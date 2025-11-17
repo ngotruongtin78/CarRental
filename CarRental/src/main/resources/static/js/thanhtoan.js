@@ -17,101 +17,136 @@ if (!rentalId) {
 // LOAD THÔNG TIN
 // ================================
 let totalAmount = 0;
+let rentalData = null;
+let vehicleData = null;
+let stationData = null;
+
+function formatDate(dateStr) {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("vi-VN");
+}
 
 async function loadRentalInfo() {
     try {
-        const res = await fetch(`/api/rentals/${rentalId}`);
+        const res = await fetch(`/api/rental/${rentalId}`);
         if (!res.ok) {
             console.error("Lỗi khi gọi API rental");
+            alert("Không tải được thông tin thanh toán, vui lòng thử lại.");
             return;
         }
 
-        const rental = await res.json();
+        rentalData = await res.json();
 
-        const vehicleRes = await fetch(`/api/vehicles/admin/${rental.vehicleId}`);
-        const vehicle = await vehicleRes.json();
+        const vehicleRes = await fetch(`/api/vehicles/admin/${rentalData.vehicleId}`);
+        vehicleData = vehicleRes.ok ? await vehicleRes.json() : null;
 
-        const stationRes = await fetch(`/api/stations/admin/${rental.stationId}`);
-        const station = await stationRes.json();
-        document.querySelector(".summary-value.rental-code").innerText = rental.id;
-        document.querySelector(".summary-value.vehicle-type").innerText =
-            `${vehicle.type} (${vehicle.plate})`;
-        document.querySelector(".summary-value.station-name").innerText = station.name;
+        const stationRes = await fetch(`/api/stations/admin/${rentalData.stationId}`);
+        stationData = stationRes.ok ? await stationRes.json() : null;
 
+        const brandPlate = vehicleData ? `${vehicleData.brand ?? vehicleData.type} (${vehicleData.plate})` : rentalData.vehicleId;
+        const stationName = stationData ? `${stationData.name} - ${stationData.address ?? ""}` : rentalData.stationId || "";
 
-        // ================================
-        // TÍNH SỐ NGÀY THUÊ
-        // ================================
-        const start = new Date(rental.startTime);
-        const end = rental.endTime ? new Date(rental.endTime) : new Date();
+        document.querySelector(".summary-value.rental-code").innerText = rentalData.id;
+        const customerEl = document.querySelector(".summary-value.customer-name");
+        if (customerEl) customerEl.innerText = rentalData.username || "-";
+        document.querySelector(".summary-value.vehicle-type").innerText = brandPlate;
+        document.querySelector(".summary-value.station-name").innerText = stationName;
 
-        const diffMs = end - start;
-        const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        const days = rentalData.rentalDays && rentalData.rentalDays > 0
+            ? rentalData.rentalDays
+            : Math.max(1, Math.ceil((new Date(rentalData.endTime) - new Date(rentalData.startTime)) / (1000 * 60 * 60 * 24)));
+        const startLabel = formatDate(rentalData.startDate || rentalData.startTime);
+        const endLabel = formatDate(rentalData.endDate || rentalData.endTime);
 
-        document.querySelector(".summary-value.time-range").innerText =
-            `${start.toLocaleDateString()} - ${end.toLocaleDateString()} (${days} ngày)`;
+        document.querySelector(".summary-value.time-range").innerText = `${startLabel} - ${endLabel} (${days} ngày)`;
+        document.querySelector(".summary-value.distance").innerText =
+            rentalData.distanceKm ? `${Number(rentalData.distanceKm).toFixed(1)} km` : "-";
 
+        const basePrice = (vehicleData?.price || 0) * days;
+        totalAmount = basePrice + (rentalData.damageFee ?? 0);
 
-        // ================================
-        // TÍNH TIỀN
-        // ================================
-        const dailyPrice = vehicle.price;
-        const basePrice = days * dailyPrice;
-        const damageFee = rental.damageFee ?? 0;
+        document.querySelector(".detail-value.basic-fee").innerText = basePrice.toLocaleString("vi-VN") + " VNĐ";
+        document.querySelector(".detail-value.total-fee").innerText = totalAmount.toLocaleString("vi-VN") + " VNĐ";
+        document.getElementById("payment-method-text").innerText = rentalData.paymentMethod === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt";
 
-        document.querySelector(".detail-value.basic-fee").innerText =
-            basePrice.toLocaleString("vi-VN") + " VNĐ";
-
-        document.querySelector(".detail-value.damage-fee").innerText =
-            damageFee.toLocaleString("vi-VN") + " VNĐ";
-
-        totalAmount = basePrice + damageFee;
-
-        document.querySelector(".detail-value.total-fee").innerText =
-            totalAmount.toLocaleString("vi-VN") + " VNĐ";
-
+        refreshUploadStatus();
     } catch (err) {
         console.error("Lỗi loadRentalInfo:", err);
     }
 }
 
-
-async function createPayOSPayment() {
+async function refreshUploadStatus() {
     try {
-        const payload = {
-            orderCode: Number(Date.now().toString().slice(-8)), // 8 số cuối timestamp
-            amount: totalAmount,
-            description: `Thanh toán thuê xe mã ${rentalId}`,
-            returnUrl: `http://localhost:8080/thanhtoan/success?rentalId=${rentalId}`,
-            cancelUrl: `http://localhost:8080/thanhtoan/cancel?rentalId=${rentalId}`
-        };
-
-        const res = await fetch("/api/payment/create", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-
+        const res = await fetch("/api/renter/verification-status");
+        if (!res.ok) return;
         const data = await res.json();
-
-        if (!data || !data.checkoutUrl) {
-            alert("Không tạo được link thanh toán!");
-            return;
+        const statusText = document.getElementById("upload-status-text");
+        if (!statusText) return;
+        if (data.licenseUploaded && data.idCardUploaded) {
+            statusText.innerText = "Đã đủ CCCD & GPLX";
+            statusText.style.color = "#2e7d32";
+        } else {
+            statusText.innerText = "Thiếu giấy tờ";
+            statusText.style.color = "#c0392b";
         }
-        window.location.href = data.checkoutUrl;
-
-    } catch (err) {
-        console.error("PAYOS ERROR:", err);
-        alert("Có lỗi khi tạo thanh toán!");
+    } catch (e) {
+        console.error(e);
     }
 }
 
+function createUploader(type) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async () => {
+        const form = new FormData();
+        form.append("file", input.files[0]);
+        const res = await fetch(`/api/renter/upload-${type}`, { method: "POST", body: form });
+        if (res.ok) {
+            alert("Tải lên thành công");
+            refreshUploadStatus();
+        } else {
+            alert("Tải lên thất bại");
+        }
+    };
+    input.click();
+}
+
 async function confirmPayment() {
+    const method = document.getElementById("payment-method").value;
     if (!totalAmount || totalAmount <= 0) {
         alert("Không thể thanh toán số tiền bằng 0!");
         return;
     }
-    await createPayOSPayment();
+
+    if (method === "bank_transfer") {
+        const statusRes = await fetch("/api/renter/verification-status");
+        if (statusRes.ok) {
+            const info = await statusRes.json();
+            if (!info.licenseUploaded || !info.idCardUploaded) {
+                alert("Vui lòng tải lên CCCD và GPLX trước khi chuyển khoản.");
+                return;
+            }
+        }
+    }
+
+    const res = await fetch(`/api/rental/${rentalId}/payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ method })
+    });
+
+    if (!res.ok) {
+        const message = await res.text();
+        alert(message || "Thanh toán thất bại");
+        return;
+    }
+
+    const data = await res.json();
+    document.getElementById("payment-method-text").innerText = method === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt";
+    document.querySelector(".detail-value.total-fee").innerText = (data.total || totalAmount).toLocaleString("vi-VN") + " VNĐ";
+    alert("Đã lưu phương thức thanh toán. Vui lòng tới trạm (tiền mặt) hoặc chuyển khoản theo hướng dẫn!");
 }
 
 function cancelPayment() {
@@ -124,15 +159,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.querySelector(".btn-confirm-payment").onclick = confirmPayment;
     document.querySelector(".btn-cancel-payment").onclick = cancelPayment;
+    document.getElementById("btn-upload-id").onclick = () => createUploader("idcard");
+    document.getElementById("btn-upload-license").onclick = () => createUploader("license");
 });
 
 function convertHTMLPlaceholders() {
     document.querySelector(".summary-item:nth-child(1) .summary-value").classList.add("rental-code");
+    document.querySelector(".summary-item:nth-child(2) .summary-value").classList.add("customer-name");
     document.querySelector(".summary-item:nth-child(3) .summary-value").classList.add("vehicle-type");
     document.querySelector(".summary-item:nth-child(4) .summary-value").classList.add("station-name");
     document.querySelector(".summary-item:nth-child(5) .summary-value").classList.add("time-range");
+    document.querySelector(".summary-item:nth-child(6) .summary-value").classList.add("distance");
 
     document.querySelector(".payment-detail-row:nth-child(1) .detail-value").classList.add("basic-fee");
-    document.querySelector(".payment-detail-row:nth-child(2) .detail-value").classList.add("damage-fee");
     document.querySelector(".payment-detail-row.total-amount .detail-value").classList.add("total-fee");
 }

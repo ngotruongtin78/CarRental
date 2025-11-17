@@ -55,7 +55,7 @@
                 </div>
                 <div class="summary-item">
                     <p class="summary-label">Thời gian thuê:</p>
-                    <p class="summary-value">20/11/2023 09:00 - 20/11/2023 17:00 (8 giờ)</p>
+                    <p class="summary-value">20/11/2023 - 22/11/2023 (2 ngày)</p>
                 </div>
                 <div class="summary-item">
                     <p class="summary-label">Quãng đường:</p>
@@ -70,12 +70,8 @@
                     <p class="detail-value">120.000 VNĐ</p>
                 </div>
                 <div class="payment-detail-row">
-                    <p class="detail-label">Phí quá giờ:</p>
-                    <p class="detail-value">30.000 VNĐ</p>
-                </div>
-                <div class="payment-detail-row">
-                    <p class="detail-label">Phí phát sinh khác:</p>
-                    <p class="detail-value">0 VNĐ</p>
+                    <p class="detail-label">Phương thức:</p>
+                    <p class="detail-value" id="payment-method-text">-</p>
                 </div>
                 <div class="payment-detail-row total-amount">
                     <p class="detail-label">Tổng cộng:</p>
@@ -86,10 +82,18 @@
                     <label for="payment-method">Chọn phương thức thanh toán:</label>
                     <select id="payment-method" class="form-select">
                         <option value="cash">Tiền mặt</option>
-                        <option value="card">Thẻ tín dụng/ghi nợ</option>
-                        <option value="momo">Momo</option>
-                        <option value="zalopay">ZaloPay</option>
+                        <option value="bank_transfer">Chuyển khoản</option>
                     </select>
+                    <p class="note small" style="margin-top:8px; color:#2f4f2f">Tiền mặt: xác nhận GPLX/CCCD tại quầy. Chuyển khoản: hệ thống tính giá theo số ngày thuê.</p>
+                </div>
+
+                <div class="upload-section">
+                    <h3>CCCD & GPLX (bắt buộc nếu chọn chuyển khoản)</h3>
+                    <div class="upload-actions">
+                        <button type="button" class="btn-upload" id="btn-upload-id">Tải CCCD/CMND</button>
+                        <button type="button" class="btn-upload" id="btn-upload-license">Tải GPLX</button>
+                        <span class="upload-status" id="upload-status-text">Chưa tải lên</span>
+                    </div>
                 </div>
 
                 <button class="btn-confirm-payment"><i class="fas fa-check-circle"></i> Xác nhận thanh toán</button>
