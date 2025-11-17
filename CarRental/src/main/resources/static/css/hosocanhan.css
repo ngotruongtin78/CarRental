@@ -199,6 +199,18 @@ body {
     flex-wrap: wrap;
 }
 
+.doc-status {
+    font-weight: 600;
+    color: #c0392b;
+    align-self: center;
+}
+
+.doc-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 .doc-button {
     padding: 10px 20px;
     border: 1px solid #ccc;
