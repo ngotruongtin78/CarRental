@@ -19,7 +19,7 @@
             <li><a href="/home"><i class="fas fa-home"></i> Trang chủ</a></li>
             <li><a href="/datxe"><i class="fas fa-bicycle"></i> Đặt xe</a></li>
             <li><a href="/lichsuthue"><i class="fas fa-history"></i> Lịch sử thuê</a></li>
-            <li class="active"><a href="/hosocanhan"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
+            <li class="active"><a href="/ho-so"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
         </ul>
     </div>
 
@@ -112,12 +112,14 @@
     }
 
     async function loadStats() {
-        const res = await fetch("/api/rentals/stats");
+        const res = await fetch("/api/rental/stats");
         const s = await res.json();
 
-        document.getElementById("stat-trips").innerText = s.totalTrips;
-        document.getElementById("stat-avg").innerText = s.avgMinutesPerTrip + " phút";
-        document.getElementById("stat-spent").innerText = s.totalSpent + " đ";
+        document.getElementById("stat-trips").innerText = s.totalTrips ?? 0;
+        const avg = s.averageDurationMinutes ? s.averageDurationMinutes.toFixed(1) : 0;
+        document.getElementById("stat-avg").innerText = avg + " phút";
+        const spent = s.totalSpent ? s.totalSpent.toLocaleString('vi-VN') : 0;
+        document.getElementById("stat-spent").innerText = spent + " đ";
     }
 
     function upload(type) {

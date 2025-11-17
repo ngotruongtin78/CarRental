@@ -1,7 +1,7 @@
 function formatDate(dateStr) {
     if (!dateStr) return "";
     const date = new Date(dateStr);
-    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    return `${date.toLocaleDateString()}`;
 }
 function renderHistoryItem(item) {
     const record = item.record || {};
@@ -10,10 +10,11 @@ function renderHistoryItem(item) {
     const container = document.createElement("div");
     container.classList.add("history-item");
 
-    const start = formatDate(record.startTime);
-    const end = formatDate(record.endTime) || "Chưa trả";
-    const vehicleLabel = vehicle ? `${vehicle.type} (${vehicle.plate})` : record.vehicleId;
-    const stationLabel = station ? station.name : (record.stationId || "");
+    const start = formatDate(record.startDate || record.startTime);
+    const end = formatDate(record.endDate || record.endTime) || "Chưa trả";
+    const vehicleLabel = vehicle ? `${vehicle.brand ?? vehicle.type} (${vehicle.plate})` : record.vehicleId;
+    const stationLabel = station ? `${station.name} - ${station.address ?? ""}` : (record.stationId || "");
+    const distance = record.distanceKm ? `${Number(record.distanceKm).toFixed(1)} km` : "-";
     const total = record.total ? Number(record.total).toLocaleString("vi-VN") + " VNĐ" : "0";
 
     container.innerHTML = `
@@ -37,6 +38,10 @@ function renderHistoryItem(item) {
             <div class="detail-group">
                 <i class="fas fa-dollar-sign"></i>
                 <p>Chi phí: ${total}</p>
+            </div>
+            <div class="detail-group">
+                <i class="fas fa-road"></i>
+                <p>Quãng đường: ${distance}</p>
             </div>
         </div>
     `;

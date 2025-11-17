@@ -1,8 +1,10 @@
 package CarRental.example.controller;
 
 import CarRental.example.document.RentalRecord;
+import CarRental.example.document.User;
 import CarRental.example.document.Vehicle;
 import CarRental.example.repository.RentalRecordRepository;
+import CarRental.example.repository.UserRepository;
 import CarRental.example.repository.VehicleRepository;
 import CarRental.example.service.RentalRecordService;
 import CarRental.example.service.SequenceGeneratorService;
@@ -15,7 +17,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -28,15 +32,18 @@ public class RentalController {
     private final SequenceGeneratorService sequence;
     private final VehicleService vehicleService;
     private final RentalRecordService rentalRecordService;
+    private final UserRepository userRepository;
     public RentalController(RentalRecordRepository rentalRepo,
                             VehicleRepository vehicleRepo,
                             SequenceGeneratorService sequence, VehicleService vehicleService,
-                            RentalRecordService rentalRecordService) {
+                            RentalRecordService rentalRecordService,
+                            UserRepository userRepository) {
         this.rentalRepo = rentalRepo;
         this.vehicleRepo = vehicleRepo;
         this.sequence = sequence;
         this.vehicleService = vehicleService;
         this.rentalRecordService = rentalRecordService;
+        this.userRepository = userRepository;
     }
 
     private String getCurrentUsername() {
@@ -66,7 +73,10 @@ public class RentalController {
 
     @PostMapping(value = "/book", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> bookRental(@RequestParam("vehicleId") String vehicleId,
-                                        @RequestParam(value = "stationId", required = false) String stationId) {
+                                        @RequestParam("stationId") String stationId,
+                                        @RequestParam("startDate") String startDateStr,
+                                        @RequestParam("endDate") String endDateStr,
+                                        @RequestParam(value = "distanceKm", required = false) Double distanceKm) {
 
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
@@ -76,6 +86,21 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Vehicle not available");
         }
 
+        LocalDate startDate;
+        LocalDate endDate;
+        try {
+            startDate = startDateStr != null && !startDateStr.isBlank()
+                    ? LocalDate.parse(startDateStr)
+                    : LocalDate.now();
+            endDate = endDateStr != null && !endDateStr.isBlank()
+                    ? LocalDate.parse(endDateStr)
+                    : startDate;
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid date format");
+        }
+        int rentalDays = (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        if (rentalDays < 1) rentalDays = 1;
+
         long seq = sequence.getNextSequence("rentalCounter");
         String rentalId = "rental" + seq;
 
@@ -84,8 +109,13 @@ public class RentalController {
         record.setUsername(username);
         record.setVehicleId(vehicleId);
         record.setStationId(stationId);
-        record.setStartTime(LocalDateTime.now());
-        record.setTotal(vehicle.getPrice());
+        record.setStartDate(startDate);
+        record.setEndDate(endDate);
+        record.setRentalDays(rentalDays);
+        record.setDistanceKm(distanceKm != null ? distanceKm : 0);
+        record.setStartTime(startDate.atStartOfDay());
+        record.setEndTime(endDate.plusDays(1).atStartOfDay());
+        record.setTotal(vehicle.getPrice() * rentalDays);
         record.setStatus("BOOKED");
 
         rentalRepo.save(record);
@@ -119,6 +149,49 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
         }
         return ResponseEntity.ok(record);
+    }
+
+    @PostMapping("/{rentalId}/payment")
+    public ResponseEntity<?> confirmPayment(@PathVariable String rentalId, @RequestBody Map<String, String> body) {
+        String username = getCurrentUsername();
+        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+
+        String method = body.getOrDefault("method", "");
+        if (!method.equals("cash") && !method.equals("bank_transfer")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid payment method");
+        }
+
+        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        if (record == null || !Objects.equals(record.getUsername(), username)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
+        }
+
+        Vehicle vehicle = vehicleRepo.findById(record.getVehicleId()).orElse(null);
+        if (vehicle == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Vehicle missing for rental");
+        }
+
+        int rentalDays = record.getRentalDays() > 0 ? record.getRentalDays() : 1;
+        double calculatedTotal = rentalDays * vehicle.getPrice();
+        record.setTotal(calculatedTotal);
+        record.setPaymentMethod(method);
+        record.setPaymentStatus(method.equals("cash") ? "PAY_AT_STATION" : "BANK_TRANSFER");
+
+        if (method.equals("bank_transfer")) {
+            User user = userRepository.findByUsername(username);
+            if (user == null || user.getLicenseData() == null || user.getIdCardData() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Vui lòng tải lên CCCD và GPLX để thanh toán chuyển khoản");
+            }
+        }
+
+        rentalRepo.save(record);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("paymentStatus", record.getPaymentStatus());
+        response.put("total", calculatedTotal);
+        response.put("rentalDays", rentalDays);
+        response.put("paymentMethod", method);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{rentalId}/sign-contract")
