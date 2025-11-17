@@ -4,6 +4,7 @@ import CarRental.example.document.RentalRecord;
 import CarRental.example.document.Vehicle;
 import CarRental.example.repository.RentalRecordRepository;
 import CarRental.example.repository.VehicleRepository;
+import CarRental.example.service.RentalRecordService;
 import CarRental.example.service.SequenceGeneratorService;
 import CarRental.example.service.VehicleService;
 
@@ -23,13 +24,16 @@ public class RentalController {
     private final VehicleRepository vehicleRepo;
     private final SequenceGeneratorService sequence;
     private final VehicleService vehicleService;
+    private final RentalRecordService rentalRecordService;
     public RentalController(RentalRecordRepository rentalRepo,
                             VehicleRepository vehicleRepo,
-                            SequenceGeneratorService sequence, VehicleService vehicleService) {
+                            SequenceGeneratorService sequence, VehicleService vehicleService,
+                            RentalRecordService rentalRecordService) {
         this.rentalRepo = rentalRepo;
         this.vehicleRepo = vehicleRepo;
         this.sequence = sequence;
         this.vehicleService = vehicleService;
+        this.rentalRecordService = rentalRecordService;
     }
 
     private String getCurrentUsername() {
@@ -84,6 +88,7 @@ public class RentalController {
         record.setStationId(stationId);
         record.setStartTime(LocalDateTime.now());
         record.setTotal(amount);
+        record.setStatus("BOOKED");
 
         rentalRepo.save(record);
 
@@ -106,34 +111,45 @@ public class RentalController {
         String username = getCurrentUsername();
         if (username == null) return Map.of("error", "Unauthorized");
 
-        List<RentalRecord> records = rentalRepo.findByUsername(username);
+        return rentalRecordService.calculateStats(username);
+    }
 
-        double totalSpent = records.stream()
-                .mapToDouble(RentalRecord::getTotal)
-                .sum();
+    @PostMapping("/{rentalId}/sign-contract")
+    public Map<String, Object> signContract(@PathVariable String rentalId) {
+        String username = getCurrentUsername();
+        RentalRecord record = rentalRecordService.signContract(rentalId, username);
+        if (record == null) return Map.of("error", "Rental not found or unauthorized");
+        return Map.of("status", "SIGNED", "contractSigned", true);
+    }
 
-        int totalTrips = records.size();
-        double averageSpent = totalTrips > 0 ? totalSpent / totalTrips : 0;
+    @PostMapping("/{rentalId}/check-in")
+    public Map<String, Object> checkIn(@PathVariable String rentalId, @RequestBody(required = false) Map<String, String> body) {
+        String username = getCurrentUsername();
+        String notes = body != null ? body.getOrDefault("notes", "") : "";
 
-        Map<Integer, Long> hourCounts = records.stream()
-                .filter(r -> r.getStartTime() != null)
-                .collect(Collectors.groupingBy(
-                        r -> r.getStartTime().getHour(),
-                        Collectors.counting()
-                ));
+        RentalRecord record = rentalRecordService.checkIn(rentalId, username, notes);
+        if (record == null) return Map.of("error", "Rental not found or unauthorized");
 
-        List<Integer> peakHours = hourCounts.entrySet().stream()
-                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
-                .limit(3)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+        vehicleService.updateAvailable(record.getVehicleId(), false);
+        return Map.of(
+                "status", record.getStatus(),
+                "checkinNotes", record.getCheckinNotes(),
+                "startTime", record.getStartTime()
+        );
+    }
 
-        Map<String, Object> stats = new LinkedHashMap<>();
-        stats.put("totalTrips", totalTrips);
-        stats.put("totalSpent", totalSpent);
-        stats.put("averageSpent", averageSpent);
-        stats.put("peakHours", peakHours);
+    @PostMapping("/{rentalId}/return")
+    public Map<String, Object> requestReturn(@PathVariable String rentalId, @RequestBody(required = false) Map<String, String> body) {
+        String username = getCurrentUsername();
+        String notes = body != null ? body.getOrDefault("notes", "") : "";
 
-        return stats;
+        RentalRecord record = rentalRecordService.requestReturn(rentalId, username, notes);
+        if (record == null) return Map.of("error", "Rental not found or unauthorized");
+
+        return Map.of(
+                "status", record.getStatus(),
+                "returnNotes", record.getReturnNotes(),
+                "endTime", record.getEndTime()
+        );
     }
 }

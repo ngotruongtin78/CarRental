@@ -6,8 +6,11 @@ import org.bson.BsonBinarySubType;
 import org.bson.types.Binary;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/renter")
@@ -39,6 +42,24 @@ public class RenterController {
         return "Upload license success";
     }
 
+    @PostMapping("/request-verification")
+    public ResponseEntity<?> requestVerification() {
+        String username = getCurrentUsername();
+        if (username == null) return ResponseEntity.status(401).body("Unauthorized");
+
+        User user = repo.findByUsername(username);
+        if (user == null) return ResponseEntity.status(404).body("User not found");
+
+        if (user.isVerificationRequested() || user.isVerified()) {
+            return ResponseEntity.ok("ALREADY_REQUESTED_OR_VERIFIED");
+        }
+
+        user.setVerificationRequested(true);
+        repo.save(user);
+
+        return ResponseEntity.ok("REQUEST_SUBMITTED");
+    }
+
     @PostMapping("/upload-idcard")
     public String uploadIdCard(@RequestParam("file") MultipartFile file) throws Exception {
 
@@ -52,6 +73,22 @@ public class RenterController {
         repo.save(user);
 
         return "Upload idcard success";
+    }
+
+    @GetMapping("/verification-status")
+    public ResponseEntity<?> verificationStatus() {
+        String username = getCurrentUsername();
+        if (username == null) return ResponseEntity.status(401).body("Unauthorized");
+
+        User user = repo.findByUsername(username);
+        if (user == null) return ResponseEntity.status(404).body("User not found");
+
+        return ResponseEntity.ok(Map.of(
+                "licenseUploaded", user.getLicenseData() != null,
+                "idCardUploaded", user.getIdCardData() != null,
+                "verificationRequested", user.isVerificationRequested(),
+                "verified", user.isVerified()
+        ));
     }
 
     @GetMapping("/profile")

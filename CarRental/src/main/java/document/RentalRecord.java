@@ -25,6 +25,10 @@ public class RentalRecord {
     private String status;
     private String paymentStatus;
 
+    private boolean contractSigned;
+    private String checkinNotes;
+    private String returnNotes;
+
     public RentalRecord() {}
 
     public RentalRecord(String userId, String vehicleId, String stationId, double total) {
@@ -38,6 +42,7 @@ public class RentalRecord {
         this.status = "PENDING";
         this.paymentStatus = "PENDING";
         this.damageFee = 0;
+        this.contractSigned = false;
     }
 
     // GETTER – SETTER
@@ -73,4 +78,13 @@ public class RentalRecord {
 
     public String getPaymentStatus() { return paymentStatus; }
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+
+    public boolean isContractSigned() { return contractSigned; }
+    public void setContractSigned(boolean contractSigned) { this.contractSigned = contractSigned; }
+
+    public String getCheckinNotes() { return checkinNotes; }
+    public void setCheckinNotes(String checkinNotes) { this.checkinNotes = checkinNotes; }
+
+    public String getReturnNotes() { return returnNotes; }
+    public void setReturnNotes(String returnNotes) { this.returnNotes = returnNotes; }
 }
