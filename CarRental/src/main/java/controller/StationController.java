@@ -48,6 +48,13 @@ public class StationController {
         return data;
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getStation(@PathVariable String id) {
+        Optional<Station> station = stationRepo.findById(id);
+        return station.<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Station not found"));
+    }
+
     @GetMapping("/admin/all")
     public List<Station> getStationsForAdmin() {
         return stationRepo.findAll();
