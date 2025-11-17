@@ -115,7 +115,9 @@ public class PaymentController {
             );
 
             if (!response.getStatusCode().is2xxSuccessful()) {
-                String reason = response.getBody() != null ? response.getBody().toString() : response.getStatusCode().getReasonPhrase();
+                String reason = response.getBody() != null ? response.getBody().toString() : Optional.ofNullable(HttpStatus.resolve(response.getStatusCode().value()))
+                        .map(HttpStatus::getReasonPhrase)
+                        .orElse(response.getStatusCode().toString());
                 return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body("Tạo QR thất bại: " + reason);
             }
 
