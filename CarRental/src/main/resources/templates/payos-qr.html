@@ -86,7 +86,9 @@
         if (orderRes.ok) {
             orderData = await orderRes.json();
         } else {
-            alert('Không tạo được QR thanh toán, vui lòng thử lại.');
+            const msg = await orderRes.text();
+            alert('Không tạo được QR thanh toán, vui lòng thử lại. ' + msg);
+            return;
         }
 
         let vehicleLabel = data.vehicleId || '';

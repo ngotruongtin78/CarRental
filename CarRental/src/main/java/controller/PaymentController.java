@@ -11,6 +11,9 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.servlet.view.RedirectView;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -76,10 +79,25 @@ public class PaymentController {
             Map<String, Object> body = new HashMap<>();
             int orderCode = Math.abs(rentalId.hashCode());
             body.put("orderCode", orderCode);
-            body.put("amount", (int) Math.round(amount));
-            body.put("description", "Thanh toan don " + rentalId);
-            body.put("returnUrl", "http://localhost:8080/payment/return?rentalId=" + rentalId);
-            body.put("cancelUrl", "http://localhost:8080/payment/cancel?rentalId=" + rentalId);
+            int amountInt = (int) Math.round(amount);
+            body.put("amount", amountInt);
+            String description = "Thanh toan don " + rentalId;
+            body.put("description", description);
+            String returnUrl = "http://localhost:8080/payment/return?rentalId=" + rentalId;
+            String cancelUrl = "http://localhost:8080/payment/cancel?rentalId=" + rentalId;
+            body.put("returnUrl", returnUrl);
+            body.put("cancelUrl", cancelUrl);
+            body.put("buyerName", username);
+            body.put("items", List.of(
+                    Map.of(
+                            "name", vehicle.getBrand() + " (" + vehicle.getPlate() + ")",
+                            "quantity", 1,
+                            "price", amountInt
+                    )
+            ));
+
+            String signatureRaw = orderCode + "|" + amountInt + "|" + description + "|" + returnUrl + "|" + cancelUrl;
+            body.put("signature", signPayload(signatureRaw));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -96,12 +114,17 @@ public class PaymentController {
                     new ParameterizedTypeReference<Map<String, Object>>() {}
             );
 
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                String reason = response.getBody() != null ? response.getBody().toString() : response.getStatusCode().getReasonPhrase();
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body("Tạo QR thất bại: " + reason);
+            }
+
             Map<String, Object> payload = response.getBody();
             Object dataObj = payload != null ? payload.get("data") : null;
 
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("orderCode", orderCode);
-            result.put("amount", (int) Math.round(amount));
+            result.put("amount", amountInt);
             if (dataObj instanceof Map<?, ?> data) {
                 result.put("checkoutUrl", data.get("checkoutUrl"));
                 result.put("qrCode", data.get("qrCode"));
@@ -113,6 +136,22 @@ public class PaymentController {
 
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
+    private String signPayload(String raw) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            SecretKeySpec keySpec = new SecretKeySpec(checksumKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            mac.init(keySpec);
+            byte[] bytes = mac.doFinal(raw.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : bytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "";
         }
     }
 
