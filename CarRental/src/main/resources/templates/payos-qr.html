@@ -71,9 +71,24 @@
     }
     async function loadQr() {
         const rentalId = getParam('rentalId');
-        const amount = getParam('amount');
-        const res = rentalId ? await fetch(`/api/rental/${rentalId}`) : null;
-        const data = res && res.ok ? await res.json() : {};
+        if (!rentalId) return;
+
+        const res = await fetch(`/api/rental/${rentalId}`);
+        const data = res.ok ? await res.json() : {};
+
+        const orderRes = await fetch('/payment/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rentalId })
+        });
+
+        let orderData = {};
+        if (orderRes.ok) {
+            orderData = await orderRes.json();
+        } else {
+            alert('Không tạo được QR thanh toán, vui lòng thử lại.');
+        }
+
         let vehicleLabel = data.vehicleId || '';
         if (data.vehicleId) {
             const vRes = await fetch(`/api/vehicles/${data.vehicleId}`);
@@ -85,12 +100,13 @@
         document.getElementById('qr-username').innerText = data.username || '';
         document.getElementById('qr-rental').innerText = rentalId || '';
         document.getElementById('qr-vehicle').innerText = vehicleLabel;
-        document.getElementById('qr-total').innerText = fmtCurrency(amount || data.total || 0);
-        const qrData = `PAYOS|rental=${rentalId||''}|amount=${amount||data.total||0}`;
-        document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrData)}`;
+        document.getElementById('qr-total').innerText = fmtCurrency(orderData.amount || data.total || 0);
+        const qrUrl = orderData.qrCodeUrl || orderData.qrCode || 'https://static.payos.vn/img/favicon.png';
+        document.getElementById('qr-image').src = qrUrl;
         document.getElementById('btn-open-payos').onclick = () => {
-            const deeplink = `https://pay.payos.vn/?amount=${amount||data.total||0}&note=${encodeURIComponent(rentalId||'rental')}`;
-            window.location.href = deeplink;
+            if (orderData.checkoutUrl) {
+                window.location.href = orderData.checkoutUrl;
+            }
         };
     }
     loadQr();
