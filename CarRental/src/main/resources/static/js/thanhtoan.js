@@ -20,6 +20,7 @@ let totalAmount = 0;
 let rentalData = null;
 let vehicleData = null;
 let stationData = null;
+let rentalDays = 1;
 
 function formatDate(dateStr) {
     if (!dateStr) return "-";
@@ -38,11 +39,13 @@ async function loadRentalInfo() {
 
         rentalData = await res.json();
 
-        const vehicleRes = await fetch(`/api/vehicles/admin/${rentalData.vehicleId}`);
+        const vehicleRes = await fetch(`/api/vehicles/${rentalData.vehicleId}`);
         vehicleData = vehicleRes.ok ? await vehicleRes.json() : null;
 
-        const stationRes = await fetch(`/api/stations/admin/${rentalData.stationId}`);
+        const stationRes = await fetch(`/api/stations/${rentalData.stationId}`);
         stationData = stationRes.ok ? await stationRes.json() : null;
+
+        document.querySelector(".username-label").innerText = rentalData.username || "";
 
         const brandPlate = vehicleData ? `${vehicleData.brand ?? vehicleData.type} (${vehicleData.plate})` : rentalData.vehicleId;
         const stationName = stationData ? `${stationData.name} - ${stationData.address ?? ""}` : rentalData.stationId || "";
@@ -53,22 +56,28 @@ async function loadRentalInfo() {
         document.querySelector(".summary-value.vehicle-type").innerText = brandPlate;
         document.querySelector(".summary-value.station-name").innerText = stationName;
 
-        const days = rentalData.rentalDays && rentalData.rentalDays > 0
+        rentalDays = rentalData.rentalDays && rentalData.rentalDays > 0
             ? rentalData.rentalDays
             : Math.max(1, Math.ceil((new Date(rentalData.endTime) - new Date(rentalData.startTime)) / (1000 * 60 * 60 * 24)));
         const startLabel = formatDate(rentalData.startDate || rentalData.startTime);
         const endLabel = formatDate(rentalData.endDate || rentalData.endTime);
 
-        document.querySelector(".summary-value.time-range").innerText = `${startLabel} - ${endLabel} (${days} ngày)`;
+        document.querySelector(".summary-value.time-range").innerText = `${startLabel} - ${endLabel} (${rentalDays} ngày)`;
         document.querySelector(".summary-value.distance").innerText =
             rentalData.distanceKm ? `${Number(rentalData.distanceKm).toFixed(1)} km` : "-";
 
-        const basePrice = (vehicleData?.price || 0) * days;
-        totalAmount = basePrice + (rentalData.damageFee ?? 0);
+        const unitPrice = vehicleData?.price || (rentalData.total && rentalData.rentalDays ? rentalData.total / rentalData.rentalDays : 0);
+        const basePrice = unitPrice * rentalDays;
+        totalAmount = rentalData.total && rentalData.total > 0 ? rentalData.total : basePrice + (rentalData.damageFee ?? 0);
 
+        document.querySelector(".detail-value.rental-days").innerText = `${rentalDays} ngày`;
         document.querySelector(".detail-value.basic-fee").innerText = basePrice.toLocaleString("vi-VN") + " VNĐ";
         document.querySelector(".detail-value.total-fee").innerText = totalAmount.toLocaleString("vi-VN") + " VNĐ";
-        document.getElementById("payment-method-text").innerText = rentalData.paymentMethod === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt";
+        const methodSelect = document.getElementById("payment-method");
+        if (rentalData.paymentMethod) {
+            methodSelect.value = rentalData.paymentMethod;
+        }
+        document.getElementById("payment-method-text").innerText = (methodSelect.value || rentalData.paymentMethod) === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt";
 
         refreshUploadStatus();
     } catch (err) {
@@ -145,8 +154,13 @@ async function confirmPayment() {
 
     const data = await res.json();
     document.getElementById("payment-method-text").innerText = method === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt";
-    document.querySelector(".detail-value.total-fee").innerText = (data.total || totalAmount).toLocaleString("vi-VN") + " VNĐ";
-    alert("Đã lưu phương thức thanh toán. Vui lòng tới trạm (tiền mặt) hoặc chuyển khoản theo hướng dẫn!");
+    const latestTotal = data.total || totalAmount;
+    document.querySelector(".detail-value.total-fee").innerText = latestTotal.toLocaleString("vi-VN") + " VNĐ";
+    if (method === "bank_transfer") {
+        window.location.href = `/payos-qr?rentalId=${encodeURIComponent(rentalId)}&amount=${encodeURIComponent(latestTotal)}`;
+    } else {
+        alert("Đã lưu phương thức thanh toán. Vui lòng tới trạm để hoàn tất thanh toán tiền mặt!");
+    }
 }
 
 function cancelPayment() {
@@ -154,7 +168,6 @@ function cancelPayment() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    convertHTMLPlaceholders();
     loadRentalInfo();
 
     document.querySelector(".btn-confirm-payment").onclick = confirmPayment;
@@ -162,15 +175,3 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btn-upload-id").onclick = () => createUploader("idcard");
     document.getElementById("btn-upload-license").onclick = () => createUploader("license");
 });
-
-function convertHTMLPlaceholders() {
-    document.querySelector(".summary-item:nth-child(1) .summary-value").classList.add("rental-code");
-    document.querySelector(".summary-item:nth-child(2) .summary-value").classList.add("customer-name");
-    document.querySelector(".summary-item:nth-child(3) .summary-value").classList.add("vehicle-type");
-    document.querySelector(".summary-item:nth-child(4) .summary-value").classList.add("station-name");
-    document.querySelector(".summary-item:nth-child(5) .summary-value").classList.add("time-range");
-    document.querySelector(".summary-item:nth-child(6) .summary-value").classList.add("distance");
-
-    document.querySelector(".payment-detail-row:nth-child(1) .detail-value").classList.add("basic-fee");
-    document.querySelector(".payment-detail-row.total-amount .detail-value").classList.add("total-fee");
-}

@@ -16,7 +16,7 @@
             <li><a th:href="@{/home}"><i class="fas fa-home"></i> Trang chủ</a></li>
             <li><a th:href="@{/datxe}"><i class="fas fa-bicycle"></i> Đặt xe</a></li>
             <li class="active"><a href="#"><i class="fas fa-history"></i> Lịch sử thuê</a></li>
-            <li><a th:href="@{/profile}"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
+            <li><a th:href="@{/ho-so}"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
         </ul>
     </div>
 
@@ -26,8 +26,9 @@
                 <input type="text" placeholder="Tìm điểm thuê gần bạn">
             </div>
             <div class="auth-buttons">
-                <a th:href="@{/login}" class="btn-login">Đăng nhập</a>
-                <a th:href="@{/register}" class="btn-register">Đăng ký</a>
+                <div class="user-info">
+                    <span class="welcome-text">Xin chào, <b th:text="${#authentication?.name}">---</b></span>
+                </div>
             </div>
         </div>
 
@@ -50,6 +51,11 @@
                 <label for="vehicle-type-filter">Loại xe:</label>
                 <select id="vehicle-type-filter" class="form-select">
                     <option value="all">Tất cả</option>
+                    <option value="4cho">Ô tô 4 chỗ</option>
+                    <option value="7cho">Ô tô 7 chỗ</option>
+                    <option value="sedan">Sedan</option>
+                    <option value="suv">SUV</option>
+                    <option value="xe_dien">Xe điện</option>
                     <option value="scooter">Xe tay ga điện</option>
                     <option value="bike">Xe đạp điện</option>
                 </select>

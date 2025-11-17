@@ -16,7 +16,7 @@
             <li><a th:href="@{/home}"><i class="fas fa-home"></i> Trang chủ</a></li>
             <li><a th:href="@{/datxe}"><i class="fas fa-bicycle"></i> Đặt xe</a></li>
             <li><a th:href="@{/lichsuthue}"><i class="fas fa-history"></i> Lịch sử thuê</a></li>
-            <li><a th:href="@{/profile}"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
+            <li><a th:href="@{/ho-so}"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
         </ul>
     </div>
 
@@ -26,8 +26,9 @@
                 <input type="text" placeholder="Tìm điểm thuê gần bạn">
             </div>
             <div class="auth-buttons">
-                <a th:href="@{/login}" class="btn-login">Đăng nhập</a>
-                <a th:href="@{/register}" class="btn-register">Đăng ký</a>
+                <div class="user-info">
+                    <span class="welcome-text">Xin chào, <b class="username-label">---</b></span>
+                </div>
             </div>
         </div>
 
@@ -39,35 +40,39 @@
                 <h2>Chi tiết chuyến thuê</h2>
                 <div class="summary-item">
                     <p class="summary-label">Mã chuyến:</p>
-                    <p class="summary-value">#RENT00789</p>
+                    <p class="summary-value rental-code">-</p>
                 </div>
                 <div class="summary-item">
                     <p class="summary-label">Khách hàng:</p>
-                    <p class="summary-value">Nguyễn Văn A</p>
+                    <p class="summary-value customer-name">-</p>
                 </div>
                 <div class="summary-item">
                     <p class="summary-label">Loại xe:</p>
-                    <p class="summary-value">Tay ga điện (ABC-123)</p>
+                    <p class="summary-value vehicle-type">-</p>
                 </div>
                 <div class="summary-item">
                     <p class="summary-label">Điểm thuê:</p>
-                    <p class="summary-value">Q1 - Trần Hưng Đạo</p>
+                    <p class="summary-value station-name">-</p>
                 </div>
                 <div class="summary-item">
                     <p class="summary-label">Thời gian thuê:</p>
-                    <p class="summary-value">20/11/2023 - 22/11/2023 (2 ngày)</p>
+                    <p class="summary-value time-range">-</p>
                 </div>
                 <div class="summary-item">
                     <p class="summary-label">Quãng đường:</p>
-                    <p class="summary-value">45 km</p>
+                    <p class="summary-value distance">-</p>
                 </div>
             </div>
 
             <div class="card payment-info-card">
                 <h2>Thông tin thanh toán</h2>
                 <div class="payment-detail-row">
+                    <p class="detail-label">Số ngày thuê:</p>
+                    <p class="detail-value rental-days">-</p>
+                </div>
+                <div class="payment-detail-row">
                     <p class="detail-label">Phí thuê cơ bản:</p>
-                    <p class="detail-value">120.000 VNĐ</p>
+                    <p class="detail-value basic-fee">-</p>
                 </div>
                 <div class="payment-detail-row">
                     <p class="detail-label">Phương thức:</p>
@@ -75,7 +80,7 @@
                 </div>
                 <div class="payment-detail-row total-amount">
                     <p class="detail-label">Tổng cộng:</p>
-                    <p class="detail-value">150.000 VNĐ</p>
+                    <p class="detail-value total-fee">-</p>
                 </div>
 
                 <div class="payment-method-selection">
