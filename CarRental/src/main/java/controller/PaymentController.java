@@ -7,6 +7,7 @@ import CarRental.example.document.Vehicle;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.servlet.view.RedirectView;
@@ -88,21 +89,24 @@ public class PaymentController {
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
-            ResponseEntity<Map> response = rest.exchange(
+            ResponseEntity<Map<String, Object>> response = rest.exchange(
                     "https://api.payos.vn/v2/payment-requests",
                     HttpMethod.POST,
                     entity,
-                    Map.class
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
             );
 
-            Map<?, ?> payload = response.getBody();
-            Map<String, Object> data = payload != null && payload.get("data") instanceof Map ? (Map<String, Object>) payload.get("data") : new HashMap<>();
+            Map<String, Object> payload = response.getBody();
+            Object dataObj = payload != null ? payload.get("data") : null;
+
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("orderCode", orderCode);
             result.put("amount", (int) Math.round(amount));
-            result.put("checkoutUrl", data.get("checkoutUrl"));
-            result.put("qrCode", data.get("qrCode"));
-            result.put("qrCodeUrl", data.get("qrCodeUrl"));
+            if (dataObj instanceof Map<?, ?> data) {
+                result.put("checkoutUrl", data.get("checkoutUrl"));
+                result.put("qrCode", data.get("qrCode"));
+                result.put("qrCodeUrl", data.get("qrCodeUrl"));
+            }
             result.put("status", payload != null ? payload.get("desc") : "OK");
             result.put("rentalId", rentalId);
             return ResponseEntity.ok(result);

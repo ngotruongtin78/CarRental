@@ -31,6 +31,11 @@ public class RentalRecord {
     private String paymentMethod;
     private String status;
     private String paymentStatus;
+    private LocalDateTime paidAt;
+
+    private boolean contractSigned;
+    private String checkinNotes;
+    private String returnNotes;
 
     private boolean contractSigned;
     private String checkinNotes;
@@ -109,4 +114,7 @@ public class RentalRecord {
 
     public String getReturnNotes() { return returnNotes; }
     public void setReturnNotes(String returnNotes) { this.returnNotes = returnNotes; }
+
+    public LocalDateTime getPaidAt() { return paidAt; }
+    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
 }
