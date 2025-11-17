@@ -20,23 +20,24 @@ let totalAmount = 0;
 
 async function loadRentalInfo() {
     try {
-        const res = await fetch(`/api/rentals/${rentalId}`);
+        const res = await fetch(`/api/rental/${rentalId}`);
         if (!res.ok) {
             console.error("Lỗi khi gọi API rental");
+            alert("Không tải được thông tin thanh toán, vui lòng thử lại.");
             return;
         }
 
         const rental = await res.json();
 
         const vehicleRes = await fetch(`/api/vehicles/admin/${rental.vehicleId}`);
-        const vehicle = await vehicleRes.json();
+        const vehicle = vehicleRes.ok ? await vehicleRes.json() : null;
 
         const stationRes = await fetch(`/api/stations/admin/${rental.stationId}`);
-        const station = await stationRes.json();
+        const station = stationRes.ok ? await stationRes.json() : null;
         document.querySelector(".summary-value.rental-code").innerText = rental.id;
         document.querySelector(".summary-value.vehicle-type").innerText =
-            `${vehicle.type} (${vehicle.plate})`;
-        document.querySelector(".summary-value.station-name").innerText = station.name;
+            vehicle ? `${vehicle.type} (${vehicle.plate})` : rental.vehicleId;
+        document.querySelector(".summary-value.station-name").innerText = station?.name || rental.stationId || "";
 
 
         // ================================
@@ -86,7 +87,7 @@ async function createPayOSPayment() {
             cancelUrl: `http://localhost:8080/thanhtoan/cancel?rentalId=${rentalId}`
         };
 
-        const res = await fetch("/api/payment/create", {
+        const res = await fetch("/payment/create-order", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)

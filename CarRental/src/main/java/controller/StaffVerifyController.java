@@ -20,6 +20,7 @@ public class StaffVerifyController {
         if (user == null) return "USER_NOT_FOUND";
 
         user.setVerified(true);
+        user.setVerificationRequested(false);
         userRepo.save(user);
 
         return "USER_VERIFIED_SUCCESSFULLY";
