@@ -67,6 +67,24 @@ public class RenterController {
         return ResponseEntity.ok("REQUEST_SUBMITTED");
     }
 
+    @PostMapping("/request-verification")
+    public ResponseEntity<?> requestVerification() {
+        String username = getCurrentUsername();
+        if (username == null) return ResponseEntity.status(401).body("Unauthorized");
+
+        User user = repo.findByUsername(username);
+        if (user == null) return ResponseEntity.status(404).body("User not found");
+
+        if (user.isVerificationRequested() || user.isVerified()) {
+            return ResponseEntity.ok("ALREADY_REQUESTED_OR_VERIFIED");
+        }
+
+        user.setVerificationRequested(true);
+        repo.save(user);
+
+        return ResponseEntity.ok("REQUEST_SUBMITTED");
+    }
+
     @PostMapping("/upload-idcard")
     public ResponseEntity<?> uploadIdCard(@RequestParam("file") MultipartFile file) {
         try {
@@ -87,6 +105,22 @@ public class RenterController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Upload idcard failed");
         }
+    }
+
+    @GetMapping("/verification-status")
+    public ResponseEntity<?> verificationStatus() {
+        String username = getCurrentUsername();
+        if (username == null) return ResponseEntity.status(401).body("Unauthorized");
+
+        User user = repo.findByUsername(username);
+        if (user == null) return ResponseEntity.status(404).body("User not found");
+
+        return ResponseEntity.ok(Map.of(
+                "licenseUploaded", user.getLicenseData() != null,
+                "idCardUploaded", user.getIdCardData() != null,
+                "verificationRequested", user.isVerificationRequested(),
+                "verified", user.isVerified()
+        ));
     }
 
     @GetMapping("/verification-status")
