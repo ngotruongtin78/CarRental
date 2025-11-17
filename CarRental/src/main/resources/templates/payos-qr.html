@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh toán PayOS</title>
+    <link rel="stylesheet" href="/css/thanhtoan.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .qr-wrapper { display:flex; gap:32px; align-items:flex-start; justify-content:center; }
+        .qr-box { padding:20px; background:#fff; border-radius:16px; box-shadow:0 4px 14px rgba(0,0,0,0.08); min-width:320px; }
+        .qr-box img { width:240px; height:240px; object-fit:contain; margin:12px auto; display:block; }
+        .qr-meta { margin-top:12px; font-size:15px; color:#2f4f2f; }
+        .qr-meta strong { color:#1f6d1f; }
+        .qr-actions { display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; }
+        .btn-outline { border:1px solid #1f6d1f; background:#f6fff6; color:#1f6d1f; padding:10px 14px; border-radius:10px; cursor:pointer; }
+        .btn-primary { border:none; background:#1f6d1f; color:#fff; padding:10px 14px; border-radius:10px; cursor:pointer; }
+    </style>
+</head>
+<body>
+<div class="main-container">
+    <div class="sidebar">
+        <div class="sidebar-header">EV Station</div>
+        <ul class="sidebar-menu">
+            <li><a href="/home"><i class="fas fa-home"></i> Trang chủ</a></li>
+            <li><a href="/datxe"><i class="fas fa-bicycle"></i> Đặt xe</a></li>
+            <li><a href="/lichsuthue"><i class="fas fa-history"></i> Lịch sử thuê</a></li>
+            <li><a href="/ho-so"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
+        </ul>
+    </div>
+
+    <div class="content-area">
+        <div class="top-bar">
+            <div class="search-bar">
+                <input type="text" placeholder="Tìm điểm thuê gần bạn">
+            </div>
+            <div class="auth-buttons">
+                <div class="user-info">
+                    <span class="welcome-text">Xin chào, <b id="qr-username">---</b></span>
+                </div>
+            </div>
+        </div>
+
+        <h1 class="page-title">Quét QR chuyển khoản (PayOS)</h1>
+
+        <div class="qr-wrapper">
+            <div class="qr-box">
+                <h2>Thông tin thanh toán</h2>
+                <p><strong>Mã chuyến:</strong> <span id="qr-rental"></span></p>
+                <p><strong>Xe:</strong> <span id="qr-vehicle"></span></p>
+                <p><strong>Tổng tiền:</strong> <span id="qr-total"></span></p>
+                <p class="qr-meta">
+                    Mở ứng dụng ngân hàng và quét QR PayOS. Nội dung chuyển khoản nên bao gồm <strong>mã chuyến</strong> để nhân viên đối chiếu.
+                </p>
+                <img id="qr-image" alt="QR PayOS" src="https://static.payos.vn/img/favicon.png">
+                <div class="qr-actions">
+                    <button class="btn-outline" onclick="window.history.back()"><i class="fas fa-arrow-left"></i> Quay lại</button>
+                    <button class="btn-primary" id="btn-open-payos"><i class="fas fa-qrcode"></i> Mở trang PayOS</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function fmtCurrency(amount) {
+        return Number(amount || 0).toLocaleString('vi-VN') + ' VNĐ';
+    }
+    function getParam(name) {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(name);
+    }
+    async function loadQr() {
+        const rentalId = getParam('rentalId');
+        const amount = getParam('amount');
+        const res = rentalId ? await fetch(`/api/rental/${rentalId}`) : null;
+        const data = res && res.ok ? await res.json() : {};
+        let vehicleLabel = data.vehicleId || '';
+        if (data.vehicleId) {
+            const vRes = await fetch(`/api/vehicles/${data.vehicleId}`);
+            if (vRes.ok) {
+                const v = await vRes.json();
+                vehicleLabel = `${v.brand ?? v.type} (${v.plate})`;
+            }
+        }
+        document.getElementById('qr-username').innerText = data.username || '';
+        document.getElementById('qr-rental').innerText = rentalId || '';
+        document.getElementById('qr-vehicle').innerText = vehicleLabel;
+        document.getElementById('qr-total').innerText = fmtCurrency(amount || data.total || 0);
+        const qrData = `PAYOS|rental=${rentalId||''}|amount=${amount||data.total||0}`;
+        document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrData)}`;
+        document.getElementById('btn-open-payos').onclick = () => {
+            const deeplink = `https://pay.payos.vn/?amount=${amount||data.total||0}&note=${encodeURIComponent(rentalId||'rental')}`;
+            window.location.href = deeplink;
+        };
+    }
+    loadQr();
+</script>
+</body>
+</html>
