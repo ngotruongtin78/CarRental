@@ -28,18 +28,43 @@ public class RenterController {
     }
 
     @PostMapping("/upload-license")
-    public String uploadLicense(@RequestParam("file") MultipartFile file) throws Exception {
+    public ResponseEntity<?> uploadLicense(@RequestParam("file") MultipartFile file) {
+        try {
+            String username = getCurrentUsername();
+            if (username == null) return ResponseEntity.status(401).body("Unauthorized");
 
+            if (file == null || file.isEmpty()) {
+                return ResponseEntity.badRequest().body("File trống");
+            }
+
+            User user = repo.findByUsername(username);
+            if (user == null) return ResponseEntity.status(404).body("User not found");
+
+            user.setLicenseData(new Binary(BsonBinarySubType.BINARY, file.getBytes()));
+            repo.save(user);
+
+            return ResponseEntity.ok(Map.of("status", "OK"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Upload license failed");
+        }
+    }
+
+    @PostMapping("/request-verification")
+    public ResponseEntity<?> requestVerification() {
         String username = getCurrentUsername();
-        if (username == null) return "Unauthorized";
+        if (username == null) return ResponseEntity.status(401).body("Unauthorized");
 
         User user = repo.findByUsername(username);
-        if (user == null) return "User not found";
+        if (user == null) return ResponseEntity.status(404).body("User not found");
 
-        user.setLicenseData(new Binary(BsonBinarySubType.BINARY, file.getBytes()));
+        if (user.isVerificationRequested() || user.isVerified()) {
+            return ResponseEntity.ok("ALREADY_REQUESTED_OR_VERIFIED");
+        }
+
+        user.setVerificationRequested(true);
         repo.save(user);
 
-        return "Upload license success";
+        return ResponseEntity.ok("REQUEST_SUBMITTED");
     }
 
     @PostMapping("/request-verification")
@@ -61,18 +86,41 @@ public class RenterController {
     }
 
     @PostMapping("/upload-idcard")
-    public String uploadIdCard(@RequestParam("file") MultipartFile file) throws Exception {
+    public ResponseEntity<?> uploadIdCard(@RequestParam("file") MultipartFile file) {
+        try {
+            String username = getCurrentUsername();
+            if (username == null) return ResponseEntity.status(401).body("Unauthorized");
 
+            if (file == null || file.isEmpty()) {
+                return ResponseEntity.badRequest().body("File trống");
+            }
+
+            User user = repo.findByUsername(username);
+            if (user == null) return ResponseEntity.status(404).body("User not found");
+
+            user.setIdCardData(new Binary(BsonBinarySubType.BINARY, file.getBytes()));
+            repo.save(user);
+
+            return ResponseEntity.ok(Map.of("status", "OK"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Upload idcard failed");
+        }
+    }
+
+    @GetMapping("/verification-status")
+    public ResponseEntity<?> verificationStatus() {
         String username = getCurrentUsername();
-        if (username == null) return "Unauthorized";
+        if (username == null) return ResponseEntity.status(401).body("Unauthorized");
 
         User user = repo.findByUsername(username);
-        if (user == null) return "User not found";
+        if (user == null) return ResponseEntity.status(404).body("User not found");
 
-        user.setIdCardData(new Binary(BsonBinarySubType.BINARY, file.getBytes()));
-        repo.save(user);
-
-        return "Upload idcard success";
+        return ResponseEntity.ok(Map.of(
+                "licenseUploaded", user.getLicenseData() != null,
+                "idCardUploaded", user.getIdCardData() != null,
+                "verificationRequested", user.isVerificationRequested(),
+                "verified", user.isVerified()
+        ));
     }
 
     @GetMapping("/verification-status")

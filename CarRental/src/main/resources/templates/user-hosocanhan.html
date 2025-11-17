@@ -60,13 +60,16 @@
             </div>
 
             <div class="profile-documents">
-                <button class="doc-button" id="btn-license">
-                    <i class="fas fa-upload"></i> Giấy phép lái xe
-                </button>
+                <div class="doc-status" id="doc-status-text">Chưa tải giấy tờ</div>
+                <div class="doc-actions">
+                    <button class="doc-button" id="btn-license">
+                        <i class="fas fa-upload"></i> Giấy phép lái xe
+                    </button>
 
-                <button class="doc-button" id="btn-idcard">
-                    <i class="fas fa-upload"></i> CMND/CCCD
-                </button>
+                    <button class="doc-button" id="btn-idcard">
+                        <i class="fas fa-upload"></i> CMND/CCCD
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -122,6 +125,38 @@
         document.getElementById("stat-spent").innerText = spent + " đ";
     }
 
+    function applyDocState(state) {
+        const statusEl = document.getElementById("doc-status-text");
+        const btnLicense = document.getElementById("btn-license");
+        const btnId = document.getElementById("btn-idcard");
+
+        if (state.licenseUploaded && state.idCardUploaded) {
+            statusEl.innerText = "Đã tải đủ CCCD & GPLX";
+            statusEl.style.color = "#2e7d32";
+            btnLicense.style.display = "none";
+            btnId.style.display = "none";
+        } else {
+            statusEl.innerText = "Thiếu giấy tờ: " +
+                [!state.licenseUploaded ? "GPLX" : null, !state.idCardUploaded ? "CCCD" : null]
+                    .filter(Boolean)
+                    .join(", ");
+            statusEl.style.color = "#c0392b";
+            btnLicense.style.display = state.licenseUploaded ? "none" : "inline-flex";
+            btnId.style.display = state.idCardUploaded ? "none" : "inline-flex";
+        }
+    }
+
+    async function refreshDocs() {
+        try {
+            const res = await fetch("/api/renter/verification-status");
+            if (!res.ok) return;
+            const data = await res.json();
+            applyDocState(data);
+        } catch (e) {
+            console.error("Không tải được trạng thái giấy tờ", e);
+        }
+    }
+
     function upload(type) {
         const input = document.createElement("input");
         input.type = "file";
@@ -131,12 +166,18 @@
             const form = new FormData();
             form.append("file", input.files[0]);
 
-            await fetch(`/api/renter/upload-${type}`, {
+            const res = await fetch(`/api/renter/upload-${type}`, {
                 method: "POST",
                 body: form
             });
 
-            alert("Tải lên thành công!");
+            if (res.ok) {
+                alert("Tải lên thành công!");
+                refreshDocs();
+            } else {
+                const msg = await res.text();
+                alert(msg || "Tải lên thất bại, vui lòng thử lại.");
+            }
         };
         input.click();
     }
@@ -146,6 +187,7 @@
 
     loadProfile();
     loadStats();
+    refreshDocs();
 </script>
 
 </body>

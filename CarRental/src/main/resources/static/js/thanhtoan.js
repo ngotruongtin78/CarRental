@@ -91,13 +91,22 @@ async function refreshUploadStatus() {
         if (!res.ok) return;
         const data = await res.json();
         const statusText = document.getElementById("upload-status-text");
+        const btnId = document.getElementById("btn-upload-id");
+        const btnLicense = document.getElementById("btn-upload-license");
         if (!statusText) return;
         if (data.licenseUploaded && data.idCardUploaded) {
-            statusText.innerText = "Đã đủ CCCD & GPLX";
+            statusText.innerText = "Đã tải đủ CCCD & GPLX";
             statusText.style.color = "#2e7d32";
+            btnId.style.display = "none";
+            btnLicense.style.display = "none";
         } else {
-            statusText.innerText = "Thiếu giấy tờ";
+            const missing = [!data.idCardUploaded ? "CCCD" : null, !data.licenseUploaded ? "GPLX" : null]
+                .filter(Boolean)
+                .join(", ");
+            statusText.innerText = missing ? `Thiếu: ${missing}` : "Thiếu giấy tờ";
             statusText.style.color = "#c0392b";
+            btnId.style.display = data.idCardUploaded ? "none" : "inline-flex";
+            btnLicense.style.display = data.licenseUploaded ? "none" : "inline-flex";
         }
     } catch (e) {
         console.error(e);
