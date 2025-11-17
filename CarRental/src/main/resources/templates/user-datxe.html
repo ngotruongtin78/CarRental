@@ -43,7 +43,6 @@
                     <span class="welcome-text">
                         Xin chào, <b sec:authentication="name"></b>
                     </span>
-                    <a href="/logout" class="btn-logout">Đăng xuất</a>
                 </div>
             </div>
         </div>
@@ -66,6 +65,24 @@
         <div class="card available-vehicles-section">
             <h2>Xe có sẵn</h2>
             <div id="vehicle-list" class="vehicle-grid"></div>
+        </div>
+
+        <div class="card">
+            <h2>Thời gian & khoảng cách</h2>
+            <div class="rental-options">
+                <div class="form-group">
+                    <label for="start-date">Ngày bắt đầu</label>
+                    <input type="date" id="start-date" />
+                </div>
+                <div class="form-group">
+                    <label for="end-date">Ngày kết thúc</label>
+                    <input type="date" id="end-date" />
+                </div>
+                <div class="form-group">
+                    <label>Quãng đường tới trạm</label>
+                    <div id="distance-display">Chưa xác định</div>
+                </div>
+            </div>
         </div>
 
         <div class="book-now-action">
