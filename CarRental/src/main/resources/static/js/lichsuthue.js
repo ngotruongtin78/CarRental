@@ -1,45 +1,20 @@
-const vehicleCache = new Map();
-const stationCache = new Map();
-
-async function fetchJson(url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-    return res.json();
-}
-
-async function getVehicle(id) {
-    if (!id) return null;
-    if (vehicleCache.has(id)) return vehicleCache.get(id);
-    const data = await fetchJson(`/api/vehicles/admin/${id}`);
-    const vehicle = data && data.type ? data : null;
-    vehicleCache.set(id, vehicle);
-    return vehicle;
-}
-
-async function getStation(id) {
-    if (!id) return null;
-    if (stationCache.has(id)) return stationCache.get(id);
-    const data = await fetchJson(`/api/stations/admin/${id}`);
-    const station = data && data.name ? data : null;
-    stationCache.set(id, station);
-    return station;
-}
-
 function formatDate(dateStr) {
     if (!dateStr) return "";
     const date = new Date(dateStr);
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
-
-function renderHistoryItem(record, vehicle, station) {
+function renderHistoryItem(item) {
+    const record = item.record || {};
+    const vehicle = item.vehicle;
+    const station = item.station;
     const container = document.createElement("div");
     container.classList.add("history-item");
 
     const start = formatDate(record.startTime);
     const end = formatDate(record.endTime) || "Chưa trả";
-    const vehicleLabel = vehicle ? `${vehicle.type} (${vehicle.plate})` : record.getVehicleId || record.vehicleId;
+    const vehicleLabel = vehicle ? `${vehicle.type} (${vehicle.plate})` : record.vehicleId;
     const stationLabel = station ? station.name : (record.stationId || "");
-    const total = record.total ? record.total.toLocaleString("vi-VN") + " VNĐ" : "0";
+    const total = record.total ? Number(record.total).toLocaleString("vi-VN") + " VNĐ" : "0";
 
     container.innerHTML = `
         <div class="item-header">
@@ -87,13 +62,7 @@ async function loadHistory() {
         }
 
         listEl.innerHTML = "";
-        for (const record of data) {
-            const [vehicle, station] = await Promise.all([
-                getVehicle(record.vehicleId),
-                getStation(record.stationId)
-            ]);
-            listEl.appendChild(renderHistoryItem(record, vehicle, station));
-        }
+        data.forEach(item => listEl.appendChild(renderHistoryItem(item)));
     } catch (err) {
         console.error("Lỗi loadHistory:", err);
         listEl.innerHTML = "<p>Không tải được lịch sử thuê.</p>";

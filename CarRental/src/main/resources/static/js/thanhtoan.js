@@ -23,20 +23,21 @@ async function loadRentalInfo() {
         const res = await fetch(`/api/rental/${rentalId}`);
         if (!res.ok) {
             console.error("Lỗi khi gọi API rental");
+            alert("Không tải được thông tin thanh toán, vui lòng thử lại.");
             return;
         }
 
         const rental = await res.json();
 
         const vehicleRes = await fetch(`/api/vehicles/admin/${rental.vehicleId}`);
-        const vehicle = await vehicleRes.json();
+        const vehicle = vehicleRes.ok ? await vehicleRes.json() : null;
 
         const stationRes = await fetch(`/api/stations/admin/${rental.stationId}`);
-        const station = await stationRes.json();
+        const station = stationRes.ok ? await stationRes.json() : null;
         document.querySelector(".summary-value.rental-code").innerText = rental.id;
         document.querySelector(".summary-value.vehicle-type").innerText =
-            `${vehicle.type} (${vehicle.plate})`;
-        document.querySelector(".summary-value.station-name").innerText = station.name;
+            vehicle ? `${vehicle.type} (${vehicle.plate})` : rental.vehicleId;
+        document.querySelector(".summary-value.station-name").innerText = station?.name || rental.stationId || "";
 
 
         // ================================

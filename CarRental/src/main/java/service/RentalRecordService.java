@@ -2,6 +2,8 @@ package CarRental.example.service;
 
 import CarRental.example.document.RentalRecord;
 import CarRental.example.repository.RentalRecordRepository;
+import CarRental.example.repository.StationRepository;
+import CarRental.example.repository.VehicleRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -12,9 +14,15 @@ import java.util.*;
 public class RentalRecordService {
 
     private final RentalRecordRepository repo;
+    private final VehicleRepository vehicleRepository;
+    private final StationRepository stationRepository;
 
-    public RentalRecordService(RentalRecordRepository repo) {
+    public RentalRecordService(RentalRecordRepository repo,
+                              VehicleRepository vehicleRepository,
+                              StationRepository stationRepository) {
         this.repo = repo;
+        this.vehicleRepository = vehicleRepository;
+        this.stationRepository = stationRepository;
     }
 
     public RentalRecord saveRecord(RentalRecord record) {
@@ -23,6 +31,38 @@ public class RentalRecordService {
 
     public List<RentalRecord> getHistoryByUsername(String username) {
         return repo.findByUsername(username);
+    }
+
+    public List<Map<String, Object>> getHistoryDetails(String username) {
+        List<RentalRecord> records = repo.findByUsername(username);
+        List<Map<String, Object>> response = new ArrayList<>();
+
+        for (RentalRecord record : records) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("record", record);
+
+            vehicleRepository.findById(record.getVehicleId()).ifPresent(vehicle -> {
+                Map<String, Object> vehicleInfo = new LinkedHashMap<>();
+                vehicleInfo.put("id", vehicle.getId());
+                vehicleInfo.put("type", vehicle.getType());
+                vehicleInfo.put("plate", vehicle.getPlate());
+                vehicleInfo.put("brand", vehicle.getBrand());
+                vehicleInfo.put("price", vehicle.getPrice());
+                item.put("vehicle", vehicleInfo);
+            });
+
+            stationRepository.findById(record.getStationId()).ifPresent(station -> {
+                Map<String, Object> stationInfo = new LinkedHashMap<>();
+                stationInfo.put("id", station.getId());
+                stationInfo.put("name", station.getName());
+                stationInfo.put("address", station.getAddress());
+                item.put("station", stationInfo);
+            });
+
+            response.add(item);
+        }
+
+        return response;
     }
 
     public List<RentalRecord> getAll() {
