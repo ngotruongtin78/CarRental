@@ -37,6 +37,10 @@ public class RentalRecord {
     private String checkinNotes;
     private String returnNotes;
 
+    private boolean contractSigned;
+    private String checkinNotes;
+    private String returnNotes;
+
     public RentalRecord() {}
 
     public RentalRecord(String userId, String vehicleId, String stationId, double total) {
