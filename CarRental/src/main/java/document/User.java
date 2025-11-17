@@ -24,6 +24,8 @@ public class User {
 
     private boolean verified = false;
 
+    private boolean verificationRequested = false;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -47,6 +49,9 @@ public class User {
 
     public boolean isVerified() { return verified; }
     public void setVerified(boolean verified) { this.verified = verified; }
+
+    public boolean isVerificationRequested() { return verificationRequested; }
+    public void setVerificationRequested(boolean verificationRequested) { this.verificationRequested = verificationRequested; }
 
 
 }
