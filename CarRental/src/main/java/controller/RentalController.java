@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/rental")
@@ -98,5 +99,41 @@ public class RentalController {
     public List<RentalRecord> history() {
         String username = getCurrentUsername();
         return rentalRepo.findByUsername(username);
+    }
+
+    @GetMapping("/stats")
+    public Map<String, Object> stats() {
+        String username = getCurrentUsername();
+        if (username == null) return Map.of("error", "Unauthorized");
+
+        List<RentalRecord> records = rentalRepo.findByUsername(username);
+
+        double totalSpent = records.stream()
+                .mapToDouble(RentalRecord::getTotal)
+                .sum();
+
+        int totalTrips = records.size();
+        double averageSpent = totalTrips > 0 ? totalSpent / totalTrips : 0;
+
+        Map<Integer, Long> hourCounts = records.stream()
+                .filter(r -> r.getStartTime() != null)
+                .collect(Collectors.groupingBy(
+                        r -> r.getStartTime().getHour(),
+                        Collectors.counting()
+                ));
+
+        List<Integer> peakHours = hourCounts.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+                .limit(3)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("totalTrips", totalTrips);
+        stats.put("totalSpent", totalSpent);
+        stats.put("averageSpent", averageSpent);
+        stats.put("peakHours", peakHours);
+
+        return stats;
     }
 }
