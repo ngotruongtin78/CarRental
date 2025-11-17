@@ -65,12 +65,26 @@ public class RenterController {
 
     @PostMapping("/upload-license")
     public ResponseEntity<?> uploadLicense(@RequestParam("file") MultipartFile file) {
-        return storeDocument(file, user -> user.setLicenseData(new Binary(BsonBinarySubType.BINARY, file.getBytes())));
+        Binary licenseBinary;
+        try {
+            licenseBinary = new Binary(BsonBinarySubType.BINARY, file.getBytes());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Upload thất bại");
+        }
+
+        return storeDocument(file, user -> user.setLicenseData(licenseBinary));
     }
 
     @PostMapping("/upload-idcard")
     public ResponseEntity<?> uploadIdCard(@RequestParam("file") MultipartFile file) {
-        return storeDocument(file, user -> user.setIdCardData(new Binary(BsonBinarySubType.BINARY, file.getBytes())));
+        Binary idBinary;
+        try {
+            idBinary = new Binary(BsonBinarySubType.BINARY, file.getBytes());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Upload thất bại");
+        }
+
+        return storeDocument(file, user -> user.setIdCardData(idBinary));
     }
 
     @PostMapping("/request-verification")
