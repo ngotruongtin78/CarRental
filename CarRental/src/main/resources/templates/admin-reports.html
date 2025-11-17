@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Báo cáo & Phân tích</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-container">
+
+    <div th:replace="~{fragments/admin-nav :: sidebar(activePage='reports')}"></div>
+
+    <div class="main-content">
+        <header class="content-header">
+        </header>
+
+        <main class="content-body">
+            <div class="page-header">
+                <h1>Báo cáo & Phân tích</h1>
+                <button id="downloadCsvBtn" class="btn-secondary">+ Tải báo cáo CSV</button>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <h3>Doanh thu tổng</h3>
+                    <div class="value" id="kpi-revenue">---</div>
+                    <div class="change positive" id="kpi-revenue-change">+0% so với tháng trước</div>
+                </div>
+                <div class="kpi-card">
+                    <h3>Tổng số chuyến</h3>
+                    <div class="value" id="kpi-trips">---</div>
+                    <div class="change" id="kpi-trips-change">⚡️</div>
+                </div>
+                <div class="kpi-card">
+                    <h3>Tỷ lệ sử dụng trung bình</h3>
+                    <div class="value" id="kpi-utilization">---%</div>
+                    <div class="change"id="kpi-utilization-change">📊</div>
+                </div>
+            </div>
+
+            <div class="page-header-filters">
+                <div class="filter-group">
+                    <label for="dateFrom">Từ ngày</label>
+                    <input type="date" id="dateFrom" name="dateFrom" class="form-control">
+                </div>
+                <div class="filter-group">
+                    <label for="dateTo">Đến ngày</label>
+                    <input type="date" id="dateTo" name="dateTo" class="form-control">
+                </div>
+            </div>
+
+            <div class="chart-grid-container">
+
+                <div class="chart-grid-left">
+                    <div class="chart-container">
+                        <h2>Biểu đồ Doanh thu</h2>
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+
+                    <div class="ai-suggestion-box">
+                        <h3>🤖 AI Gợi ý & Dự báo nhu cầu</h3>
+                        <p id="ai-suggestion">
+                            <b>CẢNH BÁO!</b> Dựa trên tuần trước, Trạm Q.Bình Thạnh có 75% nguy cơ hết xe VF e34 vào 9:00 AM sáng mai.
+                            <b>Gợi ý:</b> Điều phối 3 xe từ Trạm Q.1 về trước 8:00 AM.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="chart-grid-right">
+                    <div class="chart-container">
+                        <h2>Giờ cao điểm thuê xe</h2>
+                        <canvas id="peakHoursChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script th:src="@{/js/admin-reports.js}"></script>
+
+</body>
+</html>

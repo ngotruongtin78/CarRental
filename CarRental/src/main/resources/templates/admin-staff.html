@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý Nhân sự</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-container">
+    <div th:replace="~{fragments/admin-nav :: sidebar(activePage='staff')}"></div>
+
+    <div class="main-content">
+        <header class="content-header">
+            <div class="search-bar">
+            </div>
+            <div class="admin-profile">
+                <img th:src="@{/images/admin-avatar.png}" alt="Admin">
+                <span>Admin</span>
+            </div>
+        </header>
+
+        <main class="content-body">
+            <div class="page-header">
+                <h1>Quản lý Nhân sự</h1>
+                <button id="addStaffBtn" class="btn-primary">+ Thêm nhân viên mới</button>
+            </div>
+
+            <div class="page-header-filters">
+                <div class="search-box">
+                    <label for="searchInput">Tìm kiếm nhân viên</label>
+                    <input type="text" id="searchInput" placeholder="Tìm kiếm theo tên, email...">
+                </div>
+                <div class="filter-group">
+                    <label for="stationFilter">Điểm thuê</label>
+                    <select id="stationFilter">
+                        <option value="all">Tất cả điểm thuê</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="data-table-container" style="margin-top: 20px;">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Họ tên</th>
+                        <th>Email</th>
+                        <th>Điểm làm việc</th>
+                        <th>Vai trò</th>
+                        <th>Hiệu suất (chuyến)</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody id="staffTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div id="addStaffModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Thêm nhân viên mới</h2>
+            <span class="close-button">&times;</span>
+        </div>
+        <form id="addStaffForm">
+            <div class="form-group">
+                <label for="fullName">Họ tên</label>
+                <input type="text" id="fullName" name="fullName" required>
+            </div>
+            <div class="form-group">
+                <label for="username">Tên đăng nhập (Username)</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Mật khẩu</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <label for="modalStationId">Điểm làm việc</label>
+                <select id="modalStationId" name="stationId" required>
+                    <option value="">-- Chọn điểm thuê --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="role">Vai trò</label>
+                <select id="role" name="role" required>
+                    <option value="ROLE_STAFF">Nhân viên (Staff)</option>
+                    <option value="ROLE_ADMIN">Quản trị (Admin)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary">Lưu lại</button>
+        </form>
+    </div>
+</div>
+
+<div id="editStaffModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Cập nhật thông tin nhân viên</h2>
+            <span class="close-button">&times;</span>
+        </div>
+        <form id="editStaffForm">
+            <input type="hidden" id="edit-staffId" name="id">
+
+            <div class="form-group">
+                <label for="edit-fullName">Họ tên</label>
+                <input type="text" id="edit-fullName" name="fullName" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-username">Tên đăng nhập (Username)</label>
+                <input type="text" id="edit-username" name="username" readonly>
+                <small>Không thể thay đổi tên đăng nhập.</small>
+            </div>
+            <div class="form-group">
+                <label for="edit-password">Mật khẩu mới (Bỏ trống nếu không đổi)</label>
+                <input type="password" id="edit-password" name="password">
+            </div>
+            <div class="form-group">
+                <label for="edit-modalStationId">Điểm làm việc (Điều phối)</label>
+                <select id="edit-modalStationId" name="stationId" required>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="edit-role">Vai trò</label>
+                <select id="edit-role" name="role" required>
+                    <option value="ROLE_STAFF">Nhân viên (Staff)</option>
+                    <option value="ROLE_ADMIN">Quản trị (Admin)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary">Cập nhật</button>
+        </form>
+    </div>
+</div>
+<div id="action-menu-template" style="display: none;">
+    <div class="action-menu">
+        <a href="#" class="edit-staff">Sửa thông tin (Điều phối)</a>
+        <a href="#" class="toggle-status danger">Thay đổi trạng thái</a>
+    </div>
+</div>
+
+<script th:src="@{/js/admin-staff.js}"></script>
+
+</body>
+</html>

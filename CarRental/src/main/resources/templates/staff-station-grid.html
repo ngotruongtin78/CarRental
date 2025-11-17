@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý xe (Dạng lưới)</title>
+    <link rel="stylesheet" th:href="@{/css/staff.css}">
+</head>
+<body>
+
+<div class="staff-container">
+    <nav class="sidebar-staff">
+        <div class="logo">⚡️ EV Station</div>
+        <ul>
+            <li><a href="#">Bảng điều khiển</a></li>
+            <li><a th:href="@{/staff/station-grid}" class="active">Quản lý xe</a></li>
+            <li><a th:href="@{/staff/receive}">Nhận xe</a></li>
+            <li><a th:href="@{/staff/deliver}">Giao xe</a></li>
+            <li><a th:href="@{/staff/verify}">Xác thực</a></li>
+            <li><a th:href="@{/logout}">Đăng xuất</a></li>
+        </ul>
+    </nav>
+
+    <div class="main-content-staff">
+        <header class="content-header-staff">
+            <div class="header-title">Quản lý xe tại điểm: Q.1</div>
+        </header>
+
+        <main class="content-body-staff">
+
+            <div class="page-header-filters">
+                <div class="search-box">
+                    <label for="searchInput">Tìm kiếm xe</label>
+                    <input type="text" id="searchInput" placeholder="Tìm kiếm theo biển số xe...">
+                </div>
+                <div class="filter-group" style="margin-left: auto;">
+                    <label>&nbsp;</label>
+                    <button id="addVehicleBtn" class="btn btn-primary">+ Thêm xe mới tại điểm</button>
+                </div>
+            </div>
+
+            <div class="vehicle-grid-container" id="vehicle-grid">
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script th:src="@{/js/staff-station-grid.js}"></script>
+
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<nav class="sidebar" th:fragment="sidebar(activePage)">
+    <div class="sidebar-header">
+        <span class="logo">⚡️</span>
+        <h2>EV Station</h2>
+    </div>
+    <ul class="sidebar-nav">
+        <li><a href="#" th:class="${activePage == 'dashboard'} ? 'active'">Bảng điều khiển</a></li>
+
+        <li><a th:href="@{/admin/vehicles}"
+               th:class="${activePage == 'vehicles'} ? 'active'">Quản lý độ xe</a></li>
+
+        <li><a th:href="@{/admin/stations}"
+               th:class="${activePage == 'stations'} ? 'active'">Quản lý điểm thuê</a></li>
+
+        <li><a th:href="@{/admin/history}"
+               th:class="${activePage == 'history'} ? 'active'">Lịch sử thuê</a></li>
+
+        <li><a th:href="@{/admin/customers}"
+               th:class="${activePage == 'customers'} ? 'active'">Khách hàng</a></li>
+
+        <li><a th:href="@{/admin/staff}"
+               th:class="${activePage == 'staff'} ? 'active'">Nhân viên</a></li>
+
+        <li><a th:href="@{/admin/reports}"
+               th:class="${activePage == 'reports'} ? 'active'">Báo cáo</a></li>
+    </ul>
+</nav>
+
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý độ xe</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-container">
+
+    <div th:replace="~{fragments/admin-nav :: sidebar(activePage='vehicles')}"></div>
+
+    <div class="main-content">
+        <header class="content-header">
+            <div class="search-bar">
+                <input type="text" placeholder="Search...">
+            </div>
+            <div class="admin-profile">
+                <img th:src="@{/images/admin-avatar.png}" alt="Admin">
+                <span>Admin</span>
+            </div>
+        </header>
+
+        <main class="content-body">
+            <div class="page-header">
+                <h1>Tổng quan độ xe</h1>
+                <button id="addVehicleBtn" class="btn-primary">+ Thêm xe mới</button>
+            </div>
+
+            <div class="data-table-container">
+                <div class="table-filters">
+                    <input type="text" id="searchInput" placeholder="Tìm kiếm xe...">
+                </div>
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Biển số xe</th>
+                        <th>Mẫu xe</th>
+                        <th>Trạm (Station ID)</th>
+                        <th>Pin</th>
+                        <th>Giá (VND/giờ)</th> <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
+                    </thead>
+                    <tbody id="vehicleTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div id="addVehicleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Thêm xe mới</h2>
+            <span class="close-button">&times;</span>
+        </div>
+        <form id="addVehicleForm">
+            <div class="form-group">
+                <label for="plate">Biển số xe</label>
+                <input type="text" id="plate" name="plate" required>
+            </div>
+            <div class="form-group">
+                <label for="brand">Hãng xe (Vd: VinFast Evo 200)</label>
+                <input type="text" id="brand" name="brand" required>
+            </div>
+            <div class="form-group">
+                <label for="type">Loại xe (Vd: Xe máy điện)</label>
+                <input type="text" id="type" name="type" required>
+            </div>
+            <div class="form-group">
+                <label for="battery">Pin (%)</label>
+                <input type="number" id="battery" name="battery" value="100" required>
+            </div>
+            <div class="form-group">
+                <label for="price">Giá (VND/giờ)</label> <input type="number" id="price" name="price" required>
+            </div>
+            <div class="form-group">
+                <label for="stationId">Station ID</label>
+                <input type="text" id="stationId" name="stationId" required>
+            </div>
+            <button type="submit" class="btn-primary">Lưu lại</button>
+        </form>
+    </div>
+</div>
+
+<div id="editVehicleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Cập nhật thông tin xe</h2>
+            <span class="close-button">&times;</span>
+        </div>
+        <form id="editVehicleForm">
+            <input type="hidden" id="edit-vehicleId" name="id">
+
+            <div class="form-group">
+                <label for="edit-plate">Biển số xe</label>
+                <input type="text" id="edit-plate" name="plate" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-brand">Hãng xe</label>
+                <input type="text" id="edit-brand" name="brand" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-type">Loại xe</label>
+                <input type="text" id="edit-type" name="type" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-battery">Pin (%)</label>
+                <input type="number" id="edit-battery" name="battery" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-price">Giá (VND/giờ)</LAbel> <input type="number" id="edit-price" name="price" required>
+            </div>
+
+            <div class="form-group">
+                <label for="edit-stationId">Station ID (Điều phối)</label>
+                <input type="text" id="edit-stationId" name="stationId" required>
+            </div>
+
+            <div class="form-group">
+                <label for="edit-available">Trạng thái</label>
+                <select id="edit-available" name="available">
+                    <option value="true">Sẵn sàng</option>
+                    <option value="false">Đang thuê / Bảo trì</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-primary">Cập nhật</button>
+        </form>
+    </div>
+</div>
+
+
+<script th:src="@{/js/admin-vehicles.js}"></script>
+
+</body>
+</html>

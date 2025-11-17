@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hồ sơ cá nhân - EV Station</title>
+    <link rel="stylesheet" href="/css/hosocanhan.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+<div class="main-container">
+    <div class="sidebar">
+        <div class="sidebar-header">EV Station</div>
+        <ul class="sidebar-menu">
+            <li><a href="/home"><i class="fas fa-home"></i> Trang chủ</a></li>
+            <li><a href="/datxe"><i class="fas fa-bicycle"></i> Đặt xe</a></li>
+            <li><a href="/lichsuthue"><i class="fas fa-history"></i> Lịch sử thuê</a></li>
+            <li class="active"><a href="/hosocanhan"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
+        </ul>
+    </div>
+
+    <div class="content-area">
+
+        <div class="top-bar">
+            <div class="search-bar">
+                <input type="text" placeholder="Tìm điểm thuê gần bạn">
+            </div>
+
+            <div class="auth-buttons">
+                <div sec:authorize="isAnonymous()">
+                    <a href="/login" class="btn-login">Đăng nhập</a>
+                    <a href="/register" class="btn-register">Đăng ký</a>
+                </div>
+
+                <div class="user-info" sec:authorize="isAuthenticated()">
+        <span class="welcome-text">
+            Xin chào, <b sec:authentication="name"></b>
+        </span>
+                </div>
+            </div>
+        </div>
+
+
+        <h1 class="page-title">Hồ sơ cá nhân</h1>
+
+        <div class="card profile-card">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+
+                <div class="profile-info">
+                    <h2 id="pf-username">Đang tải...</h2>
+                    <p id="pf-email"></p>
+                </div>
+            </div>
+
+            <div class="profile-documents">
+                <button class="doc-button" id="btn-license">
+                    <i class="fas fa-upload"></i> Giấy phép lái xe
+                </button>
+
+                <button class="doc-button" id="btn-idcard">
+                    <i class="fas fa-upload"></i> CMND/CCCD
+                </button>
+            </div>
+        </div>
+
+        <div class="card activity-summary-card">
+            <h2>Tóm tắt hoạt động</h2>
+            <div class="activity-grid">
+                <div class="activity-item">
+                    <i class="fas fa-bicycle"></i>
+                    <p class="activity-label">Tổng chuyến đi</p>
+                    <p class="activity-value" id="stat-trips">0</p>
+                </div>
+
+                <div class="activity-item">
+                    <i class="fas fa-road"></i>
+                    <p class="activity-label">Thời gian TB/chuyến</p>
+                    <p class="activity-value" id="stat-avg">0 phút</p>
+                </div>
+
+                <div class="activity-item">
+                    <i class="fas fa-dollar-sign"></i>
+                    <p class="activity-label">Tổng chi</p>
+                    <p class="activity-value" id="stat-spent">0 đ</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-actions">
+            <a href="/logout" class="btn-logout" style="margin-top:10px;">
+                <i class="fas fa-sign-out-alt"></i> Đăng xuất
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function loadProfile() {
+        const res = await fetch("/api/renter/profile");
+        const u = await res.json();
+
+        document.getElementById("pf-username").innerText = u.username;
+        document.getElementById("pf-email").innerHTML =
+            `<i class='fas fa-envelope'></i> ${u.email ?? "Chưa cập nhật"}`;
+    }
+
+    async function loadStats() {
+        const res = await fetch("/api/rentals/stats");
+        const s = await res.json();
+
+        document.getElementById("stat-trips").innerText = s.totalTrips;
+        document.getElementById("stat-avg").innerText = s.avgMinutesPerTrip + " phút";
+        document.getElementById("stat-spent").innerText = s.totalSpent + " đ";
+    }
+
+    function upload(type) {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+
+        input.onchange = async () => {
+            const form = new FormData();
+            form.append("file", input.files[0]);
+
+            await fetch(`/api/renter/upload-${type}`, {
+                method: "POST",
+                body: form
+            });
+
+            alert("Tải lên thành công!");
+        };
+        input.click();
+    }
+
+    document.getElementById("btn-license").onclick = () => upload("license");
+    document.getElementById("btn-idcard").onclick = () => upload("idcard");
+
+    loadProfile();
+    loadStats();
+</script>
+
+</body>
+</html>

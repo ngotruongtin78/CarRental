@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh toán - EV Station</title>
+    <link rel="stylesheet" th:href="@{/css/thanhtoan.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+<div class="main-container">
+    <div class="sidebar">
+        <div class="sidebar-header">EV Station</div>
+        <ul class="sidebar-menu">
+            <li><a th:href="@{/home}"><i class="fas fa-home"></i> Trang chủ</a></li>
+            <li><a th:href="@{/datxe}"><i class="fas fa-bicycle"></i> Đặt xe</a></li>
+            <li><a th:href="@{/lichsuthue}"><i class="fas fa-history"></i> Lịch sử thuê</a></li>
+            <li><a th:href="@{/profile}"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
+        </ul>
+    </div>
+
+    <div class="content-area">
+        <div class="top-bar">
+            <div class="search-bar">
+                <input type="text" placeholder="Tìm điểm thuê gần bạn">
+            </div>
+            <div class="auth-buttons">
+                <a th:href="@{/login}" class="btn-login">Đăng nhập</a>
+                <a th:href="@{/register}" class="btn-register">Đăng ký</a>
+            </div>
+        </div>
+
+        <h1 class="page-title">Xác nhận thanh toán</h1>
+
+        <div class="payment-grid">
+
+            <div class="card payment-summary-card">
+                <h2>Chi tiết chuyến thuê</h2>
+                <div class="summary-item">
+                    <p class="summary-label">Mã chuyến:</p>
+                    <p class="summary-value">#RENT00789</p>
+                </div>
+                <div class="summary-item">
+                    <p class="summary-label">Khách hàng:</p>
+                    <p class="summary-value">Nguyễn Văn A</p>
+                </div>
+                <div class="summary-item">
+                    <p class="summary-label">Loại xe:</p>
+                    <p class="summary-value">Tay ga điện (ABC-123)</p>
+                </div>
+                <div class="summary-item">
+                    <p class="summary-label">Điểm thuê:</p>
+                    <p class="summary-value">Q1 - Trần Hưng Đạo</p>
+                </div>
+                <div class="summary-item">
+                    <p class="summary-label">Thời gian thuê:</p>
+                    <p class="summary-value">20/11/2023 09:00 - 20/11/2023 17:00 (8 giờ)</p>
+                </div>
+                <div class="summary-item">
+                    <p class="summary-label">Quãng đường:</p>
+                    <p class="summary-value">45 km</p>
+                </div>
+            </div>
+
+            <div class="card payment-info-card">
+                <h2>Thông tin thanh toán</h2>
+                <div class="payment-detail-row">
+                    <p class="detail-label">Phí thuê cơ bản:</p>
+                    <p class="detail-value">120.000 VNĐ</p>
+                </div>
+                <div class="payment-detail-row">
+                    <p class="detail-label">Phí quá giờ:</p>
+                    <p class="detail-value">30.000 VNĐ</p>
+                </div>
+                <div class="payment-detail-row">
+                    <p class="detail-label">Phí phát sinh khác:</p>
+                    <p class="detail-value">0 VNĐ</p>
+                </div>
+                <div class="payment-detail-row total-amount">
+                    <p class="detail-label">Tổng cộng:</p>
+                    <p class="detail-value">150.000 VNĐ</p>
+                </div>
+
+                <div class="payment-method-selection">
+                    <label for="payment-method">Chọn phương thức thanh toán:</label>
+                    <select id="payment-method" class="form-select">
+                        <option value="cash">Tiền mặt</option>
+                        <option value="card">Thẻ tín dụng/ghi nợ</option>
+                        <option value="momo">Momo</option>
+                        <option value="zalopay">ZaloPay</option>
+                    </select>
+                </div>
+
+                <button class="btn-confirm-payment"><i class="fas fa-check-circle"></i> Xác nhận thanh toán</button>
+                <button class="btn-cancel-payment"><i class="fas fa-times-circle"></i> Hủy bỏ</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="/js/thanhtoan.js"></script>
+
+</body>
+</html>

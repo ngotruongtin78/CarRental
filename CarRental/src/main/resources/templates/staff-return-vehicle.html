@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Nhận xe</title>
+    <link rel="stylesheet" th:href="@{/css/staff.css}">
+</head>
+<body>
+
+<div class="staff-container">
+    <nav class="sidebar-staff">
+        <div class="logo">⚡️ EV Station</div>
+        <ul>
+            <li><a href="#">Bảng điều khiển</a></li>
+            <li><a th:href="@{/staff/receive}" class="active">Nhận xe</a></li>
+            <li><a th:href="@{/staff/deliver}">Giao xe</a></li>
+            <li><a href="#">Hồ sơ</a></li>
+            <li><a th:href="@{/logout}">Đăng xuất</a></li>
+        </ul>
+    </nav>
+
+    <div class="main-content-staff">
+        <header class="content-header-staff">
+            <div class="header-title">Nhận xe (Trả xe)</div>
+            <div classs="header-vehicle-info" id="vehicle-plate">51A-123.45</div>
+        </header>
+
+        <main class="content-body-staff">
+            <form id="return-form">
+
+                <section class="process-section">
+                    <h2>1. Tình trạng xe (Lúc trả)</h2>
+                    <div class="customer-info">
+                        Khách hàng: <span id="customer-name">Lê Trọng Phúc</span> |
+                        Thời gian thuê: <span id="rental-time">3 giờ 15 phút</span>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="button" class="btn btn-secondary">Xem ảnh gốc (Lúc giao)</button>
+                        <button type="button" id="take-photo-btn" class="btn btn-primary">Chụp ảnh hiện tại</button>
+                    </div>
+
+                    <input type="file" id="photo-input" multiple accept="image/*" style="display:none;">
+
+                    <div class="toggle-group">
+                        <span>Có hư hỏng / vệ sinh mới?</span>
+                        <label class="switch">
+                            <input type="checkbox" id="has-damage-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="photo-uploads" id="photo-preview-container">
+                    </div>
+                </section>
+
+                <section class="process-section">
+                    <h2>2. Thanh toán & Hoàn tất</h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Phí thuê (Tạm tính)</label>
+                            <input type="text" id="rental-fee" value="120.000đ" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label for="damage-fee">Phí bồi thường (Nếu có)</label>
+                            <input type="number" id="damage-fee" name="damageFee" value="40000" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Tổng cộng</label>
+                            <input type="text" id="total-fee" value="160.000đ" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label for="incident-code">Mã sự cố/ Ghi chú</label>
+                            <input type="text" id="incident-code" name="notes" placeholder="Ghi chú (v.d: xước cửa...)">
+                        </div>
+                        <div class="form-group">
+                            <label>Đã đặt cọc</label>
+                            <input type="text" id="deposit-fee" value="0đ" disabled>
+                        </div>
+                        <div class="form-group">
+                            <div class="toggle-group" style="margin-top: 30px;">
+                                <span>Áp dụng ưu đãi?</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="discount-toggle">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="total-payment" id="final-payment">
+                        KHÁCH CẦN THANH TOÁN: 160.000đ
+                    </div>
+                </section>
+
+                <section class="process-section">
+                    <h2>3. Chữ ký xác nhận</h2>
+                    <p>Khách hàng và nhân viên vui lòng ký xác nhận đã đồng ý với các chi phí và tình trạng xe.</p>
+                    <canvas id="signature-pad"></canvas>
+                    <button type="button" id="clear-signature" class="btn btn-secondary" style="margin-top:10px;">Xóa chữ ký</button>
+                </section>
+
+                <button type="submit" class="btn btn-primary final-submit">HOÀN TẤT NHẬN XE</button>
+            </form>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+
+<script th:src="@{/js/staff-return-vehicle.js}"></script>
+
+</body>
+</html>

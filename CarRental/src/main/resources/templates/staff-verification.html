@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Xác thực Khách hàng</title>
+    <link rel="stylesheet" th:href="@{/css/staff.css}">
+</head>
+<body>
+
+<div class="staff-container">
+    <nav class="sidebar-staff">
+        <div class="logo">⚡️ EV Station</div>
+        <ul>
+            <li><a href="#">Bảng điều khiển</a></li>
+            <li><a th:href="@{/staff/receive}">Nhận xe</a></li>
+            <li><a th:href="@{/staff/deliver}">Giao xe</a></li>
+            <li><a th:href="@{/staff/verify}" class="active">Xác thực</a></li>
+            <li><a href="#">Hồ sơ</a></li>
+            <li><a th:href="@{/logout}">Đăng xuất</a></li>
+        </ul>
+    </nav>
+
+    <div class="main-content-staff">
+        <header class="content-header-staff">
+            <div class="header-title">Xác thực Khách hàng</div>
+        </header>
+
+        <main class="content-body-staff">
+
+            <div class="process-section">
+                <h2>Chờ xác thực (GPLX, CMND/CCCD,...)</h2>
+                <table class="verification-list">
+                    <thead>
+                    <tr>
+                        <th>Họ tên</th>
+                        <th>Email / SĐT</th>
+                        <th>Loại giấy tờ</th>
+                        <th>Thời gian gửi Y/C</th>
+                        <th>Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody id="verification-list-body">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="verifier-container">
+                <h2>Nhà xác thực</h2>
+                <div class="verifier-grid">
+
+                    <div class="doc-preview-box">
+                        <h3>CMND/CCCD (Mặt trước)</h3>
+                        <div class="doc-image-placeholder" id="doc-preview-front">
+                            (chưa chọn)
+                        </div>
+                    </div>
+
+                    <div class="doc-preview-box">
+                        <h3>CMND/CCCD (Mặt sau)</h3>
+                        <div class="doc-image-placeholder" id="doc-preview-back">
+                            (chưa chọn)
+                        </div>
+                    </div>
+
+                    <div class="doc-info-col">
+                        <h3>Thông tin trên giấy tờ</h3>
+                        <p id="doc-info-text">
+                            <strong>Họ tên:</strong> Nguyễn Văn A<br>
+                            <strong>Số CMND:</strong> 0123456789<br>
+                            <strong>Ngày sinh:</strong> 01/01/1990<br>
+                            ...
+                        </p>
+                        <div class="verifier-actions">
+                            <button class="btn btn-deny" id="deny-btn">Từ chối</button>
+                            <button class="btn btn-approve" id="approve-btn">Chấp thuận</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script th:src="@{/js/staff-verification.js}"></script>
+
+</body>
+</html>

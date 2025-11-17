@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Lịch sử thuê xe</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<div class="admin-container">
+
+    <div th:replace="~{fragments/admin-nav :: sidebar(activePage='history')}"></div>
+
+    <div class="main-content">
+        <header class="content-header">
+            <div class="search-bar">
+                <input type="text" placeholder="Search...">
+            </div>
+            <div class="admin-profile">
+                <img th:src="@{/images/admin-avatar.png}" alt="Admin">
+                <span>Admin</span>
+            </div>
+        </header>
+
+        <main class="content-body">
+            <div class="page-header">
+                <h1>Lịch sử thuê xe</h1>
+            </div>
+
+            <div class="data-table-container">
+                <div class="table-filters">
+                    <input type="text" id="searchInput" placeholder="Tìm kiếm theo UserID, VehicleID...">
+                </div>
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Rental ID</th>
+                        <th>User ID</th>
+                        <th>Vehicle ID</th>
+                        <th>Station ID</th>
+                        <th>Trạng thái</th>
+                        <th>Tổng giá (VND)</th>
+                    </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script th:src="@{/js/admin-history.js}"></script>
+
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch sử thuê - EV Station</title>
+    <link rel="stylesheet" th:href="@{/css/lichsuthue.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+<div class="main-container">
+    <div class="sidebar">
+        <div class="sidebar-header">EV Station</div>
+        <ul class="sidebar-menu">
+            <li><a th:href="@{/home}"><i class="fas fa-home"></i> Trang chủ</a></li>
+            <li><a th:href="@{/datxe}"><i class="fas fa-bicycle"></i> Đặt xe</a></li>
+            <li class="active"><a href="#"><i class="fas fa-history"></i> Lịch sử thuê</a></li>
+            <li><a th:href="@{/profile}"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
+        </ul>
+    </div>
+
+    <div class="content-area">
+        <div class="top-bar">
+            <div class="search-bar">
+                <input type="text" placeholder="Tìm điểm thuê gần bạn">
+            </div>
+            <div class="auth-buttons">
+                <a th:href="@{/login}" class="btn-login">Đăng nhập</a>
+                <a th:href="@{/register}" class="btn-register">Đăng ký</a>
+            </div>
+        </div>
+
+        <h1 class="page-title">Lịch sử thuê xe</h1>
+
+        <div class="card history-filter-card">
+            <h2>Lọc lịch sử</h2>
+            <div class="filter-group">
+                <label for="period-filter">Thời gian:</label>
+                <select id="period-filter" class="form-select">
+                    <option value="all">Tất cả</option>
+                    <option value="last7days">7 ngày qua</option>
+                    <option value="last30days">30 ngày qua</option>
+                    <option value="thismonth">Tháng này</option>
+                    <option value="lastmonth">Tháng trước</option>
+                    <option value="thisyear">Năm nay</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="vehicle-type-filter">Loại xe:</label>
+                <select id="vehicle-type-filter" class="form-select">
+                    <option value="all">Tất cả</option>
+                    <option value="scooter">Xe tay ga điện</option>
+                    <option value="bike">Xe đạp điện</option>
+                </select>
+            </div>
+            <button class="btn-filter"><i class="fas fa-filter"></i> Áp dụng</button>
+        </div>
+
+        <div class="card rental-history-list">
+            <h2>Các chuyến thuê của bạn</h2>
+            <div class="history-item">
+                <div class="item-header">
+                    <span class="trip-id">#12345</span>
+                    <span class="trip-date">20/11/2023 - 21/11/2023</span>
+                </div>
+                <div class="item-details">
+                    <div class="detail-group">
+                        <i class="fas fa-motorcycle"></i>
+                        <p>Xe: Tay ga điện (ABC-123)</p>
+                    </div>
+                    <div class="detail-group">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <p>Điểm thuê: Q1 - Trần Hưng Đạo</p>
+                    </div>
+                    <div class="detail-group">
+                        <i class="fas fa-route"></i>
+                        <p>Quãng đường: 35 km</p>
+                    </div>
+                    <div class="detail-group">
+                        <i class="fas fa-dollar-sign"></i>
+                        <p>Chi phí: 150.000 VNĐ</p>
+                    </div>
+                </div>
+                <button class="btn-view-details">Xem chi tiết</button>
+            </div>
+
+            <div class="history-item">
+                <div class="item-header">
+                    <span class="trip-id">#12344</span>
+                    <span class="trip-date">10/11/2023 - 10/11/2023</span>
+                </div>
+                <div class="item-details">
+                    <div class="detail-group">
+                        <i class="fas fa-bicycle"></i>
+                        <p>Xe: Đạp điện (XYZ-456)</p>
+                    </div>
+                    <div class="detail-group">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <p>Điểm thuê: Q3 - Nam Kỳ Khởi Nghĩa</p>
+                    </div>
+                    <div class="detail-group">
+                        <i class="fas fa-route"></i>
+                        <p>Quãng đường: 12 km</p>
+                    </div>
+                    <div class="detail-group">
+                        <i class="fas fa-dollar-sign"></i>
+                        <p>Chi phí: 80.000 VNĐ</p>
+                    </div>
+                </div>
+                <button class="btn-view-details">Xem chi tiết</button>
+            </div>
+
+        </div>
+
+        <div class="card analytics-summary-card">
+            <h2>Thống kê sử dụng</h2>
+            <div class="analytics-grid">
+                <div class="analytic-item">
+                    <i class="fas fa-bicycle"></i>
+                    <p class="analytic-label">Tổng số chuyến</p>
+                    <p class="analytic-value">25</p>
+                </div>
+                <div class="analytic-item">
+                    <i class="fas fa-road"></i>
+                    <p class="analytic-label">Tổng quãng đường</p>
+                    <p class="analytic-value">1.250 <small>km</small></p>
+                </div>
+                <div class="analytic-item">
+                    <i class="fas fa-dollar-sign"></i>
+                    <p class="analytic-label">Tổng chi phí</p>
+                    <p class="analytic-value">5.500.000 <small>VNĐ</small></p>
+                </div>
+                <div class="analytic-item">
+                    <i class="fas fa-clock"></i>
+                    <p class="analytic-label">Thời gian trung bình</p>
+                    <p class="analytic-value">2.5 <small>giờ</small></p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+</body>
+</html>

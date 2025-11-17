@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đặt xe - EV Station</title>
+
+    <link rel="stylesheet" href="/css/datxe.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+<div class="main-container">
+
+    <div class="sidebar">
+        <div class="sidebar-header">EV Station</div>
+        <ul class="sidebar-menu">
+            <li><a href="/home"><i class="fas fa-home"></i> Trang chủ</a></li>
+            <li class="active"><a href="/datxe"><i class="fas fa-bicycle"></i> Đặt xe</a></li>
+            <li><a href="/lichsuthue"><i class="fas fa-history"></i> Lịch sử thuê</a></li>
+            <li><a href="/ho-so"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
+        </ul>
+    </div>
+
+    <div class="content-area">
+
+        <div class="top-bar">
+            <div class="search-bar">
+                <input type="text" placeholder="Tìm điểm thuê gần bạn">
+            </div>
+
+            <div class="auth-buttons">
+                <div sec:authorize="isAnonymous()">
+                    <a href="/login" class="btn-login">Đăng nhập</a>
+                    <a href="/register" class="btn-register">Đăng ký</a>
+                </div>
+
+                <div class="user-info" sec:authorize="isAuthenticated()">
+                    <span class="welcome-text">
+                        Xin chào, <b sec:authentication="name"></b>
+                    </span>
+                    <a href="/logout" class="btn-logout">Đăng xuất</a>
+                </div>
+            </div>
+        </div>
+
+        <h1 class="page-title">Đặt xe</h1>
+
+        <div class="card rental-location-section">
+            <h2>Các điểm thuê</h2>
+
+            <div id="station-list" class="station-list"></div>
+
+            <div class="selected-location-display">
+                <p><i class="fas fa-map-marker-alt"></i>
+                    Điểm thuê đã chọn:
+                    <span id="selected-station" style="font-weight:bold; color:#1f6d1f;">Chưa chọn</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="card available-vehicles-section">
+            <h2>Xe có sẵn</h2>
+            <div id="vehicle-list" class="vehicle-grid"></div>
+        </div>
+
+        <div class="book-now-action">
+            <button class="btn-book-now" id="btn-book">
+                <i class="fas fa-shopping-cart"></i> Đặt xe ngay
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script src="/js/datxe.js"></script>
+
+</body>
+</html>

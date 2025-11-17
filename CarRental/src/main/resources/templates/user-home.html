@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang chủ - EV Station</title>
+
+    <link rel="stylesheet" th:href="@{/css/home.css}">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
+    <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+
+</head>
+
+<body>
+<div class="main-container">
+    <div class="sidebar">
+        <div class="sidebar-header">EV Station</div>
+        <ul class="sidebar-menu">
+            <li class="active">
+                <a th:href="@{/home}"><i class="fas fa-home"></i> Trang chủ</a>
+            </li>
+            <li>
+                <a th:href="@{/datxe}"><i class="fas fa-bicycle"></i> Đặt xe</a>
+            </li>
+            <li>
+                <a th:href="@{/lichsuthue}"><i class="fas fa-history"></i> Lịch sử thuê</a>
+            </li>
+            <li>
+                <a th:href="@{/ho-so}"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="content-area">
+        <div class="top-bar">
+            <div class="search-bar">
+                <input type="text" placeholder="Tìm điểm thuê gần bạn">
+            </div>
+
+            <div class="auth-buttons">
+                <div sec:authorize="isAnonymous()">
+                    <a th:href="@{/login}" class="btn-login">Đăng nhập</a>
+                    <a th:href="@{/register}" class="btn-register">Đăng ký</a>
+                </div>
+
+                <div class="user-info" sec:authorize="isAuthenticated()">
+                    <span class="welcome-text">
+                        Xin chào, <b sec:authentication="name"></b>
+                    </span>
+                    <a th:href="@{/logout}" class="btn-logout">Đăng xuất</a>
+                </div>
+            </div>
+        </div>
+
+        <h1 class="page-title">Tìm điểm thuê gần bạn</h1>
+
+        <div class="home-content-wrapper">
+            <div class="card map-section-card">
+                <div id="map"></div>
+            </div>
+
+            <div class="card location-list-card">
+                <h3>Các điểm thuê</h3>
+                <div class="location-scroll-list" id="stationList"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script th:src="@{/js/map.js}"></script>
+</body>
+</html>
