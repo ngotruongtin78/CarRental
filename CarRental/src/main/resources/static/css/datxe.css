@@ -298,6 +298,36 @@ body {
     transform: scale(1.02);
 }
 
+.rental-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.rental-options .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: #333;
+}
+
+.rental-options .form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d9e8dc;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+#distance-display {
+    padding: 12px;
+    background: #f8faf8;
+    border-radius: 10px;
+    border: 1px solid #d9e8dc;
+    font-weight: bold;
+    color: #2e7d32;
+}
+
 .book-now-action {
     display: flex;
     justify-content: center;
