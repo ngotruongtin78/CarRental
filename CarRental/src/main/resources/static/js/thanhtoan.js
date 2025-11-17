@@ -20,7 +20,7 @@ let totalAmount = 0;
 
 async function loadRentalInfo() {
     try {
-        const res = await fetch(`/api/rentals/${rentalId}`);
+        const res = await fetch(`/api/rental/${rentalId}`);
         if (!res.ok) {
             console.error("Lỗi khi gọi API rental");
             return;
@@ -86,7 +86,7 @@ async function createPayOSPayment() {
             cancelUrl: `http://localhost:8080/thanhtoan/cancel?rentalId=${rentalId}`
         };
 
-        const res = await fetch("/api/payment/create", {
+        const res = await fetch("/payment/create-order", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)

@@ -159,8 +159,11 @@ async function bookNow() {
     try {
         const form = new FormData();
         form.append("vehicleId", selectedVehicle);
+        if (selectedStation) {
+            form.append("stationId", selectedStation);
+        }
 
-        const res = await fetch("/api/rentals/book", {
+        const res = await fetch("/api/rental/book", {
             method: "POST",
             body: form
         });
@@ -169,6 +172,11 @@ async function bookNow() {
 
         try {
             const rental = JSON.parse(text);
+
+            if (!res.ok) {
+                alert(rental);
+                return;
+            }
 
             if (!rental || !rental.id) {
                 alert("Lỗi từ server!");
