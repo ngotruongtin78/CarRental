@@ -50,6 +50,8 @@ public class SecurityConfig {
 
         http.authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/home", "/register", "/css/**", "/js/**", "/images/**").permitAll()
+                        .requestMatchers("/admin/**", "/api/vehicles/admin/**", "/api/stations/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/staff/**", "/api/staff/**", "/api/staff/return/**").hasRole("STAFF")
                         .anyRequest().authenticated()
                 )
                 .formLogin(login -> login
