@@ -16,7 +16,7 @@
             <li><a th:href="@{/home}"><i class="fas fa-home"></i> Trang chủ</a></li>
             <li><a th:href="@{/datxe}"><i class="fas fa-bicycle"></i> Đặt xe</a></li>
             <li class="active"><a href="#"><i class="fas fa-history"></i> Lịch sử thuê</a></li>
-            <li><a th:href="@{/profile}"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
+            <li><a th:href="@{/ho-so}"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
         </ul>
     </div>
 
@@ -26,8 +26,9 @@
                 <input type="text" placeholder="Tìm điểm thuê gần bạn">
             </div>
             <div class="auth-buttons">
-                <a th:href="@{/login}" class="btn-login">Đăng nhập</a>
-                <a th:href="@{/register}" class="btn-register">Đăng ký</a>
+                <div class="user-info">
+                    <span class="welcome-text">Xin chào, <b th:text="${#authentication?.name}">---</b></span>
+                </div>
             </div>
         </div>
 
@@ -50,6 +51,11 @@
                 <label for="vehicle-type-filter">Loại xe:</label>
                 <select id="vehicle-type-filter" class="form-select">
                     <option value="all">Tất cả</option>
+                    <option value="4cho">Ô tô 4 chỗ</option>
+                    <option value="7cho">Ô tô 7 chỗ</option>
+                    <option value="sedan">Sedan</option>
+                    <option value="suv">SUV</option>
+                    <option value="xe_dien">Xe điện</option>
                     <option value="scooter">Xe tay ga điện</option>
                     <option value="bike">Xe đạp điện</option>
                 </select>
@@ -59,58 +65,7 @@
 
         <div class="card rental-history-list">
             <h2>Các chuyến thuê của bạn</h2>
-            <div class="history-item">
-                <div class="item-header">
-                    <span class="trip-id">#12345</span>
-                    <span class="trip-date">20/11/2023 - 21/11/2023</span>
-                </div>
-                <div class="item-details">
-                    <div class="detail-group">
-                        <i class="fas fa-motorcycle"></i>
-                        <p>Xe: Tay ga điện (ABC-123)</p>
-                    </div>
-                    <div class="detail-group">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <p>Điểm thuê: Q1 - Trần Hưng Đạo</p>
-                    </div>
-                    <div class="detail-group">
-                        <i class="fas fa-route"></i>
-                        <p>Quãng đường: 35 km</p>
-                    </div>
-                    <div class="detail-group">
-                        <i class="fas fa-dollar-sign"></i>
-                        <p>Chi phí: 150.000 VNĐ</p>
-                    </div>
-                </div>
-                <button class="btn-view-details">Xem chi tiết</button>
-            </div>
-
-            <div class="history-item">
-                <div class="item-header">
-                    <span class="trip-id">#12344</span>
-                    <span class="trip-date">10/11/2023 - 10/11/2023</span>
-                </div>
-                <div class="item-details">
-                    <div class="detail-group">
-                        <i class="fas fa-bicycle"></i>
-                        <p>Xe: Đạp điện (XYZ-456)</p>
-                    </div>
-                    <div class="detail-group">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <p>Điểm thuê: Q3 - Nam Kỳ Khởi Nghĩa</p>
-                    </div>
-                    <div class="detail-group">
-                        <i class="fas fa-route"></i>
-                        <p>Quãng đường: 12 km</p>
-                    </div>
-                    <div class="detail-group">
-                        <i class="fas fa-dollar-sign"></i>
-                        <p>Chi phí: 80.000 VNĐ</p>
-                    </div>
-                </div>
-                <button class="btn-view-details">Xem chi tiết</button>
-            </div>
-
+            <div id="history-list"></div>
         </div>
 
         <div class="card analytics-summary-card">
@@ -119,27 +74,28 @@
                 <div class="analytic-item">
                     <i class="fas fa-bicycle"></i>
                     <p class="analytic-label">Tổng số chuyến</p>
-                    <p class="analytic-value">25</p>
+                    <p class="analytic-value" id="total-trips">0</p>
                 </div>
                 <div class="analytic-item">
                     <i class="fas fa-road"></i>
                     <p class="analytic-label">Tổng quãng đường</p>
-                    <p class="analytic-value">1.250 <small>km</small></p>
+                    <p class="analytic-value" id="total-distance">0 <small>km</small></p>
                 </div>
                 <div class="analytic-item">
                     <i class="fas fa-dollar-sign"></i>
                     <p class="analytic-label">Tổng chi phí</p>
-                    <p class="analytic-value">5.500.000 <small>VNĐ</small></p>
+                    <p class="analytic-value" id="total-spent">0 <small>VNĐ</small></p>
                 </div>
                 <div class="analytic-item">
                     <i class="fas fa-clock"></i>
                     <p class="analytic-label">Thời gian trung bình</p>
-                    <p class="analytic-value">2.5 <small>giờ</small></p>
+                    <p class="analytic-value" id="avg-duration">0 <small>phút</small></p>
                 </div>
             </div>
         </div>
 
     </div>
 </div>
+<script src="/js/lichsuthue.js"></script>
 </body>
 </html>
