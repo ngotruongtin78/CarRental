@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
+import java.util.function.Consumer;
 
 @RestController
 @RequestMapping("/api/renter")
@@ -27,109 +28,77 @@ public class RenterController {
         return auth != null ? auth.getName() : null;
     }
 
-    @PostMapping("/upload-license")
-    public ResponseEntity<?> uploadLicense(@RequestParam("file") MultipartFile file) {
-        try {
-            String username = getCurrentUsername();
-            if (username == null) return ResponseEntity.status(401).body("Unauthorized");
+    private ResponseEntity<User> resolveCurrentUser() {
+        String username = getCurrentUsername();
+        if (username == null) {
+            return ResponseEntity.status(401).build();
+        }
 
+        User user = repo.findByUsername(username);
+        if (user == null) {
+            return ResponseEntity.status(404).build();
+        }
+
+        return ResponseEntity.ok(user);
+    }
+
+    private ResponseEntity<?> storeDocument(MultipartFile file, Consumer<User> setter) {
+        try {
             if (file == null || file.isEmpty()) {
                 return ResponseEntity.badRequest().body("File trống");
             }
 
-            User user = repo.findByUsername(username);
-            if (user == null) return ResponseEntity.status(404).body("User not found");
+            ResponseEntity<User> resolved = resolveCurrentUser();
+            if (!resolved.getStatusCode().is2xxSuccessful()) {
+                return ResponseEntity.status(resolved.getStatusCode()).build();
+            }
 
-            user.setLicenseData(new Binary(BsonBinarySubType.BINARY, file.getBytes()));
+            User user = resolved.getBody();
+            setter.accept(user);
             repo.save(user);
 
             return ResponseEntity.ok(Map.of("status", "OK"));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Upload license failed");
+            return ResponseEntity.internalServerError().body("Upload thất bại");
         }
     }
 
-    @PostMapping("/request-verification")
-    public ResponseEntity<?> requestVerification() {
-        String username = getCurrentUsername();
-        if (username == null) return ResponseEntity.status(401).body("Unauthorized");
-
-        User user = repo.findByUsername(username);
-        if (user == null) return ResponseEntity.status(404).body("User not found");
-
-        if (user.isVerificationRequested() || user.isVerified()) {
-            return ResponseEntity.ok("ALREADY_REQUESTED_OR_VERIFIED");
-        }
-
-        user.setVerificationRequested(true);
-        repo.save(user);
-
-        return ResponseEntity.ok("REQUEST_SUBMITTED");
-    }
-
-    @PostMapping("/request-verification")
-    public ResponseEntity<?> requestVerification() {
-        String username = getCurrentUsername();
-        if (username == null) return ResponseEntity.status(401).body("Unauthorized");
-
-        User user = repo.findByUsername(username);
-        if (user == null) return ResponseEntity.status(404).body("User not found");
-
-        if (user.isVerificationRequested() || user.isVerified()) {
-            return ResponseEntity.ok("ALREADY_REQUESTED_OR_VERIFIED");
-        }
-
-        user.setVerificationRequested(true);
-        repo.save(user);
-
-        return ResponseEntity.ok("REQUEST_SUBMITTED");
+    @PostMapping("/upload-license")
+    public ResponseEntity<?> uploadLicense(@RequestParam("file") MultipartFile file) {
+        return storeDocument(file, user -> user.setLicenseData(new Binary(BsonBinarySubType.BINARY, file.getBytes())));
     }
 
     @PostMapping("/upload-idcard")
     public ResponseEntity<?> uploadIdCard(@RequestParam("file") MultipartFile file) {
-        try {
-            String username = getCurrentUsername();
-            if (username == null) return ResponseEntity.status(401).body("Unauthorized");
+        return storeDocument(file, user -> user.setIdCardData(new Binary(BsonBinarySubType.BINARY, file.getBytes())));
+    }
 
-            if (file == null || file.isEmpty()) {
-                return ResponseEntity.badRequest().body("File trống");
-            }
-
-            User user = repo.findByUsername(username);
-            if (user == null) return ResponseEntity.status(404).body("User not found");
-
-            user.setIdCardData(new Binary(BsonBinarySubType.BINARY, file.getBytes()));
-            repo.save(user);
-
-            return ResponseEntity.ok(Map.of("status", "OK"));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Upload idcard failed");
+    @PostMapping("/request-verification")
+    public ResponseEntity<?> requestVerification() {
+        ResponseEntity<User> resolved = resolveCurrentUser();
+        if (!resolved.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(resolved.getStatusCode()).body("Unauthorized");
         }
+
+        User user = resolved.getBody();
+        if (user.isVerificationRequested() || user.isVerified()) {
+            return ResponseEntity.ok("ALREADY_REQUESTED_OR_VERIFIED");
+        }
+
+        user.setVerificationRequested(true);
+        repo.save(user);
+
+        return ResponseEntity.ok("REQUEST_SUBMITTED");
     }
 
     @GetMapping("/verification-status")
     public ResponseEntity<?> verificationStatus() {
-        String username = getCurrentUsername();
-        if (username == null) return ResponseEntity.status(401).body("Unauthorized");
+        ResponseEntity<User> resolved = resolveCurrentUser();
+        if (!resolved.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(resolved.getStatusCode()).body("Unauthorized");
+        }
 
-        User user = repo.findByUsername(username);
-        if (user == null) return ResponseEntity.status(404).body("User not found");
-
-        return ResponseEntity.ok(Map.of(
-                "licenseUploaded", user.getLicenseData() != null,
-                "idCardUploaded", user.getIdCardData() != null,
-                "verificationRequested", user.isVerificationRequested(),
-                "verified", user.isVerified()
-        ));
-    }
-
-    @GetMapping("/verification-status")
-    public ResponseEntity<?> verificationStatus() {
-        String username = getCurrentUsername();
-        if (username == null) return ResponseEntity.status(401).body("Unauthorized");
-
-        User user = repo.findByUsername(username);
-        if (user == null) return ResponseEntity.status(404).body("User not found");
+        User user = resolved.getBody();
 
         return ResponseEntity.ok(Map.of(
                 "licenseUploaded", user.getLicenseData() != null,
