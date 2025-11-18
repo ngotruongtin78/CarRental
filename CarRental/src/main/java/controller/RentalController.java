@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/rental")
@@ -92,6 +93,23 @@ public class RentalController {
         if ("PENDING_PAYMENT".equalsIgnoreCase(bookingState) && vehicle.getPendingRentalId() != null) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Xe đang chờ thanh toán");
         }
+        int rentalDays = (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        if (rentalDays < 1) rentalDays = 1;
+
+        LocalDate startDate;
+        LocalDate endDate;
+        try {
+            startDate = startDateStr != null && !startDateStr.isBlank()
+                    ? LocalDate.parse(startDateStr)
+                    : LocalDate.now();
+            endDate = endDateStr != null && !endDateStr.isBlank()
+                    ? LocalDate.parse(endDateStr)
+                    : startDate;
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid date format");
+        }
+        int rentalDays = (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        if (rentalDays < 1) rentalDays = 1;
 
         final LocalDate startDate;
         final LocalDate endDate;
