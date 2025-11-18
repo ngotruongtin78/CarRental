@@ -64,6 +64,22 @@ public class PaymentController {
         return false;
     }
 
+    private boolean expireIfNeeded(RentalRecord record) {
+        if (record == null) return false;
+
+        boolean pending = "PENDING_PAYMENT".equalsIgnoreCase(record.getStatus());
+        boolean expired = record.getHoldExpiresAt() != null && LocalDateTime.now().isAfter(record.getHoldExpiresAt());
+        if (pending && expired) {
+            record.setStatus("CANCELLED");
+            record.setPaymentStatus("EXPIRED");
+            record.setHoldExpiresAt(null);
+            rentalRepo.save(record);
+            vehicleService.releaseHold(record.getVehicleId(), record.getId());
+            return true;
+        }
+        return false;
+    }
+
     @PostMapping("/create-order")
     public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> req) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
