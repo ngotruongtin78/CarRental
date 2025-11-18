@@ -178,7 +178,7 @@ public class RentalController {
     }
 
     @GetMapping("/{rentalId}")
-    public ResponseEntity<?> getRental(@PathVariable String rentalId) {
+    public ResponseEntity<?> getRental(@PathVariable("rentalId") String rentalId) {
         try {
             String username = getCurrentUsername();
             RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
@@ -233,7 +233,7 @@ public class RentalController {
     }
 
     @PostMapping("/{rentalId}/payment")
-    public ResponseEntity<?> confirmPayment(@PathVariable String rentalId, @RequestBody Map<String, String> body) {
+    public ResponseEntity<?> confirmPayment(@PathVariable("rentalId") String rentalId, @RequestBody Map<String, String> body) {
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
@@ -283,7 +283,7 @@ public class RentalController {
     }
 
     @PostMapping("/{rentalId}/cancel")
-    public ResponseEntity<?> cancelRental(@PathVariable String rentalId) {
+    public ResponseEntity<?> cancelRental(@PathVariable("rentalId") String rentalId) {
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
@@ -301,7 +301,7 @@ public class RentalController {
     }
 
     @PostMapping("/{rentalId}/sign-contract")
-    public Map<String, Object> signContract(@PathVariable String rentalId) {
+    public Map<String, Object> signContract(@PathVariable("rentalId") String rentalId) {
         String username = getCurrentUsername();
         RentalRecord record = rentalRecordService.signContract(rentalId, username);
         if (record == null) return Map.of("error", "Rental not found or unauthorized");
@@ -309,7 +309,7 @@ public class RentalController {
     }
 
     @PostMapping("/{rentalId}/check-in")
-    public Map<String, Object> checkIn(@PathVariable String rentalId, @RequestBody(required = false) Map<String, String> body) {
+    public Map<String, Object> checkIn(@PathVariable("rentalId") String rentalId, @RequestBody(required = false) Map<String, String> body) {
         String username = getCurrentUsername();
         String notes = body != null ? body.getOrDefault("notes", "") : "";
 
@@ -325,7 +325,7 @@ public class RentalController {
     }
 
     @PostMapping("/{rentalId}/return")
-    public Map<String, Object> requestReturn(@PathVariable String rentalId, @RequestBody(required = false) Map<String, String> body) {
+    public Map<String, Object> requestReturn(@PathVariable("rentalId") String rentalId, @RequestBody(required = false) Map<String, String> body) {
         String username = getCurrentUsername();
         String notes = body != null ? body.getOrDefault("notes", "") : "";
 

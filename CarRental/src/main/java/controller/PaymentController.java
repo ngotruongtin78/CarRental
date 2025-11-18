@@ -171,7 +171,9 @@ public class PaymentController {
     }
 
     @GetMapping("/return")
-    public RedirectView paymentReturn(@RequestParam String rentalId, @RequestParam(required = false) String status, @RequestParam(required = false) String amount) {
+    public RedirectView paymentReturn(@RequestParam("rentalId") String rentalId,
+                                      @RequestParam(value = "status", required = false) String status,
+                                      @RequestParam(value = "amount", required = false) String amount) {
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record != null) {
             if (expireIfNeeded(record)) {
@@ -195,7 +197,7 @@ public class PaymentController {
     }
 
     @GetMapping("/cancel")
-    public RedirectView paymentCancel(@RequestParam String rentalId) {
+    public RedirectView paymentCancel(@RequestParam("rentalId") String rentalId) {
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record != null) {
             record.setPaymentStatus("CANCELLED");
