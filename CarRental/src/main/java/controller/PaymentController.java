@@ -70,7 +70,8 @@ public class PaymentController {
     }
 
     @PostMapping("/create-order")
-    public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> req) {
+    public ResponseEntity<?> createOrder(@RequestBody(required = false) Map<String, Object> req,
+                                         @RequestParam(value = "rentalId", required = false) String rentalIdParam) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth != null ? auth.getName() : null;
 
@@ -78,7 +79,13 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Bạn cần đăng nhập để thanh toán");
         }
 
-        String rentalId = (String) req.get("rentalId");
+        String rentalId = null;
+        if (req != null && req.get("rentalId") instanceof String) {
+            rentalId = (String) req.get("rentalId");
+        }
+        if (rentalId == null || rentalId.isEmpty()) {
+            rentalId = rentalIdParam;
+        }
         if (rentalId == null || rentalId.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Thiếu mã chuyến thuê");
         }
