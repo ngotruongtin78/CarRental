@@ -19,6 +19,9 @@ public class SepayQRData {
     @JsonProperty("account_number")
     private String accountNumber;
 
+    @JsonProperty("description")
+    private String description;
+
     @JsonProperty("amount")
     private int amount;
 
@@ -60,6 +63,14 @@ public class SepayQRData {
 
     public void setAccountNumber(String accountNumber) {
         this.accountNumber = accountNumber;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public int getAmount() {

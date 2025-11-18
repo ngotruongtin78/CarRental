@@ -51,7 +51,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> auth
                         .requestMatchers("/admin/**", "/api/vehicles/admin/**", "/api/stations/admin/**").hasRole("ADMIN")
                         .requestMatchers("/staff/**", "/api/staff/**", "/api/staff/return/**").hasRole("STAFF")
-                        .requestMatchers("/payment/webhook", "/api/payment/webhook", "/payment/return", "/payment/cancel").permitAll()
+                        .requestMatchers("/payment/webhook", "/api/payment/webhook", "/api/sepay/webhook", "/payment/return", "/payment/cancel").permitAll()
                         .requestMatchers("/datxe", "/thanhtoan", "/sepay-qr", "/payos-qr", "/lichsuthue", "/user-hosocanhan",
                                 "/api/rental/**", "/api/payment/**").authenticated()
                         .requestMatchers("/", "/home", "/register", "/css/**", "/js/**", "/images/**",

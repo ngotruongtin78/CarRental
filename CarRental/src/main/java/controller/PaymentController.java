@@ -114,10 +114,11 @@ public class PaymentController {
 
         Map<String, Object> payload = new LinkedHashMap<>();
         int amountInt = (int) Math.round(amount);
-        String description = "Thanh toan don hang #" + rentalId;
+        // SePay khuyến nghị đặt description chính là mã đơn để webhook đối chiếu dễ dàng
+        String description = rentalId;
 
         try {
-            SepayQRData qrData = sepayService.createPaymentQR(amountInt, description);
+            SepayQRData qrData = sepayService.generateQR(amountInt, description);
             payload.put("amount", amountInt);
             payload.put("description", description);
             payload.put("qrUrl", qrData.getQrUrl());
@@ -127,11 +128,30 @@ public class PaymentController {
             payload.put("accountNumber", Optional.ofNullable(qrData.getAccountNumber()).orElse(accountNumber));
             payload.put("rentalId", rentalId);
             payload.put("status", "OK");
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
         } catch (IllegalStateException ex) {
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ex.getMessage());
         }
 
         return ResponseEntity.ok(payload);
+    }
+
+    @GetMapping("/create-qr")
+    public ResponseEntity<?> createQr(@RequestParam int amount, @RequestParam String description) {
+        if (amount <= 0 || description == null || description.isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Thiếu số tiền hoặc mô tả thanh toán");
+        }
+
+        try {
+            SepayQRData qrData = sepayService.generateQR(amount, description);
+            return ResponseEntity.ok(qrData);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ex.getMessage());
+        }
     }
 
     @GetMapping("/return")
