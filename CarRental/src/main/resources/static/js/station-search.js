@@ -97,8 +97,9 @@ async function locateNearestStation({ inputId = "station-search", buttonId = "bt
             });
 
             if (best) {
-                input.value = `${best.name} (${bestDistance.toFixed(1)} km)`;
-                hintEl.textContent = `Gợi ý: ${best.address || ""}`;
+                input.value = best.name;
+                const distanceText = Number.isFinite(bestDistance) ? ` (~${bestDistance.toFixed(1)} km)` : "";
+                hintEl.textContent = `Gợi ý: ${best.address || ""}${distanceText}`;
             } else {
                 hintEl.textContent = "Không tìm được trạm phù hợp.";
             }
