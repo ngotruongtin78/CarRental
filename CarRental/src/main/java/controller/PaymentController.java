@@ -20,7 +20,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @RestController
-@RequestMapping("/payment")
+@RequestMapping({"/payment", "/api/payment"})
 public class PaymentController {
 
     private final String accountName;

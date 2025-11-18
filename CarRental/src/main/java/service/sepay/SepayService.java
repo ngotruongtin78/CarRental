@@ -1,13 +1,12 @@
 package CarRental.example.service.sepay;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,14 +18,11 @@ public class SepayService {
     private final String accountNumber;
     private final String endpoint;
 
-    public SepayService(RestTemplateBuilder builder,
+    public SepayService(RestTemplate restTemplate,
                         @Value("${sepay.api-key:}") String apiKey,
                         @Value("${sepay.account-number:}") String accountNumber,
                         @Value("${sepay.endpoint:https://api.sepay.vn/v1/transactions/generate}") String endpoint) {
-        this.restTemplate = builder
-                .setConnectTimeout(Duration.ofSeconds(10))
-                .setReadTimeout(Duration.ofSeconds(15))
-                .build();
+        this.restTemplate = restTemplate;
         this.apiKey = apiKey;
         this.accountNumber = accountNumber;
         this.endpoint = endpoint;
@@ -56,15 +52,27 @@ public class SepayService {
                     SepayQRResponse.class
             );
 
-            if (!response.getStatusCode().is2xxSuccessful()) {
-                throw new IllegalStateException("SePay trả về lỗi HTTP " + response.getStatusCode());
+            SepayQRResponse body = response.getBody();
+            if (body == null) {
+                throw new IllegalStateException("Không nhận được phản hồi từ SePay");
             }
 
-            SepayQRResponse body = response.getBody();
-            if (body == null || body.getData() == null) {
-                throw new IllegalStateException("Không nhận được dữ liệu QR từ SePay");
+            if (!"success".equalsIgnoreCase(body.getStatus()) || body.getData() == null) {
+                String message = body.getMessage();
+                if (message == null || message.isBlank()) {
+                    message = "SePay không trả về mã QR";
+                }
+                throw new IllegalStateException(message);
             }
+
             return body.getData();
+        } catch (HttpStatusCodeException ex) {
+            String detail = ex.getResponseBodyAsString();
+            String errorMsg = "SePay trả về lỗi: " + ex.getStatusCode();
+            if (detail != null && !detail.isBlank()) {
+                errorMsg += " - " + detail;
+            }
+            throw new IllegalStateException(errorMsg, ex);
         } catch (RestClientException ex) {
             throw new IllegalStateException("Gọi SePay thất bại: " + ex.getMessage(), ex);
         }
