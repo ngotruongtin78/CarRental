@@ -25,12 +25,12 @@ public class VehicleController {
     }
 
     @GetMapping("/{id}")
-    public Optional<Vehicle> getVehicle(@PathVariable String id) {
+    public Optional<Vehicle> getVehicle(@PathVariable("id") String id) {
         return repo.findById(id);
     }
 
     @GetMapping("/admin/{id}")
-    public Optional<Vehicle> getVehicleById(@PathVariable String id) {
+    public Optional<Vehicle> getVehicleById(@PathVariable("id") String id) {
         return repo.findById(id);
     }
 
@@ -40,13 +40,13 @@ public class VehicleController {
     }
 
     @PutMapping("/admin/update/{id}")
-    public Vehicle updateVehicle(@PathVariable String id, @RequestBody Vehicle updatedVehicle) {
+    public Vehicle updateVehicle(@PathVariable("id") String id, @RequestBody Vehicle updatedVehicle) {
         updatedVehicle.setId(id);
         return repo.save(updatedVehicle);
     }
 
     @DeleteMapping("/admin/delete/{id}")
-    public String deleteVehicle(@PathVariable String id) {
+    public String deleteVehicle(@PathVariable("id") String id) {
         repo.deleteById(id);
         return "Delete vehicle " + id + " success";
     }
