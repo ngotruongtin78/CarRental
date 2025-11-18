@@ -176,7 +176,7 @@ async function confirmPayment() {
     const latestTotal = data.total || totalAmount;
     document.querySelector(".detail-value.total-fee").innerText = latestTotal.toLocaleString("vi-VN") + " VNĐ";
     if (method === "bank_transfer") {
-        window.location.href = `/payos-qr?rentalId=${encodeURIComponent(rentalId)}`;
+        window.location.href = `/sepay-qr?rentalId=${encodeURIComponent(rentalId)}`;
     } else {
         alert("Đã lưu phương thức thanh toán. Vui lòng tới trạm để hoàn tất thanh toán tiền mặt!");
     }
@@ -196,7 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("Thanh toán chuyển khoản thành công!");
     }
     if (params.get("cancel")) {
-        alert("Bạn đã hủy thanh toán PayOS.");
+        alert("Bạn đã hủy thanh toán SePay.");
     }
 
     document.querySelector(".btn-confirm-payment").onclick = confirmPayment;

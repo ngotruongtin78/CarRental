@@ -52,7 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**", "/api/vehicles/admin/**", "/api/stations/admin/**").hasRole("ADMIN")
                         .requestMatchers("/staff/**", "/api/staff/**", "/api/staff/return/**").hasRole("STAFF")
                         .requestMatchers("/", "/home", "/register", "/css/**", "/js/**", "/images/**",
-                                "/datxe", "/payos-qr", "/api/stations/**", "/api/vehicles/**").permitAll()
+                                "/datxe", "/sepay-qr", "/api/stations/**", "/api/vehicles/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(login -> login

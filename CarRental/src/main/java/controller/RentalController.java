@@ -93,23 +93,6 @@ public class RentalController {
         if ("PENDING_PAYMENT".equalsIgnoreCase(bookingState) && vehicle.getPendingRentalId() != null) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Xe đang chờ thanh toán");
         }
-        int rentalDays = (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
-        if (rentalDays < 1) rentalDays = 1;
-
-        LocalDate startDate;
-        LocalDate endDate;
-        try {
-            startDate = startDateStr != null && !startDateStr.isBlank()
-                    ? LocalDate.parse(startDateStr)
-                    : LocalDate.now();
-            endDate = endDateStr != null && !endDateStr.isBlank()
-                    ? LocalDate.parse(endDateStr)
-                    : startDate;
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid date format");
-        }
-        int rentalDays = (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
-        if (rentalDays < 1) rentalDays = 1;
 
         final LocalDate startDate;
         final LocalDate endDate;
@@ -219,6 +202,8 @@ public class RentalController {
             }
         }
 
+        record.setStatus("CANCELLED");
+        record.setPaymentStatus("CANCELLED");
         rentalRepo.save(record);
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("paymentStatus", record.getPaymentStatus());
