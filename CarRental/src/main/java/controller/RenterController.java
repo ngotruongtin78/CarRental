@@ -57,7 +57,11 @@ public class RenterController {
             setter.accept(user);
             repo.save(user);
 
-            return ResponseEntity.ok(Map.of("status", "OK"));
+            return ResponseEntity.ok(Map.of(
+                    "status", "OK",
+                    "licenseUploaded", user.getLicenseData() != null,
+                    "idCardUploaded", user.getIdCardData() != null
+            ));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Upload thất bại");
         }

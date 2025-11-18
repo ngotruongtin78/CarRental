@@ -82,9 +82,19 @@ public class RentalController {
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
         Vehicle vehicle = vehicleRepo.findById(vehicleId).orElse(null);
-        if (vehicle == null || !vehicle.isAvailable()) {
+        if (vehicle == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Vehicle not available");
         }
+
+        String bookingState = vehicle.getBookingStatus() == null ? "AVAILABLE" : vehicle.getBookingStatus();
+        if ("RENTED".equalsIgnoreCase(bookingState)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Vehicle already rented");
+        }
+        if ("PENDING_PAYMENT".equalsIgnoreCase(bookingState) && vehicle.getPendingRentalId() != null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Xe đang chờ thanh toán");
+        }
+        int rentalDays = (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        if (rentalDays < 1) rentalDays = 1;
 
         LocalDate startDate;
         LocalDate endDate;
@@ -116,10 +126,17 @@ public class RentalController {
         record.setStartTime(startDate.atStartOfDay());
         record.setEndTime(endDate.plusDays(1).atStartOfDay());
         record.setTotal(vehicle.getPrice() * rentalDays);
-        record.setStatus("BOOKED");
+        record.setStatus("PENDING_PAYMENT");
+        record.setPaymentStatus("PENDING");
 
         rentalRepo.save(record);
-        vehicleRepo.updateAvailable(vehicleId, false);
+        boolean held = vehicleService.markPendingPayment(vehicleId, rentalId);
+        if (!held) {
+            record.setStatus("CANCELLED");
+            record.setPaymentStatus("CANCELLED");
+            rentalRepo.save(record);
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Xe đang chờ thanh toán");
+        }
 
         return ResponseEntity.ok(record);
     }
@@ -176,6 +193,7 @@ public class RentalController {
         record.setTotal(calculatedTotal);
         record.setPaymentMethod(method);
         record.setPaymentStatus(method.equals("cash") ? "PAY_AT_STATION" : "BANK_TRANSFER");
+        record.setStatus("PENDING_PAYMENT");
 
         if (method.equals("bank_transfer")) {
             User user = userRepository.findByUsername(username);
@@ -192,6 +210,23 @@ public class RentalController {
         response.put("rentalDays", rentalDays);
         response.put("paymentMethod", method);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{rentalId}/cancel")
+    public ResponseEntity<?> cancelRental(@PathVariable String rentalId) {
+        String username = getCurrentUsername();
+        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+
+        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        if (record == null || !Objects.equals(record.getUsername(), username)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
+        }
+
+        record.setStatus("CANCELLED");
+        record.setPaymentStatus("CANCELLED");
+        rentalRepo.save(record);
+        vehicleService.releaseHold(record.getVehicleId(), rentalId);
+        return ResponseEntity.ok(Map.of("status", "CANCELLED"));
     }
 
     @PostMapping("/{rentalId}/sign-contract")

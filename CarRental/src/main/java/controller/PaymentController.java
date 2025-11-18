@@ -4,12 +4,14 @@ import CarRental.example.repository.RentalRecordRepository;
 import CarRental.example.repository.VehicleRepository;
 import CarRental.example.document.RentalRecord;
 import CarRental.example.document.Vehicle;
+import CarRental.example.service.VehicleService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.servlet.view.RedirectView;
 import javax.crypto.Mac;
@@ -35,15 +37,21 @@ public class PaymentController {
 
     private final RentalRecordRepository rentalRepo;
     private final VehicleRepository vehicleRepository;
+    private final VehicleService vehicleService;
 
-    public PaymentController(RentalRecordRepository rentalRepo, VehicleRepository vehicleRepository) {
+    public PaymentController(RentalRecordRepository rentalRepo, VehicleRepository vehicleRepository, VehicleService vehicleService) {
         this.rentalRepo = rentalRepo;
         this.vehicleRepository = vehicleRepository;
+        this.vehicleService = vehicleService;
     }
 
     @PostMapping("/create-order")
     public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> req) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth != null ? auth.getName() : null;
+        if (username == null || "anonymousUser".equalsIgnoreCase(username)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Bạn cần đăng nhập để thanh toán");
+        }
         String rentalId = (String) req.get("rentalId");
         if (rentalId == null || rentalId.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Thiếu mã chuyến thuê");
@@ -58,6 +66,10 @@ public class PaymentController {
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy chuyến thuê");
+        }
+
+        if (record.getPaymentStatus() != null && "PAID".equalsIgnoreCase(record.getPaymentStatus())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Chuyến thuê đã thanh toán");
         }
 
         Vehicle vehicle = vehicleRepository.findById(record.getVehicleId()).orElse(null);
@@ -77,6 +89,7 @@ public class PaymentController {
         record.setTotal(amount);
         record.setPaymentMethod("bank_transfer");
         record.setPaymentStatus("PENDING");
+        record.setStatus("PENDING_PAYMENT");
         rentalRepo.save(record);
 
         try {
@@ -177,7 +190,9 @@ public class PaymentController {
                 try { record.setTotal(Double.parseDouble(amount)); } catch (NumberFormatException ignored) {}
             }
             record.setPaidAt(LocalDateTime.now());
+            record.setStatus("PAID");
             rentalRepo.save(record);
+            vehicleService.markRented(record.getVehicleId(), rentalId);
         }
         RedirectView redirectView = new RedirectView("/thanhtoan?rentalId=" + rentalId + "&success=1");
         redirectView.setExposeModelAttributes(false);
@@ -189,7 +204,9 @@ public class PaymentController {
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record != null) {
             record.setPaymentStatus("CANCELLED");
+            record.setStatus("CANCELLED");
             rentalRepo.save(record);
+            vehicleService.releaseHold(record.getVehicleId(), rentalId);
         }
         RedirectView redirectView = new RedirectView("/thanhtoan?rentalId=" + rentalId + "&cancel=1");
         redirectView.setExposeModelAttributes(false);
