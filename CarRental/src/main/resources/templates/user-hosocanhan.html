@@ -26,10 +26,6 @@
     <div class="content-area">
 
         <div class="top-bar">
-            <div class="search-bar">
-                <input type="text" placeholder="Tìm điểm thuê gần bạn">
-            </div>
-
             <div class="auth-buttons">
                 <div sec:authorize="isAnonymous()">
                     <a href="/login" class="btn-login">Đăng nhập</a>
@@ -85,7 +81,7 @@
                 <div class="activity-item">
                     <i class="fas fa-road"></i>
                     <p class="activity-label">Thời gian TB/chuyến</p>
-                    <p class="activity-value" id="stat-avg">0 phút</p>
+                    <p class="activity-value" id="stat-avg">0 ngày</p>
                 </div>
 
                 <div class="activity-item">
@@ -119,8 +115,9 @@
         const s = await res.json();
 
         document.getElementById("stat-trips").innerText = s.totalTrips ?? 0;
-        const avg = s.averageDurationMinutes ? s.averageDurationMinutes.toFixed(1) : 0;
-        document.getElementById("stat-avg").innerText = avg + " phút";
+        const avgMinutes = s.averageDurationMinutes ?? 0;
+        const avgDays = typeof s.averageDurationDays === "number" ? s.averageDurationDays : avgMinutes / (60 * 24);
+        document.getElementById("stat-avg").innerText = avgDays.toFixed(1) + " ngày";
         const spent = s.totalSpent ? s.totalSpent.toLocaleString('vi-VN') : 0;
         document.getElementById("stat-spent").innerText = spent + " đ";
     }

@@ -30,7 +30,9 @@
 
         <div class="top-bar">
             <div class="search-bar">
-                <input type="text" placeholder="Tìm điểm thuê gần bạn">
+                <input id="station-search" type="text" placeholder="Tìm điểm thuê gần bạn">
+                <button id="btn-find-station" type="button"><i class="fas fa-location-crosshairs"></i></button>
+                <div id="station-hint" class="station-hint"></div>
             </div>
 
             <div class="auth-buttons">
@@ -121,6 +123,7 @@
     </div>
 </div>
 
+<script src="/js/station-search.js"></script>
 <script src="/js/datxe.js"></script>
 
 </body>

@@ -36,14 +36,17 @@ public class SepayWebhookHandler {
                 .matcher(lower);
 
         if (matcher.find()) {
-            rentalId = matcher.group(1);
+            rentalId = matcher.group(0); // giữ nguyên prefix rental để khớp với id trong DB
             log.info("===> rentalId lấy theo regex rentalXX: {}", rentalId);
         }
 
         if ((rentalId == null || rentalId.isEmpty()) && lower.contains("carrental_")) {
-            rentalId = lower.substring(lower.indexOf("carrental_") + "carrental_".length())
+            String digits = lower.substring(lower.indexOf("carrental_") + "carrental_".length())
                     .replaceAll("[^0-9]", "")
                     .trim();
+            if (!digits.isEmpty()) {
+                rentalId = "rental" + digits;
+            }
             log.info("===> rentalId từ CARRENTAL_XX: {}", rentalId);
         }
 
