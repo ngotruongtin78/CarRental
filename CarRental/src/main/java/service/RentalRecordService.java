@@ -36,12 +36,18 @@ public class RentalRecordService {
     }
 
     public List<Map<String, Object>> getHistoryDetails(String username) {
-        List<RentalRecord> records = repo.findByUsername(username);
+        List<RentalRecord> records = repo.findByUsername(username)
+                .stream()
+                .filter(this::isVisibleInHistory)
+                .sorted(Comparator.comparing(RentalRecord::getStartDate,
+                        Comparator.nullsLast(Comparator.naturalOrder())).reversed())
+                .toList();
         List<Map<String, Object>> response = new ArrayList<>();
 
         for (RentalRecord record : records) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("record", record);
+            item.put("displayStatus", translateStatus(record));
 
             vehicleRepository.findById(record.getVehicleId()).ifPresent(vehicle -> {
                 Map<String, Object> vehicleInfo = new LinkedHashMap<>();
@@ -79,7 +85,10 @@ public class RentalRecordService {
     }
 
     public Map<String, Object> calculateStats(String username) {
-        List<RentalRecord> records = repo.findByUsername(username);
+        List<RentalRecord> records = repo.findByUsername(username)
+                .stream()
+                .filter(this::isVisibleInHistory)
+                .toList();
 
         double totalSpent = records.stream()
                 .mapToDouble(RentalRecord::getTotal)
@@ -206,5 +215,41 @@ public class RentalRecordService {
         stats.put("peakValues", peakValues);
 
         return stats;
+    }
+
+    private boolean isVisibleInHistory(RentalRecord record) {
+        if (record == null) return false;
+
+        String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
+        String paymentStatus = Optional.ofNullable(record.getPaymentStatus()).orElse("").toUpperCase();
+
+        boolean cancelled = status.equals("CANCELLED") || status.equals("EXPIRED") || paymentStatus.equals("CANCELLED")
+                || paymentStatus.equals("EXPIRED");
+        boolean unpaid = status.equals("PENDING_PAYMENT") || paymentStatus.equals("PENDING")
+                || paymentStatus.equals("PAY_AT_STATION");
+
+        if (cancelled || unpaid) return false;
+
+        boolean paid = paymentStatus.equals("PAID") || status.equals("PAID");
+        boolean active = status.equals("IN_PROGRESS") || status.equals("WAITING_INSPECTION")
+                || status.equals("COMPLETED") || status.equals("CONTRACT_SIGNED");
+
+        return paid || active;
+    }
+
+    private String translateStatus(RentalRecord record) {
+        String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
+        String paymentStatus = Optional.ofNullable(record.getPaymentStatus()).orElse("").toUpperCase();
+
+        if (paymentStatus.equals("PAID") || status.equals("PAID")) {
+            return "Đã thuê";
+        }
+        return switch (status) {
+            case "IN_PROGRESS" -> "Đang thuê";
+            case "WAITING_INSPECTION" -> "Chờ kiểm tra";
+            case "COMPLETED" -> "Đã hoàn tất";
+            case "CONTRACT_SIGNED" -> "Sẵn sàng nhận xe";
+            default -> "Đã thuê";
+        };
     }
 }

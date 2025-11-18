@@ -1,8 +1,11 @@
+let historyData = [];
+
 function formatDate(dateStr) {
     if (!dateStr) return "";
     const date = new Date(dateStr);
     return `${date.toLocaleDateString()}`;
 }
+
 function renderHistoryItem(item) {
     const record = item.record || {};
     const vehicle = item.vehicle;
@@ -16,6 +19,7 @@ function renderHistoryItem(item) {
     const stationLabel = station ? `${station.name} - ${station.address ?? ""}` : (record.stationId || "");
     const distance = record.distanceKm ? `${Number(record.distanceKm).toFixed(1)} km` : "-";
     const total = record.total ? Number(record.total).toLocaleString("vi-VN") + " VNĐ" : "0";
+    const displayStatus = item.displayStatus || record.displayStatus || record.status || "";
 
     container.innerHTML = `
         <div class="item-header">
@@ -33,7 +37,7 @@ function renderHistoryItem(item) {
             </div>
             <div class="detail-group">
                 <i class="fas fa-info-circle"></i>
-                <p>Trạng thái: ${record.status || ""}</p>
+                <p>Trạng thái: ${displayStatus}</p>
             </div>
             <div class="detail-group">
                 <i class="fas fa-dollar-sign"></i>
@@ -49,6 +53,78 @@ function renderHistoryItem(item) {
     return container;
 }
 
+function renderHistoryList(list) {
+    const listEl = document.getElementById("history-list");
+    if (!list || !list.length) {
+        listEl.innerHTML = "<p>Chưa có chuyến thuê nào.</p>";
+        updateAnalyticsFromHistory([]);
+        return;
+    }
+
+    listEl.innerHTML = "";
+    list.forEach(item => listEl.appendChild(renderHistoryItem(item)));
+    updateAnalyticsFromHistory(list);
+}
+
+function parseDate(input) {
+    if (!input) return null;
+    const dt = new Date(input);
+    return isNaN(dt.getTime()) ? null : dt;
+}
+
+function filterHistory() {
+    const period = document.getElementById("period-filter").value;
+    const vehicleType = document.getElementById("vehicle-type-filter").value;
+    const status = document.getElementById("status-filter").value;
+
+    const now = new Date();
+    const startBoundary = (() => {
+        switch (period) {
+            case "last7days":
+                return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+            case "last30days":
+                return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+            case "thismonth":
+                return new Date(now.getFullYear(), now.getMonth(), 1);
+            case "lastmonth":
+                return new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            case "thisyear":
+                return new Date(now.getFullYear(), 0, 1);
+            default:
+                return null;
+        }
+    })();
+
+    const filtered = historyData.filter(item => {
+        const record = item.record || {};
+        const startDate = parseDate(record.startDate || record.startTime);
+        const displayStatus = (item.displayStatus || record.displayStatus || record.status || "").toLowerCase();
+
+        if (startBoundary && startDate && startDate < startBoundary) return false;
+
+        if (period === "lastmonth") {
+            const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+            if (!startDate || startDate < lastMonthStart || startDate > lastMonthEnd) return false;
+        }
+
+        if (vehicleType !== "all") {
+            const vehicleMatch = (item.vehicle?.type || "").toLowerCase().includes(vehicleType.toLowerCase());
+            if (!vehicleMatch) return false;
+        }
+
+        if (status !== "all") {
+            if (status === "paid" && !displayStatus.includes("thuê")) return false;
+            if (status === "active" && !displayStatus.includes("đang")) return false;
+            if (status === "completed" && !displayStatus.includes("hoàn")) return false;
+        }
+
+        return true;
+    });
+
+    renderHistoryList(filtered);
+}
+
 async function loadHistory() {
     const listEl = document.getElementById("history-list");
     listEl.innerHTML = "<p>Đang tải...</p>";
@@ -59,19 +135,32 @@ async function loadHistory() {
             listEl.innerHTML = "<p>Bạn cần đăng nhập để xem lịch sử.</p>";
             return;
         }
-        const data = await res.json();
-
-        if (!data.length) {
-            listEl.innerHTML = "<p>Chưa có chuyến thuê nào.</p>";
-            return;
-        }
-
-        listEl.innerHTML = "";
-        data.forEach(item => listEl.appendChild(renderHistoryItem(item)));
+        historyData = await res.json();
+        renderHistoryList(historyData);
     } catch (err) {
         console.error("Lỗi loadHistory:", err);
         listEl.innerHTML = "<p>Không tải được lịch sử thuê.</p>";
     }
+}
+
+function updateAnalyticsFromHistory(list) {
+    const totalTrips = list.length;
+    const totalSpent = list.reduce((sum, item) => sum + (item.record?.total || 0), 0);
+    const durations = list
+        .map(item => {
+            const start = parseDate(item.record?.startTime);
+            const end = parseDate(item.record?.endTime);
+            return start && end ? (end - start) / 60000 : null;
+        })
+        .filter(v => v !== null);
+
+    const avgDuration = durations.length
+        ? durations.reduce((a, b) => a + b, 0) / durations.length
+        : 0;
+
+    document.getElementById("total-trips").innerText = totalTrips;
+    document.getElementById("total-spent").innerHTML = `${totalSpent.toLocaleString("vi-VN")} <small>VNĐ</small>`;
+    document.getElementById("avg-duration").innerHTML = `${Math.round(avgDuration)} <small>phút</small>`;
 }
 
 async function loadStats() {
@@ -88,7 +177,77 @@ async function loadStats() {
     }
 }
 
+function toRad(value) {
+    return (value * Math.PI) / 180;
+}
+
+function calcDistanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+async function findNearestStation() {
+    const hintEl = document.getElementById("station-hint");
+    hintEl.textContent = "Đang tìm trạm gần nhất...";
+
+    if (!navigator.geolocation) {
+        hintEl.textContent = "Trình duyệt không hỗ trợ định vị.";
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        try {
+            const res = await fetch("/api/stations");
+            if (!res.ok) {
+                hintEl.textContent = "Không tải được danh sách trạm.";
+                return;
+            }
+            const stations = await res.json();
+            if (!stations.length) {
+                hintEl.textContent = "Chưa có trạm nào.";
+                return;
+            }
+
+            const { latitude, longitude } = pos.coords;
+            let best = null;
+            let bestDistance = Infinity;
+
+            stations.forEach(st => {
+                if (st.latitude == null || st.longitude == null) return;
+                const distance = calcDistanceKm(latitude, longitude, st.latitude, st.longitude);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = st;
+                }
+            });
+
+            if (best) {
+                const input = document.getElementById("station-search");
+                input.value = `${best.name} (${bestDistance.toFixed(1)} km)`;
+                hintEl.textContent = `Gợi ý: ${best.address || ""}`;
+            } else {
+                hintEl.textContent = "Không tìm được trạm phù hợp.";
+            }
+        } catch (err) {
+            console.error(err);
+            hintEl.textContent = "Lỗi khi tìm trạm gần bạn.";
+        }
+    }, () => {
+        hintEl.textContent = "Không thể truy cập vị trí của bạn.";
+    }, { enableHighAccuracy: true, timeout: 8000 });
+}
+
 window.addEventListener("DOMContentLoaded", () => {
     loadHistory();
     loadStats();
+
+    document.querySelector(".btn-filter")?.addEventListener("click", filterHistory);
+    document.getElementById("period-filter")?.addEventListener("change", filterHistory);
+    document.getElementById("vehicle-type-filter")?.addEventListener("change", filterHistory);
+    document.getElementById("status-filter")?.addEventListener("change", filterHistory);
+    document.getElementById("btn-find-station")?.addEventListener("click", findNearestStation);
 });
