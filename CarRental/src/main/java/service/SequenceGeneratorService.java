@@ -23,6 +23,14 @@ public class SequenceGeneratorService {
                 options().returnNew(true).upsert(true),
                 Sequence.class);
 
+        if (counter == null) {
+            Sequence seed = new Sequence();
+            seed.setId(seqName);
+            seed.setSeq(1);
+            mongoOperations.save(seed);
+            return 1;
+        }
+
         return counter.getSeq();
     }
 }
