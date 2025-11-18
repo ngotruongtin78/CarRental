@@ -16,7 +16,7 @@
             <li><a th:href="@{/home}"><i class="fas fa-home"></i> Trang chủ</a></li>
             <li><a th:href="@{/datxe}"><i class="fas fa-bicycle"></i> Đặt xe</a></li>
             <li><a th:href="@{/lichsuthue}"><i class="fas fa-history"></i> Lịch sử thuê</a></li>
-            <li><a th:href="@{/profile}"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
+            <li><a th:href="@{/ho-so}"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
         </ul>
     </div>
 
@@ -26,8 +26,9 @@
                 <input type="text" placeholder="Tìm điểm thuê gần bạn">
             </div>
             <div class="auth-buttons">
-                <a th:href="@{/login}" class="btn-login">Đăng nhập</a>
-                <a th:href="@{/register}" class="btn-register">Đăng ký</a>
+                <div class="user-info">
+                    <span class="welcome-text">Xin chào, <b class="username-label">---</b></span>
+                </div>
             </div>
         </div>
 
@@ -39,57 +40,65 @@
                 <h2>Chi tiết chuyến thuê</h2>
                 <div class="summary-item">
                     <p class="summary-label">Mã chuyến:</p>
-                    <p class="summary-value">#RENT00789</p>
+                    <p class="summary-value rental-code">-</p>
                 </div>
                 <div class="summary-item">
                     <p class="summary-label">Khách hàng:</p>
-                    <p class="summary-value">Nguyễn Văn A</p>
+                    <p class="summary-value customer-name">-</p>
                 </div>
                 <div class="summary-item">
                     <p class="summary-label">Loại xe:</p>
-                    <p class="summary-value">Tay ga điện (ABC-123)</p>
+                    <p class="summary-value vehicle-type">-</p>
                 </div>
                 <div class="summary-item">
                     <p class="summary-label">Điểm thuê:</p>
-                    <p class="summary-value">Q1 - Trần Hưng Đạo</p>
+                    <p class="summary-value station-name">-</p>
                 </div>
                 <div class="summary-item">
                     <p class="summary-label">Thời gian thuê:</p>
-                    <p class="summary-value">20/11/2023 09:00 - 20/11/2023 17:00 (8 giờ)</p>
+                    <p class="summary-value time-range">-</p>
                 </div>
                 <div class="summary-item">
                     <p class="summary-label">Quãng đường:</p>
-                    <p class="summary-value">45 km</p>
+                    <p class="summary-value distance">-</p>
                 </div>
             </div>
 
             <div class="card payment-info-card">
                 <h2>Thông tin thanh toán</h2>
                 <div class="payment-detail-row">
+                    <p class="detail-label">Số ngày thuê:</p>
+                    <p class="detail-value rental-days">-</p>
+                </div>
+                <div class="payment-detail-row">
                     <p class="detail-label">Phí thuê cơ bản:</p>
-                    <p class="detail-value">120.000 VNĐ</p>
+                    <p class="detail-value basic-fee">-</p>
                 </div>
                 <div class="payment-detail-row">
-                    <p class="detail-label">Phí quá giờ:</p>
-                    <p class="detail-value">30.000 VNĐ</p>
-                </div>
-                <div class="payment-detail-row">
-                    <p class="detail-label">Phí phát sinh khác:</p>
-                    <p class="detail-value">0 VNĐ</p>
+                    <p class="detail-label">Phương thức:</p>
+                    <p class="detail-value" id="payment-method-text">-</p>
                 </div>
                 <div class="payment-detail-row total-amount">
                     <p class="detail-label">Tổng cộng:</p>
-                    <p class="detail-value">150.000 VNĐ</p>
+                    <p class="detail-value total-fee">-</p>
                 </div>
 
                 <div class="payment-method-selection">
                     <label for="payment-method">Chọn phương thức thanh toán:</label>
                     <select id="payment-method" class="form-select">
                         <option value="cash">Tiền mặt</option>
-                        <option value="card">Thẻ tín dụng/ghi nợ</option>
-                        <option value="momo">Momo</option>
-                        <option value="zalopay">ZaloPay</option>
+                        <option value="bank_transfer">Chuyển khoản</option>
                     </select>
+                    <p class="note small" style="margin-top:8px; color:#2f4f2f">Tiền mặt: xác nhận GPLX/CCCD tại quầy. Chuyển khoản: hệ thống tính giá theo số ngày thuê.</p>
+                </div>
+
+                <div class="upload-section">
+                    <h3>CCCD & GPLX (bắt buộc nếu chọn chuyển khoản)</h3>
+                    <div class="upload-actions">
+                        <button type="button" class="btn-upload" id="btn-upload-id">Tải CCCD/CMND</button>
+                        <button type="button" class="btn-upload" id="btn-upload-license">Tải GPLX</button>
+                        <span class="upload-status" id="upload-status-text">Chưa tải lên</span>
+                    </div>
                 </div>
 
                 <button class="btn-confirm-payment"><i class="fas fa-check-circle"></i> Xác nhận thanh toán</button>
