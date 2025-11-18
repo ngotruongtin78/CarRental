@@ -26,12 +26,6 @@
     <div class="content-area">
 
         <div class="top-bar">
-            <div class="search-bar">
-                <input id="station-search" type="text" placeholder="Tìm điểm thuê gần bạn">
-                <button id="btn-find-station" type="button"><i class="fas fa-location-crosshairs"></i></button>
-                <div id="station-hint" class="station-hint"></div>
-            </div>
-
             <div class="auth-buttons">
                 <div sec:authorize="isAnonymous()">
                     <a href="/login" class="btn-login">Đăng nhập</a>
@@ -87,7 +81,7 @@
                 <div class="activity-item">
                     <i class="fas fa-road"></i>
                     <p class="activity-label">Thời gian TB/chuyến</p>
-                    <p class="activity-value" id="stat-avg">0 phút</p>
+                    <p class="activity-value" id="stat-avg">0 ngày</p>
                 </div>
 
                 <div class="activity-item">
@@ -106,7 +100,6 @@
     </div>
 </div>
 
-<script src="/js/station-search.js"></script>
 <script>
     async function loadProfile() {
         const res = await fetch("/api/renter/profile");
@@ -122,8 +115,8 @@
         const s = await res.json();
 
         document.getElementById("stat-trips").innerText = s.totalTrips ?? 0;
-        const avg = s.averageDurationMinutes ? s.averageDurationMinutes.toFixed(1) : 0;
-        document.getElementById("stat-avg").innerText = avg + " phút";
+        const avgDays = s.averageDurationMinutes ? (s.averageDurationMinutes / 1440).toFixed(1) : 0;
+        document.getElementById("stat-avg").innerText = avgDays + " ngày";
         const spent = s.totalSpent ? s.totalSpent.toLocaleString('vi-VN') : 0;
         document.getElementById("stat-spent").innerText = spent + " đ";
     }

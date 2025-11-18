@@ -17,7 +17,6 @@ function renderHistoryItem(item) {
     const end = formatDate(record.endDate || record.endTime) || "Chưa trả";
     const vehicleLabel = vehicle ? `${vehicle.brand ?? vehicle.type} (${vehicle.plate})` : record.vehicleId;
     const stationLabel = station ? `${station.name} - ${station.address ?? ""}` : (record.stationId || "");
-    const distance = record.distanceKm ? `${Number(record.distanceKm).toFixed(1)} km` : "-";
     const total = record.total ? Number(record.total).toLocaleString("vi-VN") + " VNĐ" : "0";
     const displayStatus = item.displayStatus || record.displayStatus || record.status || "";
 
@@ -42,10 +41,6 @@ function renderHistoryItem(item) {
             <div class="detail-group">
                 <i class="fas fa-dollar-sign"></i>
                 <p>Chi phí: ${total}</p>
-            </div>
-            <div class="detail-group">
-                <i class="fas fa-road"></i>
-                <p>Quãng đường: ${distance}</p>
             </div>
         </div>
     `;
@@ -96,20 +91,23 @@ function filterHistory() {
     const status = document.getElementById("status-filter").value;
 
     const now = new Date();
-    const startBoundary = (() => {
+    const periodRange = (() => {
         switch (period) {
             case "last7days":
-                return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+                return { start: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7), end: now };
             case "last30days":
-                return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+                return { start: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30), end: now };
             case "thismonth":
-                return new Date(now.getFullYear(), now.getMonth(), 1);
+                return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: now };
             case "lastmonth":
-                return new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                return {
+                    start: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+                    end: new Date(now.getFullYear(), now.getMonth(), 0)
+                };
             case "thisyear":
-                return new Date(now.getFullYear(), 0, 1);
+                return { start: new Date(now.getFullYear(), 0, 1), end: now };
             default:
-                return null;
+                return { start: null, end: null };
         }
     })();
 
@@ -118,13 +116,8 @@ function filterHistory() {
         const startDate = parseDate(record.startDate || record.startTime);
         const displayStatus = (item.displayStatus || record.displayStatus || record.status || "").toLowerCase();
 
-        if (startBoundary && startDate && startDate < startBoundary) return false;
-
-        if (period === "lastmonth") {
-            const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-            if (!startDate || startDate < lastMonthStart || startDate > lastMonthEnd) return false;
-        }
+        if (periodRange.start && (!startDate || startDate < periodRange.start)) return false;
+        if (periodRange.end && startDate && startDate > periodRange.end) return false;
 
         if (vehicleType !== "all" && !matchesVehicleType(item.vehicle?.type, vehicleType)) return false;
 
@@ -169,13 +162,13 @@ function updateAnalyticsFromHistory(list) {
         })
         .filter(v => v !== null);
 
-    const avgDuration = durations.length
-        ? durations.reduce((a, b) => a + b, 0) / durations.length
+    const avgDurationDays = durations.length
+        ? (durations.reduce((a, b) => a + b, 0) / durations.length) / 1440
         : 0;
 
     document.getElementById("total-trips").innerText = totalTrips;
     document.getElementById("total-spent").innerHTML = `${totalSpent.toLocaleString("vi-VN")} <small>VNĐ</small>`;
-    document.getElementById("avg-duration").innerHTML = `${Math.round(avgDuration)} <small>phút</small>`;
+    document.getElementById("avg-duration").innerHTML = `${avgDurationDays.toFixed(1)} <small>ngày</small>`;
 }
 
 async function loadStats() {
@@ -186,74 +179,13 @@ async function loadStats() {
 
         document.getElementById("total-trips").innerText = stats.totalTrips || 0;
         document.getElementById("total-spent").innerHTML = `${(stats.totalSpent || 0).toLocaleString("vi-VN")} <small>VNĐ</small>`;
-        document.getElementById("avg-duration").innerHTML = `${Math.round(stats.averageDurationMinutes || 0)} <small>phút</small>`;
+        const avgDays = stats.averageDurationMinutes
+            ? (stats.averageDurationMinutes / 1440).toFixed(1)
+            : "0.0";
+        document.getElementById("avg-duration").innerHTML = `${avgDays} <small>ngày</small>`;
     } catch (err) {
         console.error("Lỗi loadStats:", err);
     }
-}
-
-function toRad(value) {
-    return (value * Math.PI) / 180;
-}
-
-function calcDistanceKm(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-}
-
-async function findNearestStation() {
-    const hintEl = document.getElementById("station-hint");
-    hintEl.textContent = "Đang tìm trạm gần nhất...";
-
-    if (!navigator.geolocation) {
-        hintEl.textContent = "Trình duyệt không hỗ trợ định vị.";
-        return;
-    }
-
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-        try {
-            const res = await fetch("/api/stations");
-            if (!res.ok) {
-                hintEl.textContent = "Không tải được danh sách trạm.";
-                return;
-            }
-            const stations = await res.json();
-            if (!stations.length) {
-                hintEl.textContent = "Chưa có trạm nào.";
-                return;
-            }
-
-            const { latitude, longitude } = pos.coords;
-            let best = null;
-            let bestDistance = Infinity;
-
-            stations.forEach(st => {
-                if (st.latitude == null || st.longitude == null) return;
-                const distance = calcDistanceKm(latitude, longitude, st.latitude, st.longitude);
-                if (distance < bestDistance) {
-                    bestDistance = distance;
-                    best = st;
-                }
-            });
-
-            if (best) {
-                const input = document.getElementById("station-search");
-                input.value = `${best.name} (${bestDistance.toFixed(1)} km)`;
-                hintEl.textContent = `Gợi ý: ${best.address || ""}`;
-            } else {
-                hintEl.textContent = "Không tìm được trạm phù hợp.";
-            }
-        } catch (err) {
-            console.error(err);
-            hintEl.textContent = "Lỗi khi tìm trạm gần bạn.";
-        }
-    }, () => {
-        hintEl.textContent = "Không thể truy cập vị trí của bạn.";
-    }, { enableHighAccuracy: true, timeout: 8000 });
 }
 
 window.addEventListener("DOMContentLoaded", () => {
