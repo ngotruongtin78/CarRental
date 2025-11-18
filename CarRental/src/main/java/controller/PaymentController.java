@@ -111,7 +111,9 @@ public class PaymentController {
         record.setPaymentMethod("bank_transfer");
         record.setPaymentStatus("PENDING");
         record.setStatus("PENDING_PAYMENT");
+        record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
         rentalRepo.save(record);
+        vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
 
         Map<String, Object> payload = new LinkedHashMap<>();
         int orderCode = Math.abs(rentalId.hashCode());

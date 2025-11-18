@@ -271,9 +271,18 @@ public class RentalController {
         record.setTotal(calculatedTotal);
         record.setPaymentMethod(paymentMethod);
         record.setPaymentStatus(paymentMethod.equals("cash") ? "PAY_AT_STATION" : "BANK_TRANSFER");
-        record.setStatus("PENDING_PAYMENT");
 
-        rentalRepo.save(record);
+        if (paymentMethod.equals("cash")) {
+            record.setStatus("AWAITING_CASH");
+            record.setHoldExpiresAt(null);
+            rentalRepo.save(record);
+            vehicleService.markRented(record.getVehicleId(), rentalId);
+        } else {
+            record.setStatus("PENDING_PAYMENT");
+            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
+            rentalRepo.save(record);
+            vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
+        }
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("paymentStatus", record.getPaymentStatus());
         response.put("total", calculatedTotal);
