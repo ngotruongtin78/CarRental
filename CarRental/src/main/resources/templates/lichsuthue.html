@@ -23,7 +23,9 @@
     <div class="content-area">
         <div class="top-bar">
             <div class="search-bar">
-                <input type="text" placeholder="Tìm điểm thuê gần bạn">
+                <input id="station-search" type="text" placeholder="Tìm điểm thuê gần bạn">
+                <button id="btn-find-station" type="button"><i class="fas fa-location-crosshairs"></i></button>
+                <div id="station-hint" class="station-hint"></div>
             </div>
             <div class="auth-buttons">
                 <div class="user-info">
@@ -58,6 +60,15 @@
                     <option value="xe_dien">Xe điện</option>
                     <option value="scooter">Xe tay ga điện</option>
                     <option value="bike">Xe đạp điện</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="status-filter">Trạng thái:</label>
+                <select id="status-filter" class="form-select">
+                    <option value="all">Tất cả</option>
+                    <option value="paid">Đã thuê</option>
+                    <option value="active">Đang thuê</option>
+                    <option value="completed">Đã hoàn tất</option>
                 </select>
             </div>
             <button class="btn-filter"><i class="fas fa-filter"></i> Áp dụng</button>

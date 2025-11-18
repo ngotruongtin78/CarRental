@@ -96,6 +96,41 @@ body {
     color: #fff;
 }
 
+.top-bar .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+.top-bar .search-bar button {
+    background: #ffffff;
+    color: #388e3c;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.top-bar .search-bar button:hover {
+    background: #e6ffe6;
+    transform: translateY(-1px);
+}
+
+.station-hint {
+    position: absolute;
+    left: 0;
+    top: 48px;
+    color: #ffffff;
+    font-size: 13px;
+    background: rgba(0, 0, 0, 0.15);
+    padding: 4px 8px;
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+}
+
 .top-bar .search-bar input::placeholder {
     color: #e0e0e0;
 }

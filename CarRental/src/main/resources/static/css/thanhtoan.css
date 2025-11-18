@@ -303,7 +303,7 @@ body {
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, box-shadow 0.2s ease, transform 0.2s ease;
     margin-bottom: 10px;
 }
 
@@ -314,6 +314,8 @@ body {
 
 .btn-confirm-payment:hover {
     background-color: #2e7d32;
+    box-shadow: 0 6px 18px rgba(46, 125, 50, 0.25);
+    transform: translateY(-1px);
 }
 
 .btn-cancel-payment {
@@ -323,11 +325,23 @@ body {
 
 .btn-cancel-payment:hover {
     background-color: #d32f2f;
+    box-shadow: 0 6px 18px rgba(211, 47, 47, 0.25);
+    transform: translateY(-1px);
 }
 
 .btn-confirm-payment i,
 .btn-cancel-payment i {
     margin-right: 10px;
+}
+
+#qrModal button {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+#qrModal button:hover {
+    filter: brightness(0.97);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
 }
 
 @media (max-width: 992px) {
