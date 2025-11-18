@@ -16,8 +16,4 @@ public class RentalPageController {
         return "thanhtoan";
     }
 
-    @GetMapping("/sepay-qr")
-    public String sepayQrPage() {
-        return "sepay-qr";
-    }
 }

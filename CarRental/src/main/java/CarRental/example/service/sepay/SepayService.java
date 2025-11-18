@@ -1,89 +1,116 @@
 package CarRental.example.service.sepay;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class SepayService {
 
-    private final RestTemplate restTemplate;
-    private final String apiKey;
-    private final String accountNumber;
-    private final String endpoint;
+    @Value("${sepay.api-url:https://api.sepay.vn}")
+    private String apiBaseUrl;
 
-    public SepayService(RestTemplate restTemplate,
-                        @Value("${sepay.api-key:}") String apiKey,
-                        @Value("${sepay.account-number:}") String accountNumber,
-                        @Value("${sepay.endpoint:https://api.sepay.vn/v1/transactions/generate}") String endpoint) {
-        this.restTemplate = restTemplate;
-        this.apiKey = apiKey;
-        this.accountNumber = accountNumber;
-        this.endpoint = endpoint;
-    }
+    @Value("${sepay.api-key:}")
+    private String apiKey;
 
-    /**
-     * Gọi API SePay để tạo mã QR chuyển khoản theo hướng dẫn chuẩn.
-     */
-    public SepayQRData generateQR(int amount, String description) {
+    @Value("${sepay.merchant-code:}")
+    private String merchantCode;
+
+    @Value("${sepay.secret-key:}")
+    private String secretKey;
+
+    // URL webhook public – bạn đã dùng ngrok:
+    // ví dụ: https://willfully-nonarsenic-halina.ngrok-free.dev/payment/webhook
+    @Value("${sepay.callback-url:}")
+    private String callbackUrl;
+
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public SepayQRData createQR(int amount, String description) {
         if (amount <= 0) {
-            throw new IllegalArgumentException("Số tiền thanh toán không hợp lệ");
+            throw new IllegalArgumentException("Số tiền không hợp lệ");
         }
-        if (apiKey == null || apiKey.isBlank() || accountNumber == null || accountNumber.isBlank()) {
-            throw new IllegalStateException("Thiếu cấu hình SePay (api-key/account-number)");
+        if (description == null || description.isBlank()) {
+            throw new IllegalArgumentException("Mô tả thanh toán không được để trống");
+        }
+        if (merchantCode == null || merchantCode.isBlank()
+                || secretKey == null || secretKey.isBlank()
+                || apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("Cấu hình SePay (merchantCode / secretKey / apiKey) chưa đầy đủ");
         }
 
+        // tạo orderId ngẫu nhiên
+        String orderId = UUID.randomUUID().toString().replace("-", "").substring(0, 20);
+
+        // signature = sha256(merchantCode|orderId|amount|secretKey)
+        String rawSignature = merchantCode + "|" + orderId + "|" + amount + "|" + secretKey;
+        String signature = sha256(rawSignature);
+
+        // Build body JSON đúng theo API SePay
         Map<String, Object> body = new HashMap<>();
-        body.put("account_number", accountNumber);
         body.put("amount", amount);
+        body.put("order_id", orderId);
+        body.put("merchant_code", merchantCode);
         body.put("description", description);
+        body.put("signature", signature);
+        if (callbackUrl != null && !callbackUrl.isBlank()) {
+            body.put("callback_url", callbackUrl);
+        }
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
+        // API v2 dùng Bearer api_key
+        headers.set("Authorization", "Bearer " + apiKey);
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-        try {
-            ResponseEntity<SepayQRResponse> response =
-                    restTemplate.exchange(endpoint, HttpMethod.POST, entity, SepayQRResponse.class);
+        String url = apiBaseUrl + "/v2/qr/generate";
 
-            SepayQRResponse payload = response.getBody();
-            if (payload == null) {
-                throw new IllegalStateException("Không nhận được phản hồi từ SePay");
-            }
+        ResponseEntity<SepayQRResponse> responseEntity =
+                restTemplate.exchange(url, HttpMethod.POST, requestEntity, SepayQRResponse.class);
 
-            if (!"success".equalsIgnoreCase(payload.getStatus()) || payload.getData() == null) {
-                String msg = payload.getMessage();
-                if (msg == null || msg.isBlank()) {
-                    msg = "SePay không trả về mã QR";
-                }
-                throw new IllegalStateException(msg);
-            }
-
-            return payload.getData();
-        } catch (HttpStatusCodeException ex) {
-            String detail = ex.getResponseBodyAsString();
-            String errorMsg = "SePay trả về lỗi: " + ex.getStatusCode();
-            if (detail != null && !detail.isBlank()) {
-                errorMsg += " - " + detail;
-            }
-            throw new IllegalStateException(errorMsg, ex);
-        } catch (RestClientException ex) {
-            throw new IllegalStateException("Gọi SePay thất bại: " + ex.getMessage(), ex);
+        if (!responseEntity.getStatusCode().is2xxSuccessful() || responseEntity.getBody() == null) {
+            throw new IllegalStateException("Không nhận được phản hồi hợp lệ từ SePay");
         }
+
+        SepayQRResponse response = responseEntity.getBody();
+
+        // Ở đây dùng status thay cho code
+        if (response.isStatus() == null || !"success".equalsIgnoreCase(response.isStatus())) {
+            String msg = response.getMessage() != null ? response.getMessage() : "Không rõ lỗi";
+            throw new IllegalStateException("SePay trả về lỗi: " + msg);
+        }
+
+        SepayQRData data = response.getData();
+        if (data == null || data.getQrUrl() == null || data.getQrUrl().isBlank()) {
+            throw new IllegalStateException("SePay không trả về dữ liệu QR hợp lệ");
+        }
+
+        return data;
     }
 
-    /**
-     * Giữ lại tên hàm cũ để tương thích với mã đã gọi trước đây.
-     */
-    public SepayQRData createPaymentQR(int amount, String description) {
-        return generateQR(amount, description);
+    private String sha256(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encodedHash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder(2 * encodedHash.length);
+            for (byte b : encodedHash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Không thể tạo chữ ký SHA-256", ex);
+        }
     }
 }

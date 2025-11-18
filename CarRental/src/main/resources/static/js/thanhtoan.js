@@ -193,11 +193,35 @@ async function confirmPayment() {
     document.getElementById("payment-method-text").innerText = method === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt";
     const latestTotal = data.total || totalAmount;
     document.querySelector(".detail-value.total-fee").innerText = latestTotal.toLocaleString("vi-VN") + " VNĐ";
+
+
+    // ==============================
+    // SEPAY — SHOW POPUP QR
+    // ==============================
     if (method === "bank_transfer") {
-        window.location.href = `/sepay-qr?rentalId=${encodeURIComponent(rentalId)}`;
-    } else {
-        alert("Đã lưu phương thức thanh toán. Vui lòng tới trạm để hoàn tất thanh toán tiền mặt!");
+        const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}`, {
+            method: "POST"
+        });
+
+        if (!qrRes.ok) {
+            alert("Không tạo được QR thanh toán SePay!");
+            return;
+        }
+
+        const qr = await qrRes.json();
+
+        document.getElementById("qrImage").src = qr.qrBase64 || qr.qrUrl;
+        document.getElementById("qrAmount").innerText = qr.amount.toLocaleString("vi-VN");
+        document.getElementById("qrAccountName").innerText = qr.accountName;
+        document.getElementById("qrAccountNumber").innerText = qr.accountNumber;
+        document.getElementById("qrOrder").innerText = rentalId;
+
+        document.getElementById("qrModal").style.display = "flex";
+
+        return;
     }
+
+    alert("Đã lưu phương thức thanh toán. Vui lòng tới trạm để hoàn tất thanh toán tiền mặt!");
 }
 
 function cancelPayment() {
@@ -206,16 +230,30 @@ function cancelPayment() {
     });
 }
 
+function closeQR() {
+    document.getElementById("qrModal").style.display = "none";
+}
+
+async function checkPaymentStatus() {
+    const res = await fetch(`/api/payment/check?rentalId=${encodeURIComponent(rentalId)}`);
+    if (!res.ok) {
+        alert("Không kiểm tra được trạng thái thanh toán!");
+        return;
+    }
+
+    const data = await res.json();
+
+    if (data?.paid === true) {
+        alert("Thanh toán thành công!");
+        window.location.href = "/lichsuthue";
+    } else {
+        alert("Chưa nhận được thanh toán! Vui lòng đợi ngân hàng xử lý (1–3s).");
+    }
+}
+
+
 document.addEventListener("DOMContentLoaded", () => {
     loadRentalInfo();
-
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("success")) {
-        alert("Thanh toán chuyển khoản thành công!");
-    }
-    if (params.get("cancel")) {
-        alert("Bạn đã hủy thanh toán SePay.");
-    }
 
     document.querySelector(".btn-confirm-payment").onclick = confirmPayment;
     document.querySelector(".btn-cancel-payment").onclick = cancelPayment;

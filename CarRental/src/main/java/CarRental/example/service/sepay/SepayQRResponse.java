@@ -1,7 +1,9 @@
 package CarRental.example.service.sepay;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SepayQRResponse {
 
     @JsonProperty("status")
@@ -13,7 +15,7 @@ public class SepayQRResponse {
     @JsonProperty("data")
     private SepayQRData data;
 
-    public String getStatus() {
+    public String isStatus() {
         return status;
     }
 

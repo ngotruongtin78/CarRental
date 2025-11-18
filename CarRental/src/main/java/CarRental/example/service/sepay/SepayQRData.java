@@ -1,7 +1,9 @@
 package CarRental.example.service.sepay;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SepayQRData {
 
     @JsonProperty("qr")
@@ -23,7 +25,8 @@ public class SepayQRData {
     private String description;
 
     @JsonProperty("amount")
-    private int amount;
+    private Integer amount;
+
 
     public String getQr() {
         return qr;
@@ -73,11 +76,23 @@ public class SepayQRData {
         this.description = description;
     }
 
-    public int getAmount() {
+    public Integer getAmount() {
         return amount;
     }
 
-    public void setAmount(int amount) {
+    public void setAmount(Integer amount) {
         this.amount = amount;
+    }
+
+    public String getQr_url() {
+        return qrUrl;
+    }
+
+    public String getAccount_name() {
+        return accountName;
+    }
+
+    public String getAccount_number() {
+        return accountNumber;
     }
 }

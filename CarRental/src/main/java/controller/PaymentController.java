@@ -68,9 +68,11 @@ public class PaymentController {
     public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> req) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth != null ? auth.getName() : null;
+
         if (username == null || "anonymousUser".equalsIgnoreCase(username)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Bạn cần đăng nhập để thanh toán");
         }
+
         String rentalId = (String) req.get("rentalId");
         if (rentalId == null || rentalId.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Thiếu mã chuyến thuê");
@@ -86,7 +88,7 @@ public class PaymentController {
                     .body("Đơn đặt đã hết hạn thanh toán. Vui lòng đặt xe lại.");
         }
 
-        if (record.getPaymentStatus() != null && "PAID".equalsIgnoreCase(record.getPaymentStatus())) {
+        if ("PAID".equalsIgnoreCase(record.getPaymentStatus())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Chuyến thuê đã thanh toán");
         }
 
@@ -103,6 +105,7 @@ public class PaymentController {
                 rentalDays = 1;
             }
         }
+
         double amount = record.getTotal() > 0 ? record.getTotal() : rentalDays * vehicle.getPrice();
         record.setTotal(amount);
         record.setPaymentMethod("bank_transfer");
@@ -114,20 +117,22 @@ public class PaymentController {
 
         Map<String, Object> payload = new LinkedHashMap<>();
         int amountInt = (int) Math.round(amount);
-        // SePay khuyến nghị đặt description chính là mã đơn để webhook đối chiếu dễ dàng
         String description = rentalId;
 
         try {
-            SepayQRData qrData = sepayService.generateQR(amountInt, description);
+            SepayQRData qrData = sepayService.createQR(amountInt, description);
+
             payload.put("amount", amountInt);
             payload.put("description", description);
-            payload.put("qrUrl", qrData.getQrUrl());
+
+            payload.put("qrUrl", qrData.getQr_url());
             payload.put("qrBase64", qrData.getQr());
             payload.put("bank", Optional.ofNullable(qrData.getBank()).orElse(bankName));
-            payload.put("accountName", Optional.ofNullable(qrData.getAccountName()).orElse(accountName));
-            payload.put("accountNumber", Optional.ofNullable(qrData.getAccountNumber()).orElse(accountNumber));
+            payload.put("accountName", Optional.ofNullable(qrData.getAccount_name()).orElse(accountName));
+            payload.put("accountNumber", Optional.ofNullable(qrData.getAccount_number()).orElse(accountNumber));
             payload.put("rentalId", rentalId);
             payload.put("status", "OK");
+
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
         } catch (IllegalStateException ex) {
@@ -139,13 +144,13 @@ public class PaymentController {
 
     @GetMapping("/create-qr")
     public ResponseEntity<?> createQr(@RequestParam int amount, @RequestParam String description) {
-        if (amount <= 0 || description == null || description.isBlank()) {
+        if (amount <= 0 || description.isBlank()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Thiếu số tiền hoặc mô tả thanh toán");
         }
 
         try {
-            SepayQRData qrData = sepayService.generateQR(amount, description);
+            SepayQRData qrData = sepayService.createQR(amount, description);
             return ResponseEntity.ok(qrData);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
@@ -158,6 +163,7 @@ public class PaymentController {
     public RedirectView paymentReturn(@RequestParam("rentalId") String rentalId,
                                       @RequestParam(value = "status", required = false) String status,
                                       @RequestParam(value = "amount", required = false) String amount) {
+
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record != null) {
             if (expireRentalIfNeeded(record)) {
@@ -165,9 +171,12 @@ public class PaymentController {
                 redirectView.setExposeModelAttributes(false);
                 return redirectView;
             }
+
             record.setPaymentStatus("PAID");
             if (amount != null) {
-                try { record.setTotal(Double.parseDouble(amount)); } catch (NumberFormatException ignored) {}
+                try {
+                    record.setTotal(Double.parseDouble(amount));
+                } catch (NumberFormatException ignored) {}
             }
             record.setPaidAt(LocalDateTime.now());
             record.setStatus("PAID");
@@ -175,6 +184,7 @@ public class PaymentController {
             rentalRepo.save(record);
             vehicleService.markRented(record.getVehicleId(), rentalId);
         }
+
         RedirectView redirectView = new RedirectView("/thanhtoan?rentalId=" + rentalId + "&success=1");
         redirectView.setExposeModelAttributes(false);
         return redirectView;
@@ -183,13 +193,16 @@ public class PaymentController {
     @GetMapping("/cancel")
     public RedirectView paymentCancel(@RequestParam("rentalId") String rentalId) {
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+
         if (record != null) {
             record.setPaymentStatus("CANCELLED");
             record.setStatus("CANCELLED");
             record.setHoldExpiresAt(null);
+
             rentalRepo.save(record);
             vehicleService.releaseHold(record.getVehicleId(), rentalId);
         }
+
         RedirectView redirectView = new RedirectView("/thanhtoan?rentalId=" + rentalId + "&cancel=1");
         redirectView.setExposeModelAttributes(false);
         return redirectView;
@@ -197,8 +210,10 @@ public class PaymentController {
 
     @PostMapping("/webhook")
     public ResponseEntity<String> paymentWebhook(@RequestBody Map<String, Object> payload) {
+
         String description = Objects.toString(payload.get("description"), "");
         String rentalId = null;
+
         if (description.contains("#")) {
             rentalId = description.substring(description.indexOf('#') + 1).trim();
         } else if (!description.isBlank()) {
@@ -209,12 +224,14 @@ public class PaymentController {
         }
 
         if (rentalId == null || rentalId.isBlank()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Thiếu rentalId trong description");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Thiếu rentalId trong description");
         }
 
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy chuyến thuê");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Không tìm thấy chuyến thuê");
         }
 
         if (!expireRentalIfNeeded(record)) {
@@ -222,9 +239,11 @@ public class PaymentController {
             record.setPaymentMethod("bank_transfer");
             record.setStatus("PAID");
             record.setHoldExpiresAt(null);
+
             if (payload.get("amount") instanceof Number amount) {
                 record.setTotal(amount.doubleValue());
             }
+
             record.setPaidAt(LocalDateTime.now());
             rentalRepo.save(record);
             vehicleService.markRented(record.getVehicleId(), rentalId);
