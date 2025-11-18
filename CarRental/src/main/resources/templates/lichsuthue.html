@@ -22,11 +22,6 @@
 
     <div class="content-area">
         <div class="top-bar">
-            <div class="search-bar">
-                <input id="station-search" type="text" placeholder="Tìm điểm thuê gần bạn">
-                <button id="btn-find-station" type="button"><i class="fas fa-location-crosshairs"></i></button>
-                <div id="station-hint" class="station-hint"></div>
-            </div>
             <div class="auth-buttons">
                 <div class="user-info">
                     <span class="welcome-text">Xin chào, <b th:text="${#authentication?.name}">---</b></span>
@@ -86,11 +81,6 @@
                     <p class="analytic-value" id="total-trips">0</p>
                 </div>
                 <div class="analytic-item">
-                    <i class="fas fa-road"></i>
-                    <p class="analytic-label">Tổng quãng đường</p>
-                    <p class="analytic-value" id="total-distance">0 <small>km</small></p>
-                </div>
-                <div class="analytic-item">
                     <i class="fas fa-dollar-sign"></i>
                     <p class="analytic-label">Tổng chi phí</p>
                     <p class="analytic-value" id="total-spent">0 <small>VNĐ</small></p>
@@ -98,14 +88,13 @@
                 <div class="analytic-item">
                     <i class="fas fa-clock"></i>
                     <p class="analytic-label">Thời gian trung bình</p>
-                    <p class="analytic-value" id="avg-duration">0 <small>phút</small></p>
+                    <p class="analytic-value" id="avg-duration">0 <small>ngày</small></p>
                 </div>
             </div>
         </div>
 
     </div>
 </div>
-<script src="/js/station-search.js"></script>
 <script src="/js/lichsuthue.js"></script>
 </body>
 </html>
