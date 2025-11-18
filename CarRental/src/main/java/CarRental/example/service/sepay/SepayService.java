@@ -1,13 +1,11 @@
 package CarRental.example.service.sepay;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -32,10 +30,13 @@ public class SepayService {
     @Value("${sepay.callback-url:}")
     private String callbackUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final RestTemplate restTemplate;
 
-    public SepayQRData createQR(int amount, String description) {
+    public SepayService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
+    public SepayQRData createQR(int amount, String description, String orderId) {
         if (amount <= 0) {
             throw new IllegalArgumentException("Số tiền không hợp lệ");
         }
@@ -48,12 +49,15 @@ public class SepayService {
             throw new IllegalStateException("Cấu hình SePay (merchantCode / secretKey / apiKey) chưa đầy đủ");
         }
 
-        // tạo orderId ngẫu nhiên
-        String orderId = UUID.randomUUID().toString().replace("-", "").substring(0, 20);
-
-        // signature = sha256(merchantCode|orderId|amount|secretKey)
-        String rawSignature = merchantCode + "|" + orderId + "|" + amount + "|" + secretKey;
-        String signature = sha256(rawSignature);
+        if (!StringUtils.hasText(orderId)) {
+            orderId = UUID.randomUUID().toString().replace("-", "").substring(0, 20);
+        } else if (orderId.length() > 32) {
+            orderId = orderId.substring(0, 32);
+        }
+        String signature = SepaySignatureUtil.generateSignature(orderId, amount, secretKey);
+        if (signature == null) {
+            throw new IllegalStateException("Không thể tạo chữ ký SePay");
+        }
 
         // Build body JSON đúng theo API SePay
         Map<String, Object> body = new HashMap<>();
@@ -84,8 +88,7 @@ public class SepayService {
 
         SepayQRResponse response = responseEntity.getBody();
 
-        // Ở đây dùng status thay cho code
-        if (response.isStatus() == null || !"success".equalsIgnoreCase(response.isStatus())) {
+        if (response.getStatus() == null || !"success".equalsIgnoreCase(response.getStatus())) {
             String msg = response.getMessage() != null ? response.getMessage() : "Không rõ lỗi";
             throw new IllegalStateException("SePay trả về lỗi: " + msg);
         }
@@ -98,19 +101,4 @@ public class SepayService {
         return data;
     }
 
-    private String sha256(String input) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] encodedHash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder(2 * encodedHash.length);
-            for (byte b : encodedHash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (Exception ex) {
-            throw new IllegalStateException("Không thể tạo chữ ký SHA-256", ex);
-        }
-    }
 }
