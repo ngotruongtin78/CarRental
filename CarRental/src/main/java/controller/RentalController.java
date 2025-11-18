@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/rental")
@@ -201,6 +202,38 @@ public class RentalController {
             }
         }
 
+        String method = body.getOrDefault("method", "");
+        if (!method.equals("cash") && !method.equals("bank_transfer")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid payment method");
+        }
+
+        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        if (record == null || !Objects.equals(record.getUsername(), username)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
+        }
+
+        Vehicle vehicle = vehicleRepo.findById(record.getVehicleId()).orElse(null);
+        if (vehicle == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Vehicle missing for rental");
+        }
+
+        int rentalDays = record.getRentalDays() > 0 ? record.getRentalDays() : 1;
+        double calculatedTotal = rentalDays * vehicle.getPrice();
+        record.setTotal(calculatedTotal);
+        record.setPaymentMethod(method);
+        record.setPaymentStatus(method.equals("cash") ? "PAY_AT_STATION" : "BANK_TRANSFER");
+        record.setStatus("PENDING_PAYMENT");
+
+        if (method.equals("bank_transfer")) {
+            User user = userRepository.findByUsername(username);
+            if (user == null || user.getLicenseData() == null || user.getIdCardData() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Vui lòng tải lên CCCD và GPLX để thanh toán chuyển khoản");
+            }
+        }
+
+        record.setStatus("CANCELLED");
+        record.setPaymentStatus("CANCELLED");
         rentalRepo.save(record);
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("paymentStatus", record.getPaymentStatus());
