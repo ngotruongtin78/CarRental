@@ -24,6 +24,11 @@ public class VehicleController {
         return repo.findAll();
     }
 
+    @GetMapping("/{id}")
+    public Optional<Vehicle> getVehicle(@PathVariable String id) {
+        return repo.findById(id);
+    }
+
     @GetMapping("/admin/{id}")
     public Optional<Vehicle> getVehicleById(@PathVariable String id) {
         return repo.findById(id);

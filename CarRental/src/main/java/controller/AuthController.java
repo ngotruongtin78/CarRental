@@ -38,6 +38,10 @@ public class AuthController {
             return "register";
         }
 
+        if (user.getRole() == null || user.getRole().isBlank()) {
+            user.setRole("USER");
+        }
+
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepo.save(user);
 
