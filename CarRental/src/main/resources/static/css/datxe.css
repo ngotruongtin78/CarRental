@@ -407,6 +407,35 @@ body {
     background-color: #45a049;
 }
 
+#document-upload-card {
+    display: none;
+}
+
+.doc-status {
+    margin: 8px 0;
+    color: #1f6d1f;
+    font-weight: 600;
+}
+
+.doc-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-upload-doc {
+    background: #1f6d1f;
+    color: white;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-upload-doc:hover {
+    background: #145014;
+}
+
 
 @media (max-width: 992px) {
     .vehicle-grid {
