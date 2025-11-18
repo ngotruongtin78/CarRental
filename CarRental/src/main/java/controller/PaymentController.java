@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.servlet.view.RedirectView;
@@ -18,7 +19,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.net.URI;
 
 @RestController
 @RequestMapping("/payment")
@@ -103,12 +103,11 @@ public class PaymentController {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("x-client-id", clientId);
             headers.set("x-api-key", apiKey);
-            headers.set("x-checksum-key", checksumKey);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
             ResponseEntity<Map<String, Object>> response = rest.exchange(
-                    "https://api.payos.vn/v2/payment-requests",
+                    "https://api-merchant.payos.vn/v2/payment-requests",
                     HttpMethod.POST,
                     entity,
                     new ParameterizedTypeReference<Map<String, Object>>() {}
@@ -136,6 +135,12 @@ public class PaymentController {
             result.put("rentalId", rentalId);
             return ResponseEntity.ok(result);
 
+        } catch (HttpStatusCodeException httpEx) {
+            String responseBody = httpEx.getResponseBodyAsString();
+            String reason = !responseBody.isEmpty() ? responseBody : Optional.ofNullable(HttpStatus.resolve(httpEx.getRawStatusCode()))
+                    .map(HttpStatus::getReasonPhrase)
+                    .orElse(httpEx.getStatusCode().toString());
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body("Tạo QR thất bại: " + reason);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
