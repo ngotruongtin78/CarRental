@@ -30,9 +30,9 @@ public class SepayQRPageController {
             return "sepay-qr";
         }
 
-        int amount = (int) rental.getTotal();
+        int amount = (int) Math.round(rental.getTotal());
 
-        SepayQRData qr = sepayService.createQR(amount, rentalId);
+        SepayQRData qr = sepayService.createQR(amount, "Thanh toan don #" + rentalId, rentalId);
 
         model.addAttribute("qrUrl", qr.getQrUrl());
         model.addAttribute("amount", qr.getAmount());

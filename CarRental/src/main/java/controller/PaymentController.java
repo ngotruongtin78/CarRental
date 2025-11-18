@@ -7,6 +7,8 @@ import CarRental.example.repository.VehicleRepository;
 import CarRental.example.service.VehicleService;
 import CarRental.example.service.sepay.SepayQRData;
 import CarRental.example.service.sepay.SepayService;
+import CarRental.example.service.sepay.SepayWebhookData;
+import CarRental.example.service.sepay.SepayWebhookHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,11 +33,13 @@ public class PaymentController {
     private final VehicleRepository vehicleRepository;
     private final VehicleService vehicleService;
     private final SepayService sepayService;
+    private final SepayWebhookHandler webhookHandler;
 
     public PaymentController(RentalRecordRepository rentalRepo,
                              VehicleRepository vehicleRepository,
                              VehicleService vehicleService,
                              SepayService sepayService,
+                             SepayWebhookHandler webhookHandler,
                              @Value("${sepay.account-name:}") String accountName,
                              @Value("${sepay.account-number:}") String accountNumber,
                              @Value("${sepay.bank-name:}") String bankName) {
@@ -43,6 +47,7 @@ public class PaymentController {
         this.vehicleRepository = vehicleRepository;
         this.vehicleService = vehicleService;
         this.sepayService = sepayService;
+        this.webhookHandler = webhookHandler;
         this.accountName = accountName;
         this.accountNumber = accountNumber;
         this.bankName = bankName;
@@ -117,10 +122,10 @@ public class PaymentController {
 
         Map<String, Object> payload = new LinkedHashMap<>();
         int amountInt = (int) Math.round(amount);
-        String description = rentalId;
+        String description = "Thanh toan don #" + rentalId;
 
         try {
-            SepayQRData qrData = sepayService.createQR(amountInt, description);
+            SepayQRData qrData = sepayService.createQR(amountInt, description, rentalId);
 
             payload.put("amount", amountInt);
             payload.put("description", description);
@@ -143,14 +148,14 @@ public class PaymentController {
     }
 
     @GetMapping("/create-qr")
-    public ResponseEntity<?> createQr(@RequestParam int amount, @RequestParam String description) {
+    public ResponseEntity<?> createQr(@RequestParam int amount, @RequestParam String description, @RequestParam(required = false) String orderId) {
         if (amount <= 0 || description.isBlank()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Thiếu số tiền hoặc mô tả thanh toán");
         }
 
         try {
-            SepayQRData qrData = sepayService.createQR(amount, description);
+            SepayQRData qrData = sepayService.createQR(amount, description, orderId);
             return ResponseEntity.ok(qrData);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
@@ -209,46 +214,7 @@ public class PaymentController {
     }
 
     @PostMapping("/webhook")
-    public ResponseEntity<String> paymentWebhook(@RequestBody Map<String, Object> payload) {
-
-        String description = Objects.toString(payload.get("description"), "");
-        String rentalId = null;
-
-        if (description.contains("#")) {
-            rentalId = description.substring(description.indexOf('#') + 1).trim();
-        } else if (!description.isBlank()) {
-            rentalId = description
-                    .replace("Thanh toan don hang", "")
-                    .replace("Thanh toan don", "")
-                    .trim();
-        }
-
-        if (rentalId == null || rentalId.isBlank()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Thiếu rentalId trong description");
-        }
-
-        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
-        if (record == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Không tìm thấy chuyến thuê");
-        }
-
-        if (!expireRentalIfNeeded(record)) {
-            record.setPaymentStatus("PAID");
-            record.setPaymentMethod("bank_transfer");
-            record.setStatus("PAID");
-            record.setHoldExpiresAt(null);
-
-            if (payload.get("amount") instanceof Number amount) {
-                record.setTotal(amount.doubleValue());
-            }
-
-            record.setPaidAt(LocalDateTime.now());
-            rentalRepo.save(record);
-            vehicleService.markRented(record.getVehicleId(), rentalId);
-        }
-
-        return ResponseEntity.ok("OK");
+    public ResponseEntity<String> paymentWebhook(@RequestBody SepayWebhookData payload) {
+        return webhookHandler.processWebhook(payload);
     }
 }

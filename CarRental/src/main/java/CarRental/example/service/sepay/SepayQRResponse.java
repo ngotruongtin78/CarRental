@@ -15,7 +15,7 @@ public class SepayQRResponse {
     @JsonProperty("data")
     private SepayQRData data;
 
-    public String isStatus() {
+    public String getStatus() {
         return status;
     }
 

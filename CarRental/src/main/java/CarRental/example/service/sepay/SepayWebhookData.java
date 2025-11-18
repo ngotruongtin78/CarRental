@@ -1,13 +1,28 @@
 package CarRental.example.service.sepay;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class SepayWebhookData {
 
+    @JsonProperty("order_id")
     private String orderId;
+
+    @JsonProperty("amount")
     private int amount;
+
+    @JsonProperty("transaction_id")
     private String transactionId;
+
+    @JsonProperty("bank_code")
     private String bankCode;
+
+    @JsonProperty("description")
     private String description;
+
+    @JsonProperty("signature")
     private String signature;
+
+    @JsonProperty("status")
     private String status;   // SUCCESS | FAILED
 
     public String getOrderId() {
