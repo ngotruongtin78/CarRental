@@ -48,23 +48,7 @@ public class PaymentController {
         this.bankName = bankName;
     }
 
-    private boolean expireIfNeeded(RentalRecord record) {
-        if (record == null) return false;
-
-        boolean pending = "PENDING_PAYMENT".equalsIgnoreCase(record.getStatus());
-        boolean expired = record.getHoldExpiresAt() != null && LocalDateTime.now().isAfter(record.getHoldExpiresAt());
-        if (pending && expired) {
-            record.setStatus("CANCELLED");
-            record.setPaymentStatus("EXPIRED");
-            record.setHoldExpiresAt(null);
-            rentalRepo.save(record);
-            vehicleService.releaseHold(record.getVehicleId(), record.getId());
-            return true;
-        }
-        return false;
-    }
-
-    private boolean expireIfNeeded(RentalRecord record) {
+    private boolean expireRentalIfNeeded(RentalRecord record) {
         if (record == null) return false;
 
         boolean pending = "PENDING_PAYMENT".equalsIgnoreCase(record.getStatus());
@@ -97,7 +81,7 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy chuyến thuê");
         }
 
-        if (expireIfNeeded(record)) {
+        if (expireRentalIfNeeded(record)) {
             return ResponseEntity.status(HttpStatus.GONE)
                     .body("Đơn đặt đã hết hạn thanh toán. Vui lòng đặt xe lại.");
         }
@@ -156,7 +140,7 @@ public class PaymentController {
                                       @RequestParam(value = "amount", required = false) String amount) {
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record != null) {
-            if (expireIfNeeded(record)) {
+            if (expireRentalIfNeeded(record)) {
                 RedirectView redirectView = new RedirectView("/thanhtoan?rentalId=" + rentalId + "&cancel=1");
                 redirectView.setExposeModelAttributes(false);
                 return redirectView;
@@ -213,7 +197,7 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy chuyến thuê");
         }
 
-        if (!expireIfNeeded(record)) {
+        if (!expireRentalIfNeeded(record)) {
             record.setPaymentStatus("PAID");
             record.setPaymentMethod("bank_transfer");
             record.setStatus("PAID");
