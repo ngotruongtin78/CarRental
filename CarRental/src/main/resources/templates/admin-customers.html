@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Quản lý Khách hàng</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
 
@@ -13,11 +14,18 @@
 
     <div class="main-content">
         <header class="content-header">
-            <div class="search-bar">
-            </div>
-            <div class="admin-profile">
+            <div class="search-bar"></div>
+
+            <div class="admin-profile" onclick="toggleProfileMenu(event)">
                 <img th:src="@{/images/admin-avatar.png}" alt="Admin">
                 <span>Admin</span>
+                <i class="fas fa-chevron-down" style="font-size: 12px; margin-left: 8px; color: #777;"></i>
+
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a th:href="@{/logout}" class="logout-item">
+                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                    </a>
+                </div>
             </div>
         </header>
 
@@ -48,7 +56,6 @@
                     <thead>
                     <tr>
                         <th>Họ tên</th>
-                        <th>Email</th>
                         <th>Trạng thái</th>
                         <th>Tổng chuyến</th>
                         <th>Tổng chi tiêu</th>
@@ -72,6 +79,8 @@
 </div>
 
 <script th:src="@{/js/admin-customers.js}"></script>
+<script>
+</script>
 
 </body>
 </html>

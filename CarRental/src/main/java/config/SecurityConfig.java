@@ -20,18 +20,10 @@ public class SecurityConfig {
     public SecurityConfig(CustomUserDetailsService customUserDetailsService) {
         this.customUserDetailsService = customUserDetailsService;
     }
-
-    // =======================
-    // Password Encoder
-    // =======================
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
-    // =======================
-    // Authentication Provider
-    // =======================
     @Bean
     public DaoAuthenticationProvider authProvider() {
         DaoAuthenticationProvider auth = new DaoAuthenticationProvider();
@@ -40,16 +32,13 @@ public class SecurityConfig {
         return auth;
     }
 
-    // =======================
-    // Security Filter Chain
-    // =======================
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http.csrf(csrf -> csrf.disable());
 
         http.authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/admin/**", "/api/vehicles/admin/**", "/api/stations/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/admin/**", "/api/vehicles/admin/**", "/api/stations/admin/**", "/api/rental/admin/**").hasRole("ADMIN")
                         .requestMatchers("/staff/**", "/api/staff/**", "/api/staff/return/**").hasRole("STAFF")
                         .requestMatchers("/payment/webhook", "/api/payment/webhook", "/api/sepay/webhook", "/payment/return", "/payment/cancel").permitAll()
                         .requestMatchers("/datxe", "/thanhtoan", "/sepay-qr", "/payos-qr", "/lichsuthue", "/user-hosocanhan",

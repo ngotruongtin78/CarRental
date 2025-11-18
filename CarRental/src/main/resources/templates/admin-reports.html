@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Báo cáo & Phân tích</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
 
@@ -13,12 +14,24 @@
 
     <div class="main-content">
         <header class="content-header">
+            <div style="flex-grow: 1;"></div>
+
+            <div class="admin-profile" onclick="toggleProfileMenu(event)">
+                <img th:src="@{/images/admin-avatar.png}" alt="Admin">
+                <span>Admin</span>
+                <i class="fas fa-chevron-down" style="font-size: 12px; margin-left: 8px; color: #777;"></i>
+
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a th:href="@{/logout}" class="logout-item">
+                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                    </a>
+                </div>
+            </div>
         </header>
 
         <main class="content-body">
             <div class="page-header">
                 <h1>Báo cáo & Phân tích</h1>
-                <button id="downloadCsvBtn" class="btn-secondary">+ Tải báo cáo CSV</button>
             </div>
 
             <div class="kpi-grid">
@@ -80,8 +93,9 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script th:src="@{/js/admin-reports.js}"></script>
+<script>
+</script>
 
 </body>
 </html>

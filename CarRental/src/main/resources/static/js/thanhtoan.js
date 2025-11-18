@@ -8,7 +8,8 @@ function getRentalId() {
 
 const rentalId = getRentalId();
 if (!rentalId) {
-    alert("Không tìm thấy mã thuê xe!");
+    alert("Không tìm thấy mã thuê xe! Vui lòng đặt xe lại.");
+    window.location.href = "/datxe";
 }
 
 
@@ -79,18 +80,26 @@ async function loadRentalInfo() {
         document.querySelector(".summary-value.distance").innerText =
             rentalData.distanceKm ? `${Number(rentalData.distanceKm).toFixed(1)} km` : "-";
 
-        const unitPrice = vehicleData?.price || rentalData.vehiclePrice || (rentalData.total && rentalData.rentalDays ? rentalData.total / rentalData.rentalDays : 0);
+        const unitPrice =
+            vehicleData?.price ||
+            rentalData.vehiclePrice ||
+            (rentalData.total && rentalData.rentalDays ? rentalData.total / rentalData.rentalDays : 0);
+
         const basePrice = unitPrice * rentalDays;
-        totalAmount = rentalData.total && rentalData.total > 0 ? rentalData.total : basePrice + (rentalData.damageFee ?? 0);
+        totalAmount = rentalData.total && rentalData.total > 0
+            ? rentalData.total
+            : basePrice + (rentalData.damageFee ?? 0);
 
         document.querySelector(".detail-value.rental-days").innerText = `${rentalDays} ngày`;
         document.querySelector(".detail-value.basic-fee").innerText = basePrice.toLocaleString("vi-VN") + " VNĐ";
         document.querySelector(".detail-value.total-fee").innerText = totalAmount.toLocaleString("vi-VN") + " VNĐ";
+
         const methodSelect = document.getElementById("payment-method");
         if (rentalData.paymentMethod) {
             methodSelect.value = rentalData.paymentMethod;
         }
-        document.getElementById("payment-method-text").innerText = (methodSelect.value || rentalData.paymentMethod) === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt";
+        document.getElementById("payment-method-text").innerText =
+            (methodSelect.value || rentalData.paymentMethod) === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt";
 
         refreshUploadStatus();
     } catch (err) {
@@ -190,13 +199,15 @@ async function confirmPayment() {
     }
 
     const data = await res.json();
-    document.getElementById("payment-method-text").innerText = method === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt";
+    document.getElementById("payment-method-text").innerText =
+        method === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt";
     const latestTotal = data.total || totalAmount;
-    document.querySelector(".detail-value.total-fee").innerText = latestTotal.toLocaleString("vi-VN") + " VNĐ";
+    document.querySelector(".detail-value.total-fee").innerText =
+        latestTotal.toLocaleString("vi-VN") + " VNĐ";
 
 
     // ==============================
-    // SEPAY — SHOW POPUP QR
+    // SEPAY
     // ==============================
     if (method === "bank_transfer") {
         const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}`, {
@@ -204,6 +215,8 @@ async function confirmPayment() {
         });
 
         if (!qrRes.ok) {
+            const msg = await qrRes.text();
+            console.error(msg);
             alert("Không tạo được QR thanh toán SePay!");
             return;
         }
@@ -217,7 +230,6 @@ async function confirmPayment() {
         document.getElementById("qrOrder").innerText = rentalId;
 
         document.getElementById("qrModal").style.display = "flex";
-
         return;
     }
 
@@ -250,7 +262,6 @@ async function checkPaymentStatus() {
         alert("Chưa nhận được thanh toán! Vui lòng đợi ngân hàng xử lý (1–3s).");
     }
 }
-
 
 document.addEventListener("DOMContentLoaded", () => {
     loadRentalInfo();

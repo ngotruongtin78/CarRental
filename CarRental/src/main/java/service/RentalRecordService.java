@@ -8,7 +8,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class RentalRecordService {
@@ -18,8 +20,8 @@ public class RentalRecordService {
     private final StationRepository stationRepository;
 
     public RentalRecordService(RentalRecordRepository repo,
-                              VehicleRepository vehicleRepository,
-                              StationRepository stationRepository) {
+                               VehicleRepository vehicleRepository,
+                               StationRepository stationRepository) {
         this.repo = repo;
         this.vehicleRepository = vehicleRepository;
         this.stationRepository = stationRepository;
@@ -61,7 +63,6 @@ public class RentalRecordService {
 
             response.add(item);
         }
-
         return response;
     }
 
@@ -150,5 +151,60 @@ public class RentalRecordService {
         record.setEndTime(LocalDateTime.now());
         record.setStatus("WAITING_INSPECTION");
         return repo.save(record);
+    }
+    public Map<String, Object> getGlobalStats() {
+        List<RentalRecord> allRecords = repo.findAll();
+
+        double totalRevenue = 0;
+        int totalTrips = 0;
+        int successfulTrips = 0;
+        Map<String, Double> revenueByDate = new TreeMap<>();
+        Map<Integer, Integer> peakHourCounts = new HashMap<>();
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        for (RentalRecord r : allRecords) {
+            boolean isCancelled = "CANCELLED".equals(r.getStatus()) || "EXPIRED".equals(r.getStatus());
+
+            totalTrips++;
+
+            if (!isCancelled) {
+                totalRevenue += r.getTotal();
+                successfulTrips++;
+
+                if (r.getStartTime() != null) {
+                    String dateKey = r.getStartTime().format(dateFormatter);
+                    revenueByDate.merge(dateKey, r.getTotal(), Double::sum);
+                    int hour = r.getStartTime().getHour();
+                    peakHourCounts.merge(hour, 1, Integer::sum);
+                }
+            }
+        }
+
+        List<String> revLabels = new ArrayList<>(revenueByDate.keySet());
+        List<Double> revValues = new ArrayList<>(revenueByDate.values());
+
+        List<String> peakLabels = new ArrayList<>();
+        List<Double> peakValues = new ArrayList<>();
+
+        for (int h = 6; h <= 22; h++) {
+            peakLabels.add(h + "h");
+            int count = peakHourCounts.getOrDefault(h, 0);
+            double percent = successfulTrips > 0 ? ((double) count / successfulTrips) * 100 : 0;
+            peakValues.add(Math.round(percent * 10.0) / 10.0);
+        }
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalRevenue", totalRevenue);
+        stats.put("totalTrips", totalTrips);
+
+        double utilization = totalTrips > 0 ? (double) successfulTrips / totalTrips : 0;
+        stats.put("avgUtilization", utilization);
+
+        stats.put("revenueChartLabels", revLabels);
+        stats.put("revenueChartValues", revValues);
+        stats.put("peakLabels", peakLabels);
+        stats.put("peakValues", peakValues);
+
+        return stats;
     }
 }

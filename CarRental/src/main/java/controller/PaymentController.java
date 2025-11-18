@@ -5,10 +5,9 @@ import CarRental.example.document.Vehicle;
 import CarRental.example.repository.RentalRecordRepository;
 import CarRental.example.repository.VehicleRepository;
 import CarRental.example.service.VehicleService;
-import CarRental.example.service.sepay.SepayQRData;
-import CarRental.example.service.sepay.SepayService;
 import CarRental.example.service.sepay.SepayWebhookData;
 import CarRental.example.service.sepay.SepayWebhookHandler;
+import CarRental.example.service.sepay.SepayQrService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,13 +31,13 @@ public class PaymentController {
     private final RentalRecordRepository rentalRepo;
     private final VehicleRepository vehicleRepository;
     private final VehicleService vehicleService;
-    private final SepayService sepayService;
+    private final SepayQrService qrService;
     private final SepayWebhookHandler webhookHandler;
 
     public PaymentController(RentalRecordRepository rentalRepo,
                              VehicleRepository vehicleRepository,
                              VehicleService vehicleService,
-                             SepayService sepayService,
+                             SepayQrService qrService,
                              SepayWebhookHandler webhookHandler,
                              @Value("${sepay.account-name:}") String accountName,
                              @Value("${sepay.account-number:}") String accountNumber,
@@ -46,7 +45,7 @@ public class PaymentController {
         this.rentalRepo = rentalRepo;
         this.vehicleRepository = vehicleRepository;
         this.vehicleService = vehicleService;
-        this.sepayService = sepayService;
+        this.qrService = qrService;
         this.webhookHandler = webhookHandler;
         this.accountName = accountName;
         this.accountNumber = accountNumber;
@@ -127,48 +126,50 @@ public class PaymentController {
         rentalRepo.save(record);
         vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
 
-        Map<String, Object> payload = new LinkedHashMap<>();
+        // ==== TẠO QR BẰNG qr.sepay.vn ====
         int amountInt = (int) Math.round(amount);
-        String description = "Thanh toan don #" + rentalId;
+        String qrUrl = qrService.generateQrUrl(rentalId, amountInt);
 
-        try {
-            SepayQRData qrData = sepayService.createQR(amountInt, description, rentalId);
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("amount", amountInt);
+        payload.put("description", "Thanh toan don #" + rentalId);
 
-            payload.put("amount", amountInt);
-            payload.put("description", description);
-
-            payload.put("qrUrl", qrData.getQr_url());
-            payload.put("qrBase64", qrData.getQr());
-            payload.put("bank", Optional.ofNullable(qrData.getBank()).orElse(bankName));
-            payload.put("accountName", Optional.ofNullable(qrData.getAccount_name()).orElse(accountName));
-            payload.put("accountNumber", Optional.ofNullable(qrData.getAccount_number()).orElse(accountNumber));
-            payload.put("rentalId", rentalId);
-            payload.put("status", "OK");
-
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
-        } catch (IllegalStateException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ex.getMessage());
-        }
+        payload.put("qrUrl", qrUrl);
+        payload.put("qrBase64", null);
+        payload.put("bank", bankName);
+        payload.put("accountName", accountName);
+        payload.put("accountNumber", accountNumber);
+        payload.put("rentalId", rentalId);
+        payload.put("status", "OK");
 
         return ResponseEntity.ok(payload);
     }
 
+    /**
+     * API tạo QR đơn giản (ít dùng) – cũng chuyển sang dùng qr.sepay.vn
+     */
     @GetMapping("/create-qr")
-    public ResponseEntity<?> createQr(@RequestParam int amount, @RequestParam String description, @RequestParam(required = false) String orderId) {
+    public ResponseEntity<?> createQr(@RequestParam int amount,
+                                      @RequestParam String description,
+                                      @RequestParam(required = false) String orderId) {
         if (amount <= 0 || description.isBlank()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Thiếu số tiền hoặc mô tả thanh toán");
         }
 
-        try {
-            SepayQRData qrData = sepayService.createQR(amount, description, orderId);
-            return ResponseEntity.ok(qrData);
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
-        } catch (IllegalStateException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ex.getMessage());
-        }
+        String qrUrl = qrService.generateQrUrl(orderId != null ? orderId : "ORDER", amount);
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("amount", amount);
+        resp.put("description", description);
+        resp.put("qrUrl", qrUrl);
+        resp.put("qrBase64", null);
+        resp.put("bank", bankName);
+        resp.put("accountName", accountName);
+        resp.put("accountNumber", accountNumber);
+        resp.put("orderId", orderId);
+
+        return ResponseEntity.ok(resp);
     }
 
     @GetMapping("/return")
@@ -223,5 +224,24 @@ public class PaymentController {
     @PostMapping("/webhook")
     public ResponseEntity<String> paymentWebhook(@RequestBody SepayWebhookData payload) {
         return webhookHandler.processWebhook(payload);
+    }
+
+    @GetMapping("/check")
+    public ResponseEntity<Map<String, Object>> checkPayment(@RequestParam("rentalId") String rentalId) {
+        Map<String, Object> resp = new HashMap<>();
+
+        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        if (record == null) {
+            resp.put("paid", false);
+            resp.put("message", "Không tìm thấy chuyến thuê");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(resp);
+        }
+
+        boolean paid = "PAID".equalsIgnoreCase(record.getPaymentStatus());
+        resp.put("paid", paid);
+        resp.put("status", record.getPaymentStatus());
+        resp.put("rentalId", rentalId);
+
+        return ResponseEntity.ok(resp);
     }
 }

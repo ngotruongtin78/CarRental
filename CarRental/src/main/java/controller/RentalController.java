@@ -10,7 +10,6 @@ import CarRental.example.repository.VehicleRepository;
 import CarRental.example.service.RentalRecordService;
 import CarRental.example.service.SequenceGeneratorService;
 import CarRental.example.service.VehicleService;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/rental")
@@ -346,5 +346,11 @@ public class RentalController {
                 "returnNotes", record.getReturnNotes(),
                 "endTime", record.getEndTime()
         );
+    }
+
+    @GetMapping("/admin/all-history")
+    public ResponseEntity<?> getAllHistoryForAdmin() {
+        List<RentalRecord> records = rentalRecordService.getAll();
+        return ResponseEntity.ok(records);
     }
 }

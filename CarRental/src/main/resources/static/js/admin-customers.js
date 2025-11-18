@@ -6,22 +6,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
     async function loadCustomers() {
         try {
-            const fakeData = [
-                { "id": "1", "fullName": "Nguyễn Văn A", "email": "nvane@email.com", "enabled": true, "verified": true, "totalTrips": 25, "totalSpent": 5500000 },
-                { "id": "2", "fullName": "Lê Thị B", "email": "0912245xxx", "enabled": true, "verified": true, "totalTrips": 18, "totalSpent": 4500000 },
-                { "id": "3", "fullName": "Phạm Văn C", "email": "phamvc@email.com", "enabled": true, "verified": false, "totalTrips": 0, "totalSpent": 0 },
-                { "id": "4", "fullName": "Trần Đình D", "email": "dd.tran@email.com", "enabled": false, "verified": true, "totalTrips": 5, "totalSpent": 0 },
-                { "id": "5", "fullName": "Mai Thị E", "email": "nvate@email.com", "enabled": true, "verified": true, "totalTrips": 30, "totalSpent": 6800000 }
-            ];
-
-            const customers = fakeData;
+            const response = await fetch('/admin/customers/all');
+            if (!response.ok) {
+                throw new Error("Failed to fetch customer data");
+            }
+            const customers = await response.json();
 
             customerTableBody.innerHTML = '';
 
             customers.forEach(user => {
                 const tr = document.createElement('tr');
 
-                // Quyết định trạng thái
                 let statusText = '';
                 let statusClass = '';
                 if (!user.enabled) {
@@ -37,7 +32,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 tr.innerHTML = `
                     <td>${user.fullName}</td>
-                    <td>${user.email}</td>
                     <td><span class="status ${statusClass}">${statusText}</span></td>
                     <td>${user.totalTrips}</td>
                     <td>${user.totalSpent.toLocaleString('vi-VN')} đ</td>
@@ -50,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         } catch (error) {
             console.error("Không thể tải danh sách khách hàng:", error);
-            customerTableBody.innerHTML = '<tr><td colspan="6">Lỗi khi tải dữ liệu.</td></tr>';
+            customerTableBody.innerHTML = '<tr><td colspan="5">Lỗi khi tải dữ liệu.</td></tr>';
         }
     }
 
@@ -84,6 +78,7 @@ document.addEventListener("DOMContentLoaded", function() {
             currentOpenMenu = null;
         }
     });
+
     async function toggleUserStatus(event, userId) {
         event.preventDefault();
         event.stopPropagation();

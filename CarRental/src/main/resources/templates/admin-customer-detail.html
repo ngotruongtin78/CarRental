@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Chi tiết Khách hàng</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+<div class="admin-container">
+
+    <div th:replace="~{fragments/admin-nav :: sidebar(activePage='customers')}"></div>
+
+    <div class="main-content">
+        <header class="content-header">
+            <div class="search-bar"></div>
+
+            <div class="admin-profile" onclick="toggleProfileMenu(event)">
+                <img th:src="@{/images/admin-avatar.png}" alt="Admin">
+                <span>Admin</span>
+                <i class="fas fa-chevron-down" style="font-size: 12px; margin-left: 8px; color: #777;"></i>
+
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a th:href="@{/logout}" class="logout-item">
+                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <main class="content-body">
+            <div class="page-header">
+                <h1 th:text="|Chi tiết khách hàng: ${customer.username}|">Chi tiết khách hàng</h1>
+            </div>
+
+            <div class="detail-grid">
+                <div class="left-column">
+                    <div class="card profile-info">
+                        <div class="avatar">👤</div>
+                        <h2 th:text="${customer.username}">username</h2>
+                        <span class="status"
+                              th:classappend="${!customer.enabled ? 'status-disabled' : (!customer.verified ? 'status-pending' : 'status-available')}"
+                              th:text="${!customer.enabled ? 'Đã vô hiệu' : (!customer.verified ? 'Chờ xác thực' : 'Đã kích hoạt')}">
+                            Trạng thái
+                        </span>
+                    </div>
+
+                    <div class="card">
+                        <h3>Thống kê sử dụng</h3>
+                        <div class="kpi-grid-small">
+                            <div class="kpi-item">
+                                <h4>Tổng chuyến</h4>
+                                <div class="value" th:text="${stats.totalTrips}">0</div>
+                            </div>
+                            <div class="kpi-item">
+                                <h4>Tổng chi tiêu</h4>
+                                <div class="value" th:text="${#numbers.formatDecimal(stats.totalSpent, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                            </div>
+                            <div class="kpi-item">
+                                <h4>TB/Chuyến</h4>
+                                <div class="value" th:text="${#numbers.formatDecimal(stats.averageSpent, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="right-column">
+                    <div class="card">
+                        <h3>Lịch sử thuê</h3>
+                        <div class="data-table-container">
+                            <table class="data-table">
+                                <thead>
+                                <tr>
+                                    <th>Mã chuyến</th>
+                                    <th>Trạng thái</th>
+                                    <th>Xe</th>
+                                    <th>Tổng tiền</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:if="${#lists.isEmpty(history)}">
+                                    <td colspan="4">Chưa có lịch sử thuê.</td>
+                                </tr>
+                                <tr th:each="item : ${history}">
+                                    <td th:text="${item.record.id}">rental_id</td>
+                                    <td th:text="${item.record.status}">PENDING</td>
+                                    <td th:text="${item.vehicle != null} ? ${item.vehicle.brand} + ' (' + ${item.vehicle.plate} + ')' : ${item.record.vehicleId}">
+                                        Vehicle Info
+                                    </td>
+                                    <td th:text="${#numbers.formatDecimal(item.record.total, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+</script>
+
+</body>
+</html>
