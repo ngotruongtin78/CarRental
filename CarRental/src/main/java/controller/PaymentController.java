@@ -49,6 +49,12 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Thiếu mã chuyến thuê");
         }
 
+        if (clientId == null || apiKey == null || checksumKey == null
+                || clientId.isBlank() || apiKey.isBlank() || checksumKey.isBlank()) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Thiếu cấu hình PayOS, vui lòng kiểm tra clientId/apiKey/checksumKey");
+        }
+
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy chuyến thuê");
