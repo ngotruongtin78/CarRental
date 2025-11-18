@@ -46,6 +46,22 @@ public class PaymentController {
         this.vehicleService = vehicleService;
     }
 
+    private boolean expireIfNeeded(RentalRecord record) {
+        if (record == null) return false;
+
+        boolean pending = "PENDING_PAYMENT".equalsIgnoreCase(record.getStatus());
+        boolean expired = record.getHoldExpiresAt() != null && LocalDateTime.now().isAfter(record.getHoldExpiresAt());
+        if (pending && expired) {
+            record.setStatus("CANCELLED");
+            record.setPaymentStatus("EXPIRED");
+            record.setHoldExpiresAt(null);
+            rentalRepo.save(record);
+            vehicleService.releaseHold(record.getVehicleId(), record.getId());
+            return true;
+        }
+        return false;
+    }
+
     @PostMapping("/create-order")
     public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> req) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -66,6 +82,11 @@ public class PaymentController {
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy chuyến thuê");
+        }
+
+        if (expireIfNeeded(record)) {
+            return ResponseEntity.status(HttpStatus.GONE)
+                    .body("Đơn đặt đã hết hạn thanh toán. Vui lòng đặt xe lại.");
         }
 
         if (record.getPaymentStatus() != null && "PAID".equalsIgnoreCase(record.getPaymentStatus())) {
@@ -150,15 +171,23 @@ public class PaymentController {
     }
 
     @GetMapping("/return")
-    public RedirectView paymentReturn(@RequestParam String rentalId, @RequestParam(required = false) String status, @RequestParam(required = false) String amount) {
+    public RedirectView paymentReturn(@RequestParam("rentalId") String rentalId,
+                                      @RequestParam(value = "status", required = false) String status,
+                                      @RequestParam(value = "amount", required = false) String amount) {
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record != null) {
+            if (expireIfNeeded(record)) {
+                RedirectView redirectView = new RedirectView("/thanhtoan?rentalId=" + rentalId + "&cancel=1");
+                redirectView.setExposeModelAttributes(false);
+                return redirectView;
+            }
             record.setPaymentStatus("PAID");
             if (amount != null) {
                 try { record.setTotal(Double.parseDouble(amount)); } catch (NumberFormatException ignored) {}
             }
             record.setPaidAt(LocalDateTime.now());
             record.setStatus("PAID");
+            record.setHoldExpiresAt(null);
             rentalRepo.save(record);
             vehicleService.markRented(record.getVehicleId(), rentalId);
         }
@@ -168,11 +197,12 @@ public class PaymentController {
     }
 
     @GetMapping("/cancel")
-    public RedirectView paymentCancel(@RequestParam String rentalId) {
+    public RedirectView paymentCancel(@RequestParam("rentalId") String rentalId) {
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record != null) {
             record.setPaymentStatus("CANCELLED");
             record.setStatus("CANCELLED");
+            record.setHoldExpiresAt(null);
             rentalRepo.save(record);
             vehicleService.releaseHold(record.getVehicleId(), rentalId);
         }

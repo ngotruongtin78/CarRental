@@ -34,6 +34,11 @@ async function loadRentalInfo() {
         if (!res.ok) {
             const msg = await res.text();
             console.error("Lỗi khi gọi API rental", msg);
+            if (res.status === 410) {
+                alert(msg || "Đơn đặt đã hết hạn, vui lòng đặt lại.");
+                window.location.href = "/datxe";
+                return;
+            }
             alert(msg || "Không tải được thông tin thanh toán, vui lòng thử lại.");
             return;
         }
@@ -175,6 +180,11 @@ async function confirmPayment() {
 
     if (!res.ok) {
         const message = await res.text();
+        if (res.status === 410) {
+            alert(message || "Đơn đặt đã hết hạn, vui lòng đặt lại.");
+            window.location.href = "/datxe";
+            return;
+        }
         alert(message || "Thanh toán thất bại");
         return;
     }

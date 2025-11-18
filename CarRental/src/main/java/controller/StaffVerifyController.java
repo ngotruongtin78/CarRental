@@ -15,7 +15,7 @@ public class StaffVerifyController {
     }
 
     @PostMapping("/verify-user/{id}")
-    public String verifyUser(@PathVariable String id) {
+    public String verifyUser(@PathVariable("id") String id) {
         User user = userRepo.findById(id).orElse(null);
         if (user == null) return "USER_NOT_FOUND";
 
