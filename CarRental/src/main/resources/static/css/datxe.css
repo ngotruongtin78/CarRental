@@ -286,6 +286,26 @@ body {
     font-size: 14px;
     color: #666;
 }
+.vehicle-card .status-text {
+    margin-top: 6px;
+    font-weight: 600;
+}
+
+.vehicle-card .status-text.pending,
+.status-badge.pending {
+    color: #a67c00;
+}
+
+.vehicle-card .status-text.available,
+.status-badge.available {
+    color: #1f8b1f;
+}
+
+.vehicle-card.vehicle-pending {
+    background: #fff7e0;
+    border-color: #f0c36d;
+    cursor: not-allowed;
+}
 
 .selected-vehicle {
     background-color: #e0f2f7;
@@ -296,6 +316,67 @@ body {
     border: 2px solid #1f8b1f;
     background-color: #e9ffe9;
     transform: scale(1.02);
+}
+
+.selection-summary .selection-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    align-items: center;
+}
+
+.selection-summary .label {
+    font-weight: 600;
+    margin: 0;
+    color: #555;
+}
+
+.selection-summary .value {
+    margin: 4px 0 0;
+    font-size: 16px;
+    color: #1a1a1a;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 18px;
+    background: #eef7ee;
+    font-weight: 700;
+    color: #1f8b1f;
+    border: 1px solid #d2e9d2;
+}
+
+.rental-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.rental-options .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: #333;
+}
+
+.rental-options .form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d9e8dc;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+#distance-display {
+    padding: 12px;
+    background: #f8faf8;
+    border-radius: 10px;
+    border: 1px solid #d9e8dc;
+    font-weight: bold;
+    color: #2e7d32;
 }
 
 .book-now-action {

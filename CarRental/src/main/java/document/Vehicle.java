@@ -18,6 +18,10 @@ public class Vehicle {
     private String stationId;
     private boolean available = true;
 
+    // Booking lifecycle tracking
+    private String bookingStatus = "AVAILABLE"; // AVAILABLE, PENDING_PAYMENT, RENTED
+    private String pendingRentalId;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -41,4 +45,10 @@ public class Vehicle {
 
     public boolean isAvailable() { return available; }
     public void setAvailable(boolean available) { this.available = available; }
+
+    public String getBookingStatus() { return bookingStatus; }
+    public void setBookingStatus(String bookingStatus) { this.bookingStatus = bookingStatus; }
+
+    public String getPendingRentalId() { return pendingRentalId; }
+    public void setPendingRentalId(String pendingRentalId) { this.pendingRentalId = pendingRentalId; }
 }
