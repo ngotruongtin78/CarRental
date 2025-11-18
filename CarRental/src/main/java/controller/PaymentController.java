@@ -156,7 +156,10 @@ public class PaymentController {
 
         } catch (HttpStatusCodeException httpEx) {
             String responseBody = httpEx.getResponseBodyAsString();
-            String reason = !responseBody.isEmpty() ? responseBody : Optional.ofNullable(HttpStatus.resolve(httpEx.getRawStatusCode()))
+            int statusValue = httpEx.getStatusCode().value();
+            String reason = !responseBody.isEmpty()
+                    ? responseBody
+                    : Optional.ofNullable(HttpStatus.resolve(statusValue))
                     .map(HttpStatus::getReasonPhrase)
                     .orElse(httpEx.getStatusCode().toString());
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body("Tạo QR thất bại: " + reason);

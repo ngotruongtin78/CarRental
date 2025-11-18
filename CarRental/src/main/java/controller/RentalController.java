@@ -111,6 +111,22 @@ public class RentalController {
         int rentalDays = (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
         if (rentalDays < 1) rentalDays = 1;
 
+        final LocalDate startDate;
+        final LocalDate endDate;
+        try {
+            startDate = startDateStr != null && !startDateStr.isBlank()
+                    ? LocalDate.parse(startDateStr)
+                    : LocalDate.now();
+            endDate = endDateStr != null && !endDateStr.isBlank()
+                    ? LocalDate.parse(endDateStr)
+                    : startDate;
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid date format");
+        }
+
+        final long daySpan = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        int rentalDays = (int) Math.max(1, daySpan);
+
         long seq = sequence.getNextSequence("rentalCounter");
         String rentalId = "rental" + seq;
 
