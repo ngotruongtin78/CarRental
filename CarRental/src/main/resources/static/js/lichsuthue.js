@@ -129,8 +129,8 @@ function filterHistory() {
         if (vehicleType !== "all" && !matchesVehicleType(item.vehicle?.type, vehicleType)) return false;
 
         if (status !== "all") {
-            if (status === "paid" && !displayStatus.includes("thanh toán")) return false;
-            if (status === "active" && !displayStatus.includes("đang thuê")) return false;
+            if (status === "rented" && !displayStatus.includes("đã thuê")) return false;
+            if (status === "active" && !(displayStatus.includes("đang thuê") || displayStatus.includes("chờ xác"))) return false;
             if (status === "returned" && !displayStatus.includes("trả xe")) return false;
         }
 

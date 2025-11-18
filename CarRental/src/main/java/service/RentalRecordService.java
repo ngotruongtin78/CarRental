@@ -241,21 +241,23 @@ public class RentalRecordService {
         String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
         String paymentStatus = Optional.ofNullable(record.getPaymentStatus()).orElse("").toUpperCase();
 
-        if (record.getEndTime() != null || status.equals("WAITING_INSPECTION") || status.equals("COMPLETED")) {
+        boolean completed = status.equals("COMPLETED") || status.equals("RETURNED");
+        if (completed) {
             return "Đã trả xe";
         }
 
-        if (status.equals("IN_PROGRESS")) {
+        if (status.equals("WAITING_INSPECTION")) {
+            return "Chờ xác nhận trả";
+        }
+
+        if (status.equals("IN_PROGRESS") || status.equals("CONTRACT_SIGNED")) {
             return "Đang thuê";
         }
 
         if (paymentStatus.equals("PAID") || status.equals("PAID")) {
-            return "Đã thanh toán";
+            return "Đã thuê";
         }
 
-        return switch (status) {
-            case "CONTRACT_SIGNED" -> "Đang thuê";
-            default -> "Đã thanh toán";
-        };
+        return "Đã thuê";
     }
 }
