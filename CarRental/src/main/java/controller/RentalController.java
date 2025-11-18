@@ -273,10 +273,10 @@ public class RentalController {
         record.setPaymentStatus(paymentMethod.equals("cash") ? "PAY_AT_STATION" : "BANK_TRANSFER");
 
         if (paymentMethod.equals("cash")) {
-            record.setStatus("AWAITING_CASH");
-            record.setHoldExpiresAt(null);
+            record.setStatus("PENDING_PAYMENT");
+            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
             rentalRepo.save(record);
-            vehicleService.markRented(record.getVehicleId(), rentalId);
+            vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
         } else {
             record.setStatus("PENDING_PAYMENT");
             record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
