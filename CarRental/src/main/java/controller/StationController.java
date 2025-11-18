@@ -49,7 +49,7 @@ public class StationController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getStation(@PathVariable String id) {
+    public ResponseEntity<?> getStation(@PathVariable("id") String id) {
         Optional<Station> station = stationRepo.findById(id);
         return station.<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Station not found"));
@@ -61,7 +61,7 @@ public class StationController {
     }
 
     @GetMapping("/admin/{id}")
-    public Optional<Station> getStationById(@PathVariable String id) {
+    public Optional<Station> getStationById(@PathVariable("id") String id) {
         return stationRepo.findById(id);
     }
 
@@ -74,13 +74,13 @@ public class StationController {
     }
 
     @PutMapping("/admin/update/{id}")
-    public Station updateStation(@PathVariable String id, @RequestBody Station updatedStation) {
+    public Station updateStation(@PathVariable("id") String id, @RequestBody Station updatedStation) {
         updatedStation.setId(id);
         return stationRepo.save(updatedStation);
     }
 
     @DeleteMapping("/admin/delete/{id}")
-    public ResponseEntity<String> deleteStation(@PathVariable String id) {
+    public ResponseEntity<String> deleteStation(@PathVariable("id") String id) {
 
         if (vehicleRepo.countByStationIdAndAvailable(id, true) > 0 || vehicleRepo.countByStationIdAndAvailable(id, false) > 0) {
             return new ResponseEntity<>("Không thể xóa trạm vì vẫn còn xe.", HttpStatus.BAD_REQUEST);

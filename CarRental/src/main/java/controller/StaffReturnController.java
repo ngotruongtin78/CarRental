@@ -21,7 +21,7 @@ public class StaffReturnController {
 
     @PostMapping("/{id}/confirm")
     public String confirmReturn(
-            @PathVariable String id,
+            @PathVariable("id") String id,
             @RequestParam(defaultValue = "0") double damageFee
     ) {
         RentalRecord rental = rentalRepo.findById(id).orElse(null);
