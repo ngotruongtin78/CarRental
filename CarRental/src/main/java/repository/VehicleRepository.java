@@ -14,6 +14,7 @@ public interface VehicleRepository
 
     long countByStationIdAndAvailable(String stationId, boolean available);
     List<Vehicle> findByStationIdAndAvailable(String stationId, boolean available);
+    List<Vehicle> findByStationIdAndBookingStatusNot(String stationId, String bookingStatus);
 
     @Query("{ '_id': ?0 }")
     Vehicle findVehicleById(String id);

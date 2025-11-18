@@ -1,17 +1,26 @@
 package CarRental.example.controller;
 
 import CarRental.example.document.RentalRecord;
+import CarRental.example.document.User;
 import CarRental.example.document.Vehicle;
 import CarRental.example.repository.RentalRecordRepository;
+import CarRental.example.repository.StationRepository;
+import CarRental.example.repository.UserRepository;
 import CarRental.example.repository.VehicleRepository;
+import CarRental.example.service.RentalRecordService;
 import CarRental.example.service.SequenceGeneratorService;
 import CarRental.example.service.VehicleService;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @RestController
@@ -20,15 +29,24 @@ public class RentalController {
 
     private final RentalRecordRepository rentalRepo;
     private final VehicleRepository vehicleRepo;
+    private final StationRepository stationRepository;
     private final SequenceGeneratorService sequence;
     private final VehicleService vehicleService;
+    private final RentalRecordService rentalRecordService;
+    private final UserRepository userRepository;
     public RentalController(RentalRecordRepository rentalRepo,
                             VehicleRepository vehicleRepo,
-                            SequenceGeneratorService sequence, VehicleService vehicleService) {
+                            StationRepository stationRepository,
+                            SequenceGeneratorService sequence, VehicleService vehicleService,
+                            RentalRecordService rentalRecordService,
+                            UserRepository userRepository) {
         this.rentalRepo = rentalRepo;
         this.vehicleRepo = vehicleRepo;
+        this.stationRepository = stationRepository;
         this.sequence = sequence;
         this.vehicleService = vehicleService;
+        this.rentalRecordService = rentalRecordService;
+        this.userRepository = userRepository;
     }
 
     private String getCurrentUsername() {
@@ -56,22 +74,44 @@ public class RentalController {
         return data;
     }
 
-    @PostMapping("/create")
-    public Map<String, Object> createRental(@RequestBody Map<String, Object> req) {
+    @PostMapping(value = "/book", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> bookRental(@RequestParam("vehicleId") String vehicleId,
+                                        @RequestParam("stationId") String stationId,
+                                        @RequestParam("startDate") String startDateStr,
+                                        @RequestParam("endDate") String endDateStr,
+                                        @RequestParam(value = "distanceKm", required = false) Double distanceKm) {
 
         String username = getCurrentUsername();
-        if (username == null) return Map.of("error", "Unauthorized");
+        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
-        String vehicleId = (String) req.get("vehicleId");
-        String stationId = (String) req.get("stationId");
-
-        double amount;
-        Object rawAmount = req.get("amount");
-        if (rawAmount instanceof Integer) {
-            amount = ((Integer) rawAmount).doubleValue();
-        } else {
-            amount = (double) rawAmount;
+        Vehicle vehicle = vehicleRepo.findById(vehicleId).orElse(null);
+        if (vehicle == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Vehicle not available");
         }
+
+        String bookingState = vehicle.getBookingStatus() == null ? "AVAILABLE" : vehicle.getBookingStatus();
+        if ("RENTED".equalsIgnoreCase(bookingState)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Vehicle already rented");
+        }
+        if ("PENDING_PAYMENT".equalsIgnoreCase(bookingState) && vehicle.getPendingRentalId() != null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Xe đang chờ thanh toán");
+        }
+
+        final LocalDate startDate;
+        final LocalDate endDate;
+        try {
+            startDate = startDateStr != null && !startDateStr.isBlank()
+                    ? LocalDate.parse(startDateStr)
+                    : LocalDate.now();
+            endDate = endDateStr != null && !endDateStr.isBlank()
+                    ? LocalDate.parse(endDateStr)
+                    : startDate;
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid date format");
+        }
+
+        final long daySpan = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        int rentalDays = (int) Math.max(1, daySpan);
 
         long seq = sequence.getNextSequence("rentalCounter");
         String rentalId = "rental" + seq;
@@ -81,22 +121,191 @@ public class RentalController {
         record.setUsername(username);
         record.setVehicleId(vehicleId);
         record.setStationId(stationId);
-        record.setStartTime(LocalDateTime.now());
-        record.setTotal(amount);
+        record.setStartDate(startDate);
+        record.setEndDate(endDate);
+        record.setRentalDays(rentalDays);
+        record.setDistanceKm(distanceKm != null ? distanceKm : 0);
+        record.setStartTime(startDate.atStartOfDay());
+        record.setEndTime(endDate.plusDays(1).atStartOfDay());
+        record.setTotal(vehicle.getPrice() * rentalDays);
+        record.setStatus("PENDING_PAYMENT");
+        record.setPaymentStatus("PENDING");
 
         rentalRepo.save(record);
+        boolean held = vehicleService.markPendingPayment(vehicleId, rentalId);
+        if (!held) {
+            record.setStatus("CANCELLED");
+            record.setPaymentStatus("CANCELLED");
+            rentalRepo.save(record);
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Xe đang chờ thanh toán");
+        }
 
-        vehicleRepo.updateAvailable(vehicleId, false);
-
-        return Map.of(
-                "status", "success",
-                "rentalId", rentalId
-        );
+        return ResponseEntity.ok(record);
     }
 
     @GetMapping("/history")
-    public List<RentalRecord> history() {
+    public ResponseEntity<?> history() {
         String username = getCurrentUsername();
-        return rentalRepo.findByUsername(username);
+        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+
+        return ResponseEntity.ok(rentalRecordService.getHistoryDetails(username));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<?> stats() {
+        String username = getCurrentUsername();
+        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+
+        return ResponseEntity.ok(rentalRecordService.calculateStats(username));
+    }
+
+    @GetMapping("/{rentalId}")
+    public ResponseEntity<?> getRental(@PathVariable String rentalId) {
+        try {
+            String username = getCurrentUsername();
+            RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+            if (record == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
+            if (username == null || !Objects.equals(record.getUsername(), username)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
+            }
+
+            Vehicle vehicle = null;
+            if (record.getVehicleId() != null) {
+                vehicle = vehicleRepo.findById(record.getVehicleId()).orElse(null);
+            }
+            var station = record.getStationId() != null
+                    ? stationRepository.findById(record.getStationId()).orElse(null)
+                    : null;
+
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("id", record.getId());
+            payload.put("username", record.getUsername());
+            payload.put("vehicleId", record.getVehicleId());
+            payload.put("stationId", record.getStationId());
+            payload.put("startDate", record.getStartDate());
+            payload.put("endDate", record.getEndDate());
+            payload.put("rentalDays", record.getRentalDays());
+            payload.put("distanceKm", record.getDistanceKm());
+            payload.put("total", record.getTotal());
+            payload.put("paymentMethod", record.getPaymentMethod());
+            payload.put("paymentStatus", record.getPaymentStatus());
+            payload.put("status", record.getStatus());
+
+            if (vehicle != null) {
+                payload.put("vehicle", vehicle);
+                payload.put("vehiclePrice", vehicle.getPrice());
+                payload.put("vehicleBrand", vehicle.getBrand());
+                payload.put("vehiclePlate", vehicle.getPlate());
+            }
+            if (station != null) {
+                payload.put("station", station);
+            }
+
+            return ResponseEntity.ok(payload);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Không thể tải thông tin thanh toán, vui lòng thử lại");
+        }
+    }
+
+    @PostMapping("/{rentalId}/payment")
+    public ResponseEntity<?> confirmPayment(@PathVariable String rentalId, @RequestBody Map<String, String> body) {
+        String username = getCurrentUsername();
+        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+
+        final String paymentMethod = body.getOrDefault("method", "");
+        if (!paymentMethod.equals("cash") && !paymentMethod.equals("bank_transfer")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid payment method");
+        }
+
+        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        if (record == null || !Objects.equals(record.getUsername(), username)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
+        }
+
+        Vehicle vehicle = vehicleRepo.findById(record.getVehicleId()).orElse(null);
+        if (vehicle == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Vehicle missing for rental");
+        }
+
+        int rentalDays = record.getRentalDays() > 0 ? record.getRentalDays() : 1;
+        double calculatedTotal = rentalDays * vehicle.getPrice();
+
+        if ("bank_transfer".equals(paymentMethod)) {
+            User user = userRepository.findByUsername(username);
+            if (user == null || user.getLicenseData() == null || user.getIdCardData() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Vui lòng tải lên CCCD và GPLX để thanh toán chuyển khoản");
+            }
+        }
+
+        record.setTotal(calculatedTotal);
+        record.setPaymentMethod(paymentMethod);
+        record.setPaymentStatus(paymentMethod.equals("cash") ? "PAY_AT_STATION" : "BANK_TRANSFER");
+        record.setStatus("PENDING_PAYMENT");
+
+        rentalRepo.save(record);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("paymentStatus", record.getPaymentStatus());
+        response.put("total", calculatedTotal);
+        response.put("rentalDays", rentalDays);
+        response.put("paymentMethod", paymentMethod);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{rentalId}/cancel")
+    public ResponseEntity<?> cancelRental(@PathVariable String rentalId) {
+        String username = getCurrentUsername();
+        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+
+        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        if (record == null || !Objects.equals(record.getUsername(), username)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
+        }
+
+        record.setStatus("CANCELLED");
+        record.setPaymentStatus("CANCELLED");
+        rentalRepo.save(record);
+        vehicleService.releaseHold(record.getVehicleId(), rentalId);
+        return ResponseEntity.ok(Map.of("status", "CANCELLED"));
+    }
+
+    @PostMapping("/{rentalId}/sign-contract")
+    public Map<String, Object> signContract(@PathVariable String rentalId) {
+        String username = getCurrentUsername();
+        RentalRecord record = rentalRecordService.signContract(rentalId, username);
+        if (record == null) return Map.of("error", "Rental not found or unauthorized");
+        return Map.of("status", "SIGNED", "contractSigned", true);
+    }
+
+    @PostMapping("/{rentalId}/check-in")
+    public Map<String, Object> checkIn(@PathVariable String rentalId, @RequestBody(required = false) Map<String, String> body) {
+        String username = getCurrentUsername();
+        String notes = body != null ? body.getOrDefault("notes", "") : "";
+
+        RentalRecord record = rentalRecordService.checkIn(rentalId, username, notes);
+        if (record == null) return Map.of("error", "Rental not found or unauthorized");
+
+        vehicleService.updateAvailable(record.getVehicleId(), false);
+        return Map.of(
+                "status", record.getStatus(),
+                "checkinNotes", record.getCheckinNotes(),
+                "startTime", record.getStartTime()
+        );
+    }
+
+    @PostMapping("/{rentalId}/return")
+    public Map<String, Object> requestReturn(@PathVariable String rentalId, @RequestBody(required = false) Map<String, String> body) {
+        String username = getCurrentUsername();
+        String notes = body != null ? body.getOrDefault("notes", "") : "";
+
+        RentalRecord record = rentalRecordService.requestReturn(rentalId, username, notes);
+        if (record == null) return Map.of("error", "Rental not found or unauthorized");
+
+        return Map.of(
+                "status", record.getStatus(),
+                "returnNotes", record.getReturnNotes(),
+                "endTime", record.getEndTime()
+        );
     }
 }
