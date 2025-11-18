@@ -49,6 +49,9 @@
                 <p><strong>Mã chuyến:</strong> <span id="qr-rental"></span></p>
                 <p><strong>Xe:</strong> <span id="qr-vehicle"></span></p>
                 <p><strong>Tổng tiền:</strong> <span id="qr-total"></span></p>
+                <p><strong>Ngân hàng:</strong> <span id="qr-bank"></span></p>
+                <p><strong>Số tài khoản:</strong> <span id="qr-account"></span></p>
+                <p><strong>Chủ tài khoản:</strong> <span id="qr-account-name"></span></p>
                 <p class="qr-meta">
                     Mở ứng dụng ngân hàng và quét QR SePay. Nội dung chuyển khoản nên bao gồm <strong>mã chuyến</strong> để nhân viên đối chiếu.
                 </p>
@@ -74,7 +77,18 @@
         if (!rentalId) return;
 
         const res = await fetch(`/api/rental/${rentalId}`);
-        const data = res.ok ? await res.json() : {};
+        if (!res.ok) {
+            const msg = await res.text();
+            alert(msg || 'Không tải được thông tin chuyến, vui lòng quay lại.');
+            window.location.href = '/datxe';
+            return;
+        }
+        const data = await res.json();
+        if (data.status && data.status !== 'PENDING_PAYMENT' && data.paymentStatus === 'PAY_AT_STATION') {
+            alert('Chuyến này đang chờ thanh toán tiền mặt, không cần tạo QR.');
+            window.location.href = '/datxe';
+            return;
+        }
 
         const orderRes = await fetch('/payment/create-order', {
             method: 'POST',
@@ -103,11 +117,19 @@
         document.getElementById('qr-rental').innerText = rentalId || '';
         document.getElementById('qr-vehicle').innerText = vehicleLabel;
         document.getElementById('qr-total').innerText = fmtCurrency(orderData.amount || data.total || 0);
-        const qrUrl = orderData.qrCodeUrl || orderData.qrCode || 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=sepay';
-        document.getElementById('qr-image').src = qrUrl;
+        document.getElementById('qr-bank').innerText = orderData.bank || '';
+        document.getElementById('qr-account').innerText = orderData.accountNumber || '';
+        document.getElementById('qr-account-name').innerText = orderData.accountName || '';
+
+        const qrUrl = orderData.qrUrl || orderData.qr_url || orderData.qrCodeUrl || orderData.qrCode || 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=sepay';
+        if (orderData.qrBase64) {
+            document.getElementById('qr-image').src = `data:image/png;base64,${orderData.qrBase64}`;
+        } else {
+            document.getElementById('qr-image').src = qrUrl;
+        }
         document.getElementById('btn-open-sepay').onclick = () => {
-            if (orderData.checkoutUrl) {
-                window.location.href = orderData.checkoutUrl;
+            if (qrUrl) {
+                window.open(qrUrl, '_blank');
             }
         };
     }

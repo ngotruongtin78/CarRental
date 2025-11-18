@@ -11,6 +11,7 @@ let selectedVehicle = null;
 let selectedVehicleData = null;
 let stationCache = [];
 let userCoordinates = null;
+let documentInfo = null;
 
 function initDates() {
     const today = new Date().toISOString().split("T")[0];
@@ -103,6 +104,70 @@ async function checkLogin() {
     } catch {
         return false;
     }
+}
+
+function applyDocumentStatus(data) {
+    const card = document.getElementById("document-upload-card");
+    const statusEl = document.getElementById("document-status");
+    const btnId = document.getElementById("btn-upload-idcard");
+    const btnLicense = document.getElementById("btn-upload-license");
+    if (!card || !statusEl || !btnId || !btnLicense) return;
+
+    const licenseUploaded = !!data?.licenseUploaded;
+    const idCardUploaded = !!data?.idCardUploaded;
+
+    if (licenseUploaded && idCardUploaded) {
+        card.style.display = "none";
+        return;
+    }
+
+    card.style.display = "block";
+    const missing = [];
+    if (!idCardUploaded) missing.push("CCCD");
+    if (!licenseUploaded) missing.push("GPLX");
+
+    statusEl.innerText = missing.length ? `Vui lòng tải: ${missing.join(", ")}` : "Chưa có thông tin giấy tờ.";
+    statusEl.style.color = "#c0392b";
+    btnId.style.display = idCardUploaded ? "none" : "inline-flex";
+    btnLicense.style.display = licenseUploaded ? "none" : "inline-flex";
+}
+
+async function loadDocumentStatus() {
+    try {
+        const res = await fetch("/api/renter/verification-status");
+        if (!res.ok) {
+            applyDocumentStatus({});
+            return;
+        }
+        const data = await res.json();
+        documentInfo = data;
+        applyDocumentStatus(data);
+    } catch (e) {
+        console.error("Lỗi kiểm tra giấy tờ:", e);
+        applyDocumentStatus({});
+    }
+}
+
+function triggerDocumentUpload(type) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async () => {
+        if (!input.files.length) return;
+        const form = new FormData();
+        form.append("file", input.files[0]);
+        const res = await fetch(`/api/renter/upload-${type}`, { method: "POST", body: form });
+        if (res.ok) {
+            const data = await res.json().catch(() => null);
+            alert("Tải lên thành công");
+            documentInfo = data || documentInfo;
+            applyDocumentStatus(documentInfo || {});
+        } else {
+            const msg = await res.text();
+            alert(msg || "Tải lên thất bại");
+        }
+    };
+    input.click();
 }
 
 // ===============================
@@ -312,6 +377,10 @@ async function bookNow() {
 }
 
 document.getElementById("btn-book").onclick = bookNow;
+const btnIdCard = document.getElementById("btn-upload-idcard");
+const btnLicense = document.getElementById("btn-upload-license");
+if (btnIdCard) btnIdCard.onclick = () => triggerDocumentUpload("idcard");
+if (btnLicense) btnLicense.onclick = () => triggerDocumentUpload("license");
 
 // ===============================
 // KHỞI CHẠY
@@ -320,6 +389,7 @@ initDates();
 requestUserLocation();
 loadStations();
 renderSelectionDetails();
+loadDocumentStatus();
 
 const startInput = document.getElementById("start-date");
 const endInput = document.getElementById("end-date");
