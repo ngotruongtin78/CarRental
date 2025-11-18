@@ -17,11 +17,16 @@ public class VehicleController {
     private VehicleRepository repo;
     @GetMapping("/station/{stationId}")
     public List<Vehicle> getByStation(@PathVariable("stationId") String stationId) {
-        return repo.findByStationIdAndAvailable(stationId, true);
+        return repo.findByStationIdAndBookingStatusNot(stationId, "RENTED");
     }
     @GetMapping("/admin/all")
     public List<Vehicle> getAllVehicles() {
         return repo.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public Optional<Vehicle> getVehicle(@PathVariable String id) {
+        return repo.findById(id);
     }
 
     @GetMapping("/admin/{id}")
