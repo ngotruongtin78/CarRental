@@ -241,15 +241,21 @@ public class RentalRecordService {
         String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
         String paymentStatus = Optional.ofNullable(record.getPaymentStatus()).orElse("").toUpperCase();
 
-        if (paymentStatus.equals("PAID") || status.equals("PAID")) {
-            return "Đã thuê";
+        if (record.getEndTime() != null || status.equals("WAITING_INSPECTION") || status.equals("COMPLETED")) {
+            return "Đã trả xe";
         }
+
+        if (status.equals("IN_PROGRESS")) {
+            return "Đang thuê";
+        }
+
+        if (paymentStatus.equals("PAID") || status.equals("PAID")) {
+            return "Đã thanh toán";
+        }
+
         return switch (status) {
-            case "IN_PROGRESS" -> "Đang thuê";
-            case "WAITING_INSPECTION" -> "Chờ kiểm tra";
-            case "COMPLETED" -> "Đã hoàn tất";
-            case "CONTRACT_SIGNED" -> "Sẵn sàng nhận xe";
-            default -> "Đã thuê";
+            case "CONTRACT_SIGNED" -> "Đang thuê";
+            default -> "Đã thanh toán";
         };
     }
 }

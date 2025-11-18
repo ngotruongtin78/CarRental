@@ -72,6 +72,24 @@ function parseDate(input) {
     return isNaN(dt.getTime()) ? null : dt;
 }
 
+function matchesVehicleType(vehicleType, filterValue) {
+    const type = (vehicleType || "").toLowerCase();
+    switch (filterValue) {
+        case "oto4":
+            return type.includes("4") || type.includes("4 ch");
+        case "oto7":
+            return type.includes("7") || type.includes("7 ch");
+        case "xe_may_dien":
+            return type.includes("xe m") || type.includes("máy");
+        case "xe_tay_ga_dien":
+            return type.includes("tay ga") || type.includes("ga");
+        case "xe_dap_dien":
+            return type.includes("đạp");
+        default:
+            return true;
+    }
+}
+
 function filterHistory() {
     const period = document.getElementById("period-filter").value;
     const vehicleType = document.getElementById("vehicle-type-filter").value;
@@ -108,15 +126,12 @@ function filterHistory() {
             if (!startDate || startDate < lastMonthStart || startDate > lastMonthEnd) return false;
         }
 
-        if (vehicleType !== "all") {
-            const vehicleMatch = (item.vehicle?.type || "").toLowerCase().includes(vehicleType.toLowerCase());
-            if (!vehicleMatch) return false;
-        }
+        if (vehicleType !== "all" && !matchesVehicleType(item.vehicle?.type, vehicleType)) return false;
 
         if (status !== "all") {
-            if (status === "paid" && !displayStatus.includes("thuê")) return false;
-            if (status === "active" && !displayStatus.includes("đang")) return false;
-            if (status === "completed" && !displayStatus.includes("hoàn")) return false;
+            if (status === "paid" && !displayStatus.includes("thanh toán")) return false;
+            if (status === "active" && !displayStatus.includes("đang thuê")) return false;
+            if (status === "returned" && !displayStatus.includes("trả xe")) return false;
         }
 
         return true;
@@ -249,5 +264,4 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("period-filter")?.addEventListener("change", filterHistory);
     document.getElementById("vehicle-type-filter")?.addEventListener("change", filterHistory);
     document.getElementById("status-filter")?.addEventListener("change", filterHistory);
-    document.getElementById("btn-find-station")?.addEventListener("click", findNearestStation);
 });

@@ -53,13 +53,20 @@
                 <label for="vehicle-type-filter">Loại xe:</label>
                 <select id="vehicle-type-filter" class="form-select">
                     <option value="all">Tất cả</option>
-                    <option value="4cho">Ô tô 4 chỗ</option>
-                    <option value="7cho">Ô tô 7 chỗ</option>
-                    <option value="sedan">Sedan</option>
-                    <option value="suv">SUV</option>
-                    <option value="xe_dien">Xe điện</option>
-                    <option value="scooter">Xe tay ga điện</option>
-                    <option value="bike">Xe đạp điện</option>
+                    <option value="oto4">Ô tô 4 chỗ</option>
+                    <option value="oto7">Ô tô 7 chỗ</option>
+                    <option value="xe_may_dien">Xe máy điện</option>
+                    <option value="xe_tay_ga_dien">Xe tay ga điện</option>
+                    <option value="xe_dap_dien">Xe đạp điện</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="status-filter">Trạng thái:</label>
+                <select id="status-filter" class="form-select">
+                    <option value="all">Tất cả</option>
+                    <option value="paid">Đã thanh toán</option>
+                    <option value="active">Đang thuê</option>
+                    <option value="returned">Đã trả xe</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -107,6 +114,7 @@
 
     </div>
 </div>
+<script src="/js/station-search.js"></script>
 <script src="/js/lichsuthue.js"></script>
 </body>
 </html>
