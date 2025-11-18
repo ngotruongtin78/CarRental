@@ -117,7 +117,7 @@ public class PaymentController {
         String description = "Thanh toan don hang #" + rentalId;
 
         try {
-            SepayQRData qrData = sepayService.createPaymentQR(amountInt, description);
+            SepayQRData qrData = sepayService.generateQR(amountInt, description);
             payload.put("amount", amountInt);
             payload.put("description", description);
             payload.put("qrUrl", qrData.getQrUrl());
@@ -127,6 +127,8 @@ public class PaymentController {
             payload.put("accountNumber", Optional.ofNullable(qrData.getAccountNumber()).orElse(accountNumber));
             payload.put("rentalId", rentalId);
             payload.put("status", "OK");
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
         } catch (IllegalStateException ex) {
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ex.getMessage());
         }
