@@ -32,18 +32,26 @@ async function loadRentalInfo() {
     try {
         const res = await fetch(`/api/rental/${rentalId}`);
         if (!res.ok) {
-            console.error("Lỗi khi gọi API rental");
-            alert("Không tải được thông tin thanh toán, vui lòng thử lại.");
+            const msg = await res.text();
+            console.error("Lỗi khi gọi API rental", msg);
+            alert(msg || "Không tải được thông tin thanh toán, vui lòng thử lại.");
             return;
         }
 
         rentalData = await res.json();
 
-        const vehicleRes = await fetch(`/api/vehicles/${rentalData.vehicleId}`);
-        vehicleData = vehicleRes.ok ? await vehicleRes.json() : null;
+        vehicleData = rentalData.vehicle || null;
+        stationData = rentalData.station || null;
 
-        const stationRes = await fetch(`/api/stations/${rentalData.stationId}`);
-        stationData = stationRes.ok ? await stationRes.json() : null;
+        if (!vehicleData) {
+            const vehicleRes = await fetch(`/api/vehicles/${rentalData.vehicleId}`);
+            vehicleData = vehicleRes.ok ? await vehicleRes.json() : null;
+        }
+
+        if (!stationData) {
+            const stationRes = await fetch(`/api/stations/${rentalData.stationId}`);
+            stationData = stationRes.ok ? await stationRes.json() : null;
+        }
 
         document.querySelector(".username-label").innerText = rentalData.username || "";
 
@@ -66,7 +74,7 @@ async function loadRentalInfo() {
         document.querySelector(".summary-value.distance").innerText =
             rentalData.distanceKm ? `${Number(rentalData.distanceKm).toFixed(1)} km` : "-";
 
-        const unitPrice = vehicleData?.price || (rentalData.total && rentalData.rentalDays ? rentalData.total / rentalData.rentalDays : 0);
+        const unitPrice = vehicleData?.price || rentalData.vehiclePrice || (rentalData.total && rentalData.rentalDays ? rentalData.total / rentalData.rentalDays : 0);
         const basePrice = unitPrice * rentalDays;
         totalAmount = rentalData.total && rentalData.total > 0 ? rentalData.total : basePrice + (rentalData.damageFee ?? 0);
 

@@ -4,6 +4,7 @@ import CarRental.example.document.RentalRecord;
 import CarRental.example.document.User;
 import CarRental.example.document.Vehicle;
 import CarRental.example.repository.RentalRecordRepository;
+import CarRental.example.repository.StationRepository;
 import CarRental.example.repository.UserRepository;
 import CarRental.example.repository.VehicleRepository;
 import CarRental.example.service.RentalRecordService;
@@ -29,17 +30,20 @@ public class RentalController {
 
     private final RentalRecordRepository rentalRepo;
     private final VehicleRepository vehicleRepo;
+    private final StationRepository stationRepository;
     private final SequenceGeneratorService sequence;
     private final VehicleService vehicleService;
     private final RentalRecordService rentalRecordService;
     private final UserRepository userRepository;
     public RentalController(RentalRecordRepository rentalRepo,
                             VehicleRepository vehicleRepo,
+                            StationRepository stationRepository,
                             SequenceGeneratorService sequence, VehicleService vehicleService,
                             RentalRecordService rentalRecordService,
                             UserRepository userRepository) {
         this.rentalRepo = rentalRepo;
         this.vehicleRepo = vehicleRepo;
+        this.stationRepository = stationRepository;
         this.sequence = sequence;
         this.vehicleService = vehicleService;
         this.rentalRecordService = rentalRecordService;
@@ -158,13 +162,51 @@ public class RentalController {
 
     @GetMapping("/{rentalId}")
     public ResponseEntity<?> getRental(@PathVariable String rentalId) {
-        String username = getCurrentUsername();
-        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
-        if (record == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
-        if (username == null || !Objects.equals(record.getUsername(), username)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
+        try {
+            String username = getCurrentUsername();
+            RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+            if (record == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
+            if (username == null || !Objects.equals(record.getUsername(), username)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
+            }
+
+            Vehicle vehicle = null;
+            if (record.getVehicleId() != null) {
+                vehicle = vehicleRepo.findById(record.getVehicleId()).orElse(null);
+            }
+            var station = record.getStationId() != null
+                    ? stationRepository.findById(record.getStationId()).orElse(null)
+                    : null;
+
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("id", record.getId());
+            payload.put("username", record.getUsername());
+            payload.put("vehicleId", record.getVehicleId());
+            payload.put("stationId", record.getStationId());
+            payload.put("startDate", record.getStartDate());
+            payload.put("endDate", record.getEndDate());
+            payload.put("rentalDays", record.getRentalDays());
+            payload.put("distanceKm", record.getDistanceKm());
+            payload.put("total", record.getTotal());
+            payload.put("paymentMethod", record.getPaymentMethod());
+            payload.put("paymentStatus", record.getPaymentStatus());
+            payload.put("status", record.getStatus());
+
+            if (vehicle != null) {
+                payload.put("vehicle", vehicle);
+                payload.put("vehiclePrice", vehicle.getPrice());
+                payload.put("vehicleBrand", vehicle.getBrand());
+                payload.put("vehiclePlate", vehicle.getPlate());
+            }
+            if (station != null) {
+                payload.put("station", station);
+            }
+
+            return ResponseEntity.ok(payload);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Không thể tải thông tin thanh toán, vui lòng thử lại");
         }
-        return ResponseEntity.ok(record);
     }
 
     @PostMapping("/{rentalId}/payment")
