@@ -34,6 +34,8 @@ public class StaffReturnController {
         Vehicle vehicle = vehicleRepo.findById(rental.getVehicleId()).orElse(null);
         if (vehicle != null) {
             vehicle.setAvailable(true);
+            vehicle.setBookingStatus("AVAILABLE");
+            vehicle.setPendingRentalId(null);
             vehicleRepo.save(vehicle);
         }
 
