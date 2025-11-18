@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/rental")
@@ -201,6 +202,8 @@ public class RentalController {
             }
         }
 
+        record.setStatus("CANCELLED");
+        record.setPaymentStatus("CANCELLED");
         rentalRepo.save(record);
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("paymentStatus", record.getPaymentStatus());
