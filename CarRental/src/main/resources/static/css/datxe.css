@@ -488,6 +488,20 @@ body {
     flex-wrap: wrap;
 }
 
+.verify-row {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.verify-status {
+    margin: 0;
+    color: #c0392b;
+    font-weight: 600;
+}
+
 .btn-upload-doc {
     background: #1f6d1f;
     color: white;
@@ -499,6 +513,12 @@ body {
 
 .btn-upload-doc:hover {
     background: #145014;
+}
+
+.btn-upload-doc.secondary {
+    background: #ffffff;
+    color: #1f6d1f;
+    border: 1px dashed #1f6d1f;
 }
 
 

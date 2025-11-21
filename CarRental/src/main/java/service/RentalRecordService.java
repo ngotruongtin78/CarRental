@@ -95,6 +95,10 @@ public class RentalRecordService {
                 .mapToDouble(RentalRecord::getTotal)
                 .sum();
 
+        double totalDistance = records.stream()
+                .mapToDouble(RentalRecord::getDistanceKm)
+                .sum();
+
         int totalTrips = records.size();
         double averageSpent = totalTrips > 0 ? totalSpent / totalTrips : 0;
 
@@ -125,6 +129,7 @@ public class RentalRecordService {
         stats.put("totalTrips", totalTrips);
         stats.put("totalSpent", totalSpent);
         stats.put("averageSpent", averageSpent);
+        stats.put("totalDistance", totalDistance);
         stats.put("peakHours", peakHours);
         stats.put("averageDurationMinutes", averageDurationMinutes);
 

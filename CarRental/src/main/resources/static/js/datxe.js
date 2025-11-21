@@ -111,25 +111,42 @@ function applyDocumentStatus(data) {
     const statusEl = document.getElementById("document-status");
     const btnId = document.getElementById("btn-upload-idcard");
     const btnLicense = document.getElementById("btn-upload-license");
+    const verifyText = document.getElementById("verify-status");
+    const verifyBtn = document.getElementById("btn-request-verify");
     if (!card || !statusEl || !btnId || !btnLicense) return;
 
     const licenseUploaded = !!data?.licenseUploaded;
     const idCardUploaded = !!data?.idCardUploaded;
-
-    if (licenseUploaded && idCardUploaded) {
-        card.style.display = "none";
-        return;
-    }
 
     card.style.display = "block";
     const missing = [];
     if (!idCardUploaded) missing.push("CCCD");
     if (!licenseUploaded) missing.push("GPLX");
 
-    statusEl.innerText = missing.length ? `Vui lòng tải: ${missing.join(", ")}` : "Chưa có thông tin giấy tờ.";
-    statusEl.style.color = "#c0392b";
+    statusEl.innerText = missing.length ? `Vui lòng tải: ${missing.join(", ")}` : "Đã tải đủ giấy tờ.";
+    statusEl.style.color = missing.length ? "#c0392b" : "#1f6d1f";
     btnId.style.display = idCardUploaded ? "none" : "inline-flex";
     btnLicense.style.display = licenseUploaded ? "none" : "inline-flex";
+
+    if (verifyText && verifyBtn) {
+        if (data?.verified) {
+            verifyText.innerText = "Đã xác thực giấy tờ. Bạn có thể nhận xe nhanh.";
+            verifyText.style.color = "#1f6d1f";
+            verifyBtn.style.display = "none";
+        } else if (data?.verificationRequested) {
+            verifyText.innerText = "Đã gửi yêu cầu xác thực, vui lòng gặp nhân viên tại quầy.";
+            verifyText.style.color = "#c47a0b";
+            verifyBtn.disabled = true;
+            verifyBtn.innerText = "Đã yêu cầu xác thực";
+            verifyBtn.style.display = "inline-flex";
+        } else {
+            verifyText.innerText = "Chưa xác thực. Nhấn để nhờ nhân viên xác nhận nhanh tại điểm thuê.";
+            verifyText.style.color = "#c0392b";
+            verifyBtn.disabled = false;
+            verifyBtn.innerText = "Yêu cầu xác thực tại quầy";
+            verifyBtn.style.display = "inline-flex";
+        }
+    }
 }
 
 async function loadDocumentStatus() {
@@ -145,6 +162,21 @@ async function loadDocumentStatus() {
     } catch (e) {
         console.error("Lỗi kiểm tra giấy tờ:", e);
         applyDocumentStatus({});
+    }
+}
+
+async function requestVerification() {
+    try {
+        const res = await fetch("/api/renter/request-verification", { method: "POST" });
+        if (res.ok) {
+            alert("Đã gửi yêu cầu xác thực. Vui lòng gặp nhân viên tại trạm để kiểm tra nhanh.");
+            loadDocumentStatus();
+        } else {
+            const text = await res.text();
+            alert(text || "Không gửi được yêu cầu xác thực.");
+        }
+    } catch (e) {
+        alert("Không gửi được yêu cầu xác thực.");
     }
 }
 
@@ -379,8 +411,10 @@ async function bookNow() {
 document.getElementById("btn-book").onclick = bookNow;
 const btnIdCard = document.getElementById("btn-upload-idcard");
 const btnLicense = document.getElementById("btn-upload-license");
+const btnRequestVerify = document.getElementById("btn-request-verify");
 if (btnIdCard) btnIdCard.onclick = () => triggerDocumentUpload("idcard");
 if (btnLicense) btnLicense.onclick = () => triggerDocumentUpload("license");
+if (btnRequestVerify) btnRequestVerify.onclick = requestVerification;
 
 // ===============================
 // KHỞI CHẠY

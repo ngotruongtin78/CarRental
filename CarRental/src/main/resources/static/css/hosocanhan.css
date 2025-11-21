@@ -207,12 +207,31 @@ body {
     transition: background-color 0.2s;
 }
 
+.doc-button.secondary {
+    background-color: #ffffff;
+    color: #388e3c;
+    border: 1px dashed #388e3c;
+}
+
 .doc-button:hover {
     background-color: #e0e0e0;
 }
 
 .doc-button i {
     margin-right: 8px;
+}
+
+.verification-box {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 10px;
+    background: #f9f9f9;
+    border: 1px dashed #c5d6c5;
+}
+
+.verification-text {
+    margin: 0 0 10px 0;
+    color: #555;
 }
 
 .activity-summary-card h2 {
