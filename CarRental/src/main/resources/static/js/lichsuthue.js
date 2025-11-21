@@ -6,6 +6,17 @@ function formatDate(dateStr) {
     return `${date.toLocaleDateString()}`;
 }
 
+function isCancelled(record) {
+    const status = (record.status || "").toUpperCase();
+    const paymentStatus = (record.paymentStatus || "").toUpperCase();
+    return ["CANCELLED", "EXPIRED"].includes(status) || ["CANCELLED", "EXPIRED"].includes(paymentStatus);
+}
+
+function isCompleted(record) {
+    const status = (record.status || "").toUpperCase();
+    return ["COMPLETED", "RETURNED"].includes(status);
+}
+
 function renderHistoryItem(item) {
     const record = item.record || {};
     const vehicle = item.vehicle;
@@ -19,6 +30,7 @@ function renderHistoryItem(item) {
     const stationLabel = station ? `${station.name} - ${station.address ?? ""}` : (record.stationId || "");
     const total = record.total ? Number(record.total).toLocaleString("vi-VN") + " VNĐ" : "0";
     const displayStatus = item.displayStatus || record.displayStatus || record.status || "";
+    const distance = record.distanceKm ? `${record.distanceKm.toFixed(1)} km` : "Chưa có";
 
     container.innerHTML = `
         <div class="item-header">
@@ -35,8 +47,8 @@ function renderHistoryItem(item) {
                 <p>Điểm thuê: ${stationLabel || ""}</p>
             </div>
             <div class="detail-group">
-                <i class="fas fa-info-circle"></i>
-                <p>Trạng thái: ${displayStatus}</p>
+                <i class="fas fa-road"></i>
+                <p>Quãng đường tới trạm: ${distance}</p>
             </div>
             <div class="detail-group">
                 <i class="fas fa-dollar-sign"></i>
@@ -44,6 +56,65 @@ function renderHistoryItem(item) {
             </div>
         </div>
     `;
+
+    const actions = document.createElement("div");
+    actions.classList.add("history-actions");
+
+    const statusBadge = document.createElement("span");
+    statusBadge.classList.add("status-badge");
+    statusBadge.innerText = `Trạng thái: ${displayStatus}`;
+    if (record.status && record.status.toUpperCase() === "WAITING_INSPECTION") {
+        statusBadge.classList.add("warning");
+    }
+    actions.appendChild(statusBadge);
+
+    const disabled = isCancelled(record) || isCompleted(record);
+
+    if (!disabled && !record.contractSigned) {
+        const btn = document.createElement("button");
+        btn.className = "action-button";
+        btn.innerHTML = '<i class="fas fa-file-signature"></i> Ký hợp đồng điện tử';
+        btn.onclick = () => signContract(record.id);
+        actions.appendChild(btn);
+    }
+
+    const statusUpper = (record.status || "").toUpperCase();
+
+    if (!disabled) {
+        const btnCheckin = document.createElement("button");
+        btnCheckin.className = "action-button";
+        btnCheckin.innerHTML = '<i class="fas fa-check"></i> Check-in nhận xe';
+        btnCheckin.onclick = () => checkIn(record.id);
+        actions.appendChild(btnCheckin);
+    }
+
+    if (!disabled && statusUpper !== "WAITING_INSPECTION") {
+        const btnReturn = document.createElement("button");
+        btnReturn.className = "action-button secondary";
+        btnReturn.innerHTML = '<i class="fas fa-undo"></i> Yêu cầu trả xe';
+        btnReturn.onclick = () => requestReturn(record.id);
+        actions.appendChild(btnReturn);
+    } else if (statusUpper === "WAITING_INSPECTION") {
+        const note = document.createElement("span");
+        note.className = "status-badge warning";
+        note.innerText = "Đã gửi yêu cầu trả xe";
+        actions.appendChild(note);
+    }
+
+    container.appendChild(actions);
+
+    if (record.checkinNotes) {
+        const p = document.createElement("p");
+        p.className = "note-text";
+        p.innerText = `Ghi chú check-in: ${record.checkinNotes}`;
+        container.appendChild(p);
+    }
+    if (record.returnNotes) {
+        const p = document.createElement("p");
+        p.className = "note-text";
+        p.innerText = `Ghi chú trả xe: ${record.returnNotes}`;
+        container.appendChild(p);
+    }
 
     return container;
 }
@@ -131,6 +202,52 @@ function filterHistory() {
     renderHistoryList(filtered);
 }
 
+async function signContract(rentalId) {
+    try {
+        const res = await fetch(`/api/rental/${rentalId}/sign-contract`, { method: "POST" });
+        const txt = await res.text();
+        if (!res.ok) return alert(txt || "Không ký được hợp đồng");
+        alert("Đã ký hợp đồng điện tử. Vui lòng check-in để nhận xe.");
+        loadHistory();
+    } catch (e) {
+        alert("Không ký được hợp đồng. Thử lại sau.");
+    }
+}
+
+async function checkIn(rentalId) {
+    const notes = prompt("Nhập ghi chú tình trạng xe khi nhận (tuỳ chọn):", "");
+    try {
+        const res = await fetch(`/api/rental/${rentalId}/check-in`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ notes: notes || "" })
+        });
+        const txt = await res.text();
+        if (!res.ok) return alert(txt || "Check-in thất bại");
+        alert("Đã check-in. Hãy chụp ảnh và lưu ý với nhân viên tại quầy.");
+        loadHistory();
+    } catch (e) {
+        alert("Không check-in được. Thử lại sau.");
+    }
+}
+
+async function requestReturn(rentalId) {
+    const notes = prompt("Nhập ghi chú khi trả xe (hư hỏng, tình trạng...):", "");
+    try {
+        const res = await fetch(`/api/rental/${rentalId}/return`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ notes: notes || "" })
+        });
+        const txt = await res.text();
+        if (!res.ok) return alert(txt || "Không gửi được yêu cầu trả xe");
+        alert("Đã yêu cầu trả xe. Vui lòng bàn giao tại điểm thuê để nhân viên kiểm tra.");
+        loadHistory();
+    } catch (e) {
+        alert("Không gửi được yêu cầu trả xe. Thử lại sau.");
+    }
+}
+
 async function loadHistory() {
     const listEl = document.getElementById("history-list");
     listEl.innerHTML = "<p>Đang tải...</p>";
@@ -152,6 +269,7 @@ async function loadHistory() {
 function updateAnalyticsFromHistory(list) {
     const totalTrips = list.length;
     const totalSpent = list.reduce((sum, item) => sum + (item.record?.total || 0), 0);
+    const totalDistance = list.reduce((sum, item) => sum + (item.record?.distanceKm || 0), 0);
     const durations = list
         .map(item => {
             const start = parseDate(item.record?.startTime);
@@ -167,6 +285,7 @@ function updateAnalyticsFromHistory(list) {
     document.getElementById("total-trips").innerText = totalTrips;
     document.getElementById("total-spent").innerHTML = `${totalSpent.toLocaleString("vi-VN")} <small>VNĐ</small>`;
     document.getElementById("avg-duration").innerHTML = `${avgDurationDays.toFixed(1)} <small>ngày</small>`;
+    document.getElementById("total-distance").innerHTML = `${totalDistance.toFixed(1)} <small>km</small>`;
 }
 
 async function loadStats() {
@@ -181,6 +300,10 @@ async function loadStats() {
             ? (stats.averageDurationMinutes / 1440).toFixed(1)
             : "0.0";
         document.getElementById("avg-duration").innerHTML = `${avgDays} <small>ngày</small>`;
+        const distance = stats.totalDistance || 0;
+        document.getElementById("total-distance").innerHTML = `${distance.toFixed(1)} <small>km</small>`;
+        const peaks = stats.peakHours && stats.peakHours.length ? stats.peakHours.map(h => `${h}h`).join(", ") : "-";
+        document.getElementById("peak-hours").innerText = peaks;
     } catch (err) {
         console.error("Lỗi loadStats:", err);
     }
