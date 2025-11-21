@@ -4,17 +4,19 @@ import CarRental.example.document.RentalRecord;
 import CarRental.example.repository.RentalRecordRepository;
 import CarRental.example.service.VehicleService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class SepayWebhookHandler {
 
     private final RentalRecordRepository rentalRepo;
     private final VehicleService vehicleService;
+
+    private static final Logger log = LoggerFactory.getLogger(SepayWebhookHandler.class);
 
     public ResponseEntity<String> processWebhook(SepayWebhookData data) {
 
