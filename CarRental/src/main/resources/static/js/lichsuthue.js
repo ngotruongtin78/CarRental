@@ -114,7 +114,7 @@ function filterHistory() {
     const filtered = historyData.filter(item => {
         const record = item.record || {};
         const startDate = parseDate(record.startDate || record.startTime);
-        const displayStatus = (item.displayStatus || record.displayStatus || record.status || "").toLowerCase();
+        const filterStatus = (item.filterStatus || record.filterStatus || "").toLowerCase();
 
         if (periodRange.start && (!startDate || startDate < periodRange.start)) return false;
         if (periodRange.end && startDate && startDate > periodRange.end) return false;
@@ -122,9 +122,7 @@ function filterHistory() {
         if (vehicleType !== "all" && !matchesVehicleType(item.vehicle?.type, vehicleType)) return false;
 
         if (status !== "all") {
-            if (status === "rented" && !displayStatus.includes("đã thuê")) return false;
-            if (status === "active" && !(displayStatus.includes("đang thuê") || displayStatus.includes("chờ xác"))) return false;
-            if (status === "returned" && !displayStatus.includes("trả xe")) return false;
+            if (filterStatus !== status) return false;
         }
 
         return true;

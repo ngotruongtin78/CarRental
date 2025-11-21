@@ -48,6 +48,7 @@ public class RentalRecordService {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("record", record);
             item.put("displayStatus", translateStatus(record));
+            item.put("filterStatus", translateFilterStatus(record));
 
             vehicleRepository.findById(record.getVehicleId()).ifPresent(vehicle -> {
                 Map<String, Object> vehicleInfo = new LinkedHashMap<>();
@@ -233,16 +234,10 @@ public class RentalRecordService {
 
         boolean cancelled = status.equals("CANCELLED") || status.equals("EXPIRED") || paymentStatus.equals("CANCELLED")
                 || paymentStatus.equals("EXPIRED");
-        boolean unpaid = status.equals("PENDING_PAYMENT") || paymentStatus.equals("PENDING")
-                || paymentStatus.equals("PAY_AT_STATION");
 
-        if (cancelled || unpaid) return false;
+        if (cancelled) return false;
 
-        boolean paid = paymentStatus.equals("PAID") || status.equals("PAID");
-        boolean active = status.equals("IN_PROGRESS") || status.equals("WAITING_INSPECTION")
-                || status.equals("COMPLETED") || status.equals("CONTRACT_SIGNED");
-
-        return paid || active;
+        return true;
     }
 
     private String translateStatus(RentalRecord record) {
@@ -274,5 +269,36 @@ public class RentalRecordService {
         }
 
         return "Đã thuê";
+    }
+
+    private String translateFilterStatus(RentalRecord record) {
+        String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
+        String paymentStatus = Optional.ofNullable(record.getPaymentStatus()).orElse("").toUpperCase();
+
+        if (status.equals("COMPLETED") || status.equals("RETURNED")) {
+            return "returned";
+        }
+
+        if (status.equals("WAITING_INSPECTION")) {
+            return "active";
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startTime = record.getStartTime();
+        LocalDateTime endTime = record.getEndTime();
+        boolean withinRentalTime = startTime != null && endTime != null
+                && !now.isBefore(startTime)
+                && !now.isAfter(endTime);
+
+        if (withinRentalTime || status.equals("IN_PROGRESS") || status.equals("CONTRACT_SIGNED")) {
+            return "active";
+        }
+
+        if (paymentStatus.equals("PAID") || status.equals("PAID") || paymentStatus.equals("PAY_AT_STATION")
+                || status.equals("PENDING_PAYMENT") || paymentStatus.equals("BANK_TRANSFER")) {
+            return "rented";
+        }
+
+        return "rented";
     }
 }
