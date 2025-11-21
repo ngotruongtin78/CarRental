@@ -161,6 +161,7 @@ public class RentalRecordService {
         record.setStatus("WAITING_INSPECTION");
         return repo.save(record);
     }
+
     public Map<String, Object> getGlobalStats() {
         List<RentalRecord> allRecords = repo.findAll();
 
@@ -168,7 +169,12 @@ public class RentalRecordService {
         int totalTrips = 0;
         int successfulTrips = 0;
         Map<String, Double> revenueByDate = new TreeMap<>();
+
         Map<Integer, Integer> peakHourCounts = new HashMap<>();
+        for (int i = 0; i < 24; i++) {
+            peakHourCounts.put(i, 0);
+        }
+
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
         for (RentalRecord r : allRecords) {
@@ -183,6 +189,8 @@ public class RentalRecordService {
                 if (r.getStartTime() != null) {
                     String dateKey = r.getStartTime().format(dateFormatter);
                     revenueByDate.merge(dateKey, r.getTotal(), Double::sum);
+
+                    // Lấy giờ bắt đầu để tính cao điểm
                     int hour = r.getStartTime().getHour();
                     peakHourCounts.merge(hour, 1, Integer::sum);
                 }
@@ -195,7 +203,7 @@ public class RentalRecordService {
         List<String> peakLabels = new ArrayList<>();
         List<Double> peakValues = new ArrayList<>();
 
-        for (int h = 6; h <= 22; h++) {
+        for (int h = 0; h <= 23; h++) {
             peakLabels.add(h + "h");
             int count = peakHourCounts.getOrDefault(h, 0);
             double percent = successfulTrips > 0 ? ((double) count / successfulTrips) * 100 : 0;

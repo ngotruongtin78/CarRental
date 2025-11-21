@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý báo cáo sự cố</title>
+    <link rel="stylesheet" th:href="@{/css/staff.css}">
+    <style>
+        .reports-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .report-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 4px solid;
+            overflow: hidden;
+        }
+
+        .report-card.severity-minor {
+            border-left-color: #f39c12;
+        }
+
+        .report-card.severity-moderate {
+            border-left-color: #e67e22;
+        }
+
+        .report-card.severity-critical {
+            border-left-color: #e74c3c;
+        }
+
+        .report-card-header {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .report-plate {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .report-date {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .report-card-body {
+            padding: 15px;
+        }
+
+        .report-field {
+            margin-bottom: 12px;
+        }
+
+        .report-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .report-value {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .report-severity {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .severity-minor-badge {
+            background-color: #fef9e7;
+            color: #f39c12;
+        }
+
+        .severity-moderate-badge {
+            background-color: #fef5e7;
+            color: #e67e22;
+        }
+
+        .severity-critical-badge {
+            background-color: #fdeeee;
+            color: #e74c3c;
+        }
+
+        .report-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .status-reported {
+            background-color: #eaf3fb;
+            color: #3498db;
+        }
+
+        .status-in-repair {
+            background-color: #fef3e6;
+            color: #f39c12;
+        }
+
+        .status-resolved {
+            background-color: #e6f7f0;
+            color: #008a4c;
+        }
+
+        .report-card-footer {
+            padding: 15px;
+            background-color: #f9fafb;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-small-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-small-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-small-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-small-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .page-header-filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-top: 3px solid;
+        }
+
+        .stat-card.reported {
+            border-top-color: #3498db;
+        }
+
+        .stat-card.in-repair {
+            border-top-color: #f39c12;
+        }
+
+        .stat-card.resolved {
+            border-top-color: #2ecc71;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            overflow: auto;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            max-height: 90vh;
+            max-width: 600px;
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            flex-shrink: 0;
+        }
+
+        .modal-footer .btn {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="staff-container">
+    <nav class="sidebar-staff">
+        <div class="logo">⚡️ EV Station</div>
+        <ul>
+            <li><a href="#">Bảng điều khiển</a></li>
+            <li><a th:href="@{/staff/station-grid}">Quản lý xe</a></li>
+            <li><a th:href="@{/staff/receive}">Nhận xe</a></li>
+            <li><a th:href="@{/staff/deliver}">Giao xe</a></li>
+            <li><a th:href="@{/staff/verify}">Xác thực</a></li>
+            <li><a href="#" class="active">Báo cáo sự cố</a></li>
+            <li><a th:href="@{/logout}">Đăng xuất</a></li>
+        </ul>
+    </nav>
+
+    <div class="main-content-staff">
+        <header class="content-header-staff">
+            <div class="header-title">Quản lý báo cáo sự cố</div>
+        </header>
+
+        <main class="content-body-staff">
+            <!-- Statistics Section -->
+            <div class="stats-container" id="statsContainer">
+                <div class="stat-card reported">
+                    <div class="stat-value" id="reportedCount">0</div>
+                    <div class="stat-label">Đã báo cáo</div>
+                </div>
+                <div class="stat-card in-repair">
+                    <div class="stat-value" id="inRepairCount">0</div>
+                    <div class="stat-label">Đang sửa chữa</div>
+                </div>
+                <div class="stat-card resolved">
+                    <div class="stat-value" id="resolvedCount">0</div>
+                    <div class="stat-label">Đã khắc phục</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="page-header-filters">
+                <label for="statusFilter" style="font-weight: 500;">Lọc theo trạng thái:</label>
+                <select id="statusFilter" class="filter-select">
+                    <option value="">Tất cả</option>
+                    <option value="REPORTED">Đã báo cáo</option>
+                    <option value="IN_REPAIR">Đang sửa chữa</option>
+                    <option value="RESOLVED">Đã khắc phục</option>
+                </select>
+                <label for="severityFilter" style="font-weight: 500; margin-left: 20px;">Lọc theo mức độ:</label>
+                <select id="severityFilter" class="filter-select">
+                    <option value="">Tất cả</option>
+                    <option value="MINOR">Nhẹ</option>
+                    <option value="MODERATE">Trung bình</option>
+                    <option value="CRITICAL">Nghiêm trọng</option>
+                </select>
+                <button class="btn btn-primary" onclick="resetFilters()" style="margin-left: auto;">Làm mới</button>
+            </div>
+
+            <!-- Reports Grid -->
+            <div class="reports-container" id="reportsContainer">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>Không có báo cáo sự cố</p>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Report Detail Modal -->
+<div id="reportDetailModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2>Chi tiết báo cáo</h2>
+            <button type="button" class="close-btn" onclick="closeReportDetailModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="reportDetailContent">
+            <!-- Content will be loaded here -->
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeReportDetailModal()">Đóng</button>
+            <button type="button" class="btn btn-primary" onclick="markAsResolved()">Đánh dấu đã khắc phục</button>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/vehicle-reports.js}"></script>
+
+</body>
+</html>
+

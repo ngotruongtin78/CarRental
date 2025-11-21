@@ -505,3 +505,10 @@ table.data-table td.actions {
     line-height: 1.6;
     color: #333;
 }
+.action-menu.drop-up {
+    top: auto !important;
+    bottom: 80%;
+    transform-origin: bottom right;
+    margin-bottom: 5px;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+}

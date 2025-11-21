@@ -36,7 +36,7 @@ public class SepayWebhookHandler {
                 .matcher(lower);
 
         if (matcher.find()) {
-            rentalId = matcher.group(0); // giữ nguyên prefix rental để khớp với id trong DB
+            rentalId = matcher.group(0);
             log.info("===> rentalId lấy theo regex rentalXX: {}", rentalId);
         }
 

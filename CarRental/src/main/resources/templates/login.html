@@ -19,9 +19,18 @@
     <div class="card auth-form-card">
         <h2>Đăng nhập</h2>
 
-        <div th:if="${param.error}" class="auth-message error">
+        <div th:if="${param.error != null and param.error[0] == 'bad_credentials'}" class="auth-message error">
             Sai tên đăng nhập hoặc mật khẩu!
         </div>
+
+        <div th:if="${param.error != null and param.error[0] == 'disabled'}" class="auth-message error">
+            Tài khoản của bạn đã bị vô hiệu hóa. <br>Vui lòng liên hệ Admin để được hỗ trợ.
+        </div>
+
+        <div th:if="${param.error != null and param.error[0] == 'true'}" class="auth-message error">
+            Đăng nhập thất bại!
+        </div>
+
         <div th:if="${param.logout}" class="auth-message success">
             Bạn đã đăng xuất.
         </div>
@@ -29,7 +38,6 @@
             Đăng ký thành công, vui lòng đăng nhập.
         </div>
 
-        <!-- FIX QUAN TRỌNG: đổi /login → /login-process -->
         <form th:action="@{/login-process}" method="post">
             <div class="form-group">
                 <label for="username">Tên đăng nhập</label>

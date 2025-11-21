@@ -16,4 +16,9 @@ public class RentalPageController {
         return "thanhtoan";
     }
 
+    @GetMapping("/staff/vehicle-reports")
+    public String vehicleReportsPage() {
+        return "vehicle-reports";
+    }
+
 }

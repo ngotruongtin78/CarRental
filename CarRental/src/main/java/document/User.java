@@ -23,8 +23,9 @@ public class User {
     private Binary idCardData;
 
     private boolean verified = false;
-
     private boolean verificationRequested = false;
+
+    private boolean risk = false;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -53,5 +54,6 @@ public class User {
     public boolean isVerificationRequested() { return verificationRequested; }
     public void setVerificationRequested(boolean verificationRequested) { this.verificationRequested = verificationRequested; }
 
-
+    public boolean isRisk() { return risk; }
+    public void setRisk(boolean risk) { this.risk = risk; }
 }

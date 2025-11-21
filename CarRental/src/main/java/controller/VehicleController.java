@@ -2,9 +2,23 @@ package CarRental.example.controller;
 
 import CarRental.example.document.RentalRecord;
 import CarRental.example.document.Vehicle;
+import CarRental.example.document.Station;
+import CarRental.example.document.VehicleReport;
+import CarRental.example.document.Staff;
+import CarRental.example.repository.StationRepository;
 import CarRental.example.repository.RentalRecordRepository;
 import CarRental.example.repository.VehicleRepository;
+import CarRental.example.repository.VehicleReportRepository;
+import CarRental.example.repository.StaffRepository;
 import CarRental.example.service.VehicleService;
+
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import java.util.Map;
+import java.util.HashMap;
+
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,11 +39,44 @@ public class VehicleController {
 
     @Autowired
     private VehicleService vehicleService;
+
+    @Autowired
+    private StationRepository stationRepository;
+
+    @Autowired
+    private VehicleReportRepository vehicleReportRepository;
+
+    @Autowired
+    private StaffRepository staffRepository;
+
     @GetMapping("/station/{stationId}")
     public List<Vehicle> getByStation(@PathVariable("stationId") String stationId) {
         releaseExpiredHolds(stationId);
         return repo.findByStationIdAndBookingStatusNot(stationId, "RENTED");
     }
+
+    @GetMapping("/station/{stationId}/staff-station")
+    public ResponseEntity<?> getByStationWithInfo(@PathVariable("stationId") String stationId) {
+        try {
+            // Lấy danh sách xe tại trạm
+            List<Vehicle> vehicles = repo.findByStationIdAndBookingStatusNot(stationId, "RENTED");
+
+            // Lấy thông tin trạm
+            Station station = stationRepository.findById(stationId).orElse(null);
+            String stationName = (station != null) ? station.getName() : "Unknown Station";
+
+            // Tạo response object theo format frontend mong đợi
+            Map<String, Object> response = new HashMap<>();
+            response.put("stationName", stationName);
+            response.put("vehicles", vehicles);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Lỗi: " + e.getMessage()));
+        }
+    }
+
+
     @GetMapping("/admin/all")
     public List<Vehicle> getAllVehicles() {
         return repo.findAll();
@@ -56,10 +103,165 @@ public class VehicleController {
         return repo.save(updatedVehicle);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateVehicleStatus(@PathVariable("id") String id, @RequestBody Map<String, Object> updates) {
+        try {
+            Optional<Vehicle> vehicleOpt = repo.findById(id);
+            if (!vehicleOpt.isPresent()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy xe"));
+            }
+
+            Vehicle vehicle = vehicleOpt.get();
+
+            // Update battery if provided
+            if (updates.containsKey("battery")) {
+                Object batteryObj = updates.get("battery");
+                if (batteryObj instanceof Number) {
+                    vehicle.setBattery(((Number) batteryObj).intValue());
+                }
+            }
+
+            // Update booking status if provided
+            if (updates.containsKey("bookingStatus")) {
+                vehicle.setBookingStatus((String) updates.get("bookingStatus"));
+            }
+
+            // Update available status if provided
+            if (updates.containsKey("available")) {
+                vehicle.setAvailable((Boolean) updates.get("available"));
+            }
+
+            // Update issue if provided
+            if (updates.containsKey("issue")) {
+                Object issueObj = updates.get("issue");
+                vehicle.setIssue(issueObj != null ? (String) issueObj : null);
+            }
+
+            // Update issueSeverity if provided
+            if (updates.containsKey("issueSeverity")) {
+                Object severityObj = updates.get("issueSeverity");
+                vehicle.setIssueSeverity(severityObj != null ? (String) severityObj : null);
+            }
+
+            Vehicle updated = repo.save(vehicle);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Lỗi khi cập nhật: " + e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/admin/delete/{id}")
     public String deleteVehicle(@PathVariable("id") String id) {
         repo.deleteById(id);
         return "Delete vehicle " + id + " success";
+    }
+
+    @PostMapping("/{id}/report-issue")
+    public ResponseEntity<?> reportIssue(@PathVariable("id") String vehicleId, @RequestBody Map<String, Object> reportData) {
+        try {
+            Optional<Vehicle> vehicleOpt = repo.findById(vehicleId);
+            if (!vehicleOpt.isPresent()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy xe"));
+            }
+
+            Vehicle vehicle = vehicleOpt.get();
+            String issue = (String) reportData.get("issue");
+            String severity = (String) reportData.get("severity");
+
+            if (issue == null || issue.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Mô tả sự cố không được để trống"));
+            }
+
+            if (severity == null || severity.trim().isEmpty()) {
+                severity = "MODERATE";
+            }
+
+            // Get current authenticated user (staff)
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String staffId = auth.getName();
+            String staffName = auth.getName();
+
+            // Try to get staff details
+            try {
+                Optional<Staff> staffOpt = staffRepository.findById(staffId);
+                if (staffOpt.isPresent()) {
+                    staffName = staffOpt.get().getName();
+                }
+            } catch (Exception e) {
+                // If error, just use username
+            }
+
+            // Create and save VehicleReport
+            VehicleReport report = new VehicleReport(
+                    vehicleId,
+                    vehicle.getPlate(),
+                    staffId,
+                    staffName,
+                    vehicle.getStationId(),
+                    issue,
+                    severity
+            );
+
+            VehicleReport savedReport = vehicleReportRepository.save(report);
+
+            // Update vehicle with issue info and set status to MAINTENANCE
+            vehicle.setIssue(issue);
+            vehicle.setIssueSeverity(severity);
+            vehicle.setBookingStatus("MAINTENANCE");
+            repo.save(vehicle);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Báo cáo sự cố thành công");
+            response.put("report", savedReport);
+            response.put("vehicle", vehicle);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Lỗi khi báo cáo sự cố: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/reports/station/{stationId}")
+    public ResponseEntity<?> getReportsByStation(@PathVariable("stationId") String stationId) {
+        try {
+            List<VehicleReport> reports = vehicleReportRepository.findByStationId(stationId);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "count", reports.size(),
+                    "reports", reports
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Lỗi khi lấy báo cáo: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/reports/vehicle/{vehicleId}")
+    public ResponseEntity<?> getReportsByVehicle(@PathVariable("vehicleId") String vehicleId) {
+        try {
+            List<VehicleReport> reports = vehicleReportRepository.findByVehicleId(vehicleId);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "count", reports.size(),
+                    "reports", reports
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Lỗi khi lấy báo cáo: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/reports/status/{status}")
+    public ResponseEntity<?> getReportsByStatus(@PathVariable("status") String status) {
+        try {
+            List<VehicleReport> reports = vehicleReportRepository.findByStatus(status);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "count", reports.size(),
+                    "reports", reports
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Lỗi khi lấy báo cáo: " + e.getMessage()));
+        }
     }
 
     private void releaseExpiredHolds(String stationId) {

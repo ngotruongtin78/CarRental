@@ -1,85 +1,126 @@
 document.addEventListener("DOMContentLoaded", function() {
 
     const vehicleTableBody = document.getElementById('vehicleTableBody');
+    const searchInput = document.getElementById('searchInput');
 
-    // === Modal Thêm ===
     const addVehicleBtn = document.getElementById('addVehicleBtn');
     const addModal = document.getElementById('addVehicleModal');
     const addCloseButton = addModal.querySelector('.close-button');
     const addVehicleForm = document.getElementById('addVehicleForm');
 
-    // === Modal Sửa ===
     const editModal = document.getElementById('editVehicleModal');
     const editCloseButton = editModal.querySelector('.close-button');
     const editVehicleForm = document.getElementById('editVehicleForm');
 
+    let allVehiclesData = [];
 
-    // --- 1. Load danh sách xe khi tải trang ---
+    window.toggleProfileMenu = function(event) {
+        event.stopPropagation();
+        const dropdown = document.getElementById('profileDropdown');
+        if (dropdown) dropdown.classList.toggle('show');
+    };
+
+    window.addEventListener('click', function(event) {
+        if (!event.target.closest('.admin-profile')) {
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown && dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+            }
+        }
+    });
+
     loadVehicles();
 
     async function loadVehicles() {
+        if (!vehicleTableBody) return;
+        vehicleTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Đang tải dữ liệu...</td></tr>';
+
         try {
             const response = await fetch('/api/vehicles/admin/all');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            let vehicles = await response.json(); // Lấy danh sách xe
-
-            // ===================================
-            // ==== SẮP XẾP DANH SÁCH XE (MỚI) ====
-            // ===================================
-            vehicles.sort((a, b) => {
-                // Tách số ra khỏi ID (vd: "st1" -> 1, "st10" -> 10)
-                const numA = parseInt(a.stationId.replace('st', ''));
-                const numB = parseInt(b.stationId.replace('st', ''));
-
-                if (numA !== numB) {
-                    // Sắp xếp theo số của Station ID
-                    return numA - numB;
-                } else {
-                    // Nếu Station ID giống nhau, sắp xếp theo biển số xe
-                    return a.plate.localeCompare(b.plate);
-                }
+            allVehiclesData = await response.json();
+            allVehiclesData.sort((a, b) => {
+                const numA = parseInt(a.stationId.replace('st', '')) || 0;
+                const numB = parseInt(b.stationId.replace('st', '')) || 0;
+                if (numA !== numB) return numA - numB;
+                return a.plate.localeCompare(b.plate);
             });
 
-            vehicleTableBody.innerHTML = '';
-
-            // Thêm dữ liệu đã sắp xếp vào bảng
-            vehicles.forEach(vehicle => {
-                const tr = document.createElement('tr');
-
-                let statusClass = 'status-available';
-                let statusText = 'Sẵn sàng';
-                if (!vehicle.available) {
-                    statusClass = 'status-rented';
-                    statusText = 'Đang thuê';
-                }
-
-                // ===================================
-                // ==== SỬA "PHÚT" THÀNH "GIỜ" ====
-                // ===================================
-                tr.innerHTML = `
-                    <td>${vehicle.plate}</td>
-                    <td>${vehicle.brand} (${vehicle.type})</td>
-                    <td>${vehicle.stationId}</td>
-                    <td>${vehicle.battery}%</td>
-                    <td>${vehicle.price.toLocaleString('vi-VN')} / giờ</td> <td><span class="status ${statusClass}">${statusText}</span></td>
-                    <td>
-                        <button class="btn-edit" data-id="${vehicle.id}">Sửa</button>
-                        <button class="btn-delete" data-id="${vehicle.id}">Xóa</button>
-                    </td>
-                `;
-                vehicleTableBody.appendChild(tr);
-            });
+            renderTable(allVehiclesData);
 
         } catch (error) {
-            console.error("Không thể tải danh sách xe:", error);
-            vehicleTableBody.innerHTML = '<tr><td colspan="7">Lỗi khi tải dữ liệu.</td></tr>';
+            console.error("Lỗi:", error);
+            vehicleTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Lỗi khi tải dữ liệu.</td></tr>';
         }
     }
 
-    // --- 2. Xử lý Modal THÊM ---
+    function renderTable(data) {
+        vehicleTableBody.innerHTML = '';
+
+        if (!data || data.length === 0) {
+            vehicleTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Không tìm thấy xe phù hợp.</td></tr>';
+            return;
+        }
+
+        data.forEach(vehicle => {
+            const tr = document.createElement('tr');
+            let statusClass = 'status-available';
+            let statusText = 'Sẵn sàng';
+
+            if (vehicle.bookingStatus === 'PENDING_PAYMENT') {
+                statusClass = 'status-pending';
+                statusText = 'Chờ thanh toán';
+            } else if (vehicle.bookingStatus === 'RENTED' || !vehicle.available) {
+                statusClass = 'status-rented';
+                statusText = 'Đang thuê';
+            } else if (vehicle.bookingStatus === 'MAINTENANCE') {
+                statusClass = 'status-maintenance';
+                statusText = 'Bảo trì';
+            }
+
+            const price = vehicle.price ? vehicle.price.toLocaleString('vi-VN') : '0';
+
+            tr.innerHTML = `
+                <td>${vehicle.plate}</td>
+                <td>${vehicle.brand} (${vehicle.type})</td>
+                <td>${vehicle.stationId}</td>
+                <td>${vehicle.battery}%</td>
+                <td>${price} / ngày</td>
+                <td><span class="status ${statusClass}">${statusText}</span></td>
+                <td>
+                    <button class="btn-edit" data-id="${vehicle.id}">Sửa</button>
+                    <button class="btn-delete" data-id="${vehicle.id}">Xóa</button>
+                </td>
+            `;
+            vehicleTableBody.appendChild(tr);
+        });
+    }
+
+    function filterVehicles() {
+        if (!allVehiclesData) return;
+
+        const searchText = searchInput.value.toLowerCase().trim();
+
+        const filtered = allVehiclesData.filter(vehicle => {
+            const plate = (vehicle.plate || "").toLowerCase();
+            const brand = (vehicle.brand || "").toLowerCase();
+            const type = (vehicle.type || "").toLowerCase();
+            const stationId = (vehicle.stationId || "").toLowerCase();
+
+            return plate.includes(searchText) ||
+                   brand.includes(searchText) ||
+                   type.includes(searchText) ||
+                   stationId.includes(searchText);
+        });
+
+        renderTable(filtered);
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', filterVehicles);
+    }
+
     addVehicleBtn.onclick = function() {
         addVehicleForm.reset();
         addModal.style.display = "block";
@@ -88,17 +129,15 @@ document.addEventListener("DOMContentLoaded", function() {
         addModal.style.display = "none";
     }
 
-    // --- 3. Xử lý Form Thêm xe mới ---
     addVehicleForm.addEventListener('submit', async function(event) {
         event.preventDefault();
-
         const formData = new FormData(addVehicleForm);
         const vehicleData = {
             plate: formData.get('plate'),
             brand: formData.get('brand'),
             type: formData.get('type'),
             battery: parseInt(formData.get('battery')),
-            price: parseFloat(formData.get('price')), // Giá này là giá/giờ
+            price: parseFloat(formData.get('price')),
             stationId: formData.get('stationId')
         };
 
@@ -108,53 +147,39 @@ document.addEventListener("DOMContentLoaded", function() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(vehicleData)
             });
-
             if (response.ok) {
                 alert('Thêm xe thành công!');
                 addModal.style.display = 'none';
-                addVehicleForm.reset();
-                loadVehicles(); // Tải lại bảng (đã có sắp xếp)
+                loadVehicles();
             } else {
-                alert('Có lỗi xảy ra. Không thể thêm xe.');
+                alert('Lỗi khi thêm xe.');
             }
         } catch (error) {
-            console.error('Lỗi khi thêm xe:', error);
-            alert('Lỗi kết nối. Vui lòng thử lại.');
+            console.error(error);
+            alert('Lỗi kết nối.');
         }
     });
-
-    // --- 4. Logic Sửa/Xóa (Giữ nguyên như cũ) ---
 
     vehicleTableBody.addEventListener('click', async function(event) {
         const target = event.target;
         const id = target.dataset.id;
         if (!id) return;
 
-        // --- XỬ LÝ NÚT XÓA ---
+        // Xóa
         if (target.classList.contains('btn-delete')) {
-            if (confirm(`Bạn có chắc muốn xóa xe có ID: ${id}?`)) {
+            if (confirm(`Bạn có chắc muốn xóa xe ID: ${id}?`)) {
                 try {
-                    const response = await fetch(`/api/vehicles/admin/delete/${id}`, {
-                        method: 'DELETE'
-                    });
-                    if (response.ok) {
-                        alert('Xóa xe thành công!');
-                        loadVehicles();
-                    } else {
-                        alert('Xóa xe thất bại.');
-                    }
-                } catch (error) {
-                    alert('Lỗi kết nối: ' + error.message);
-                }
+                    const response = await fetch(`/api/vehicles/admin/delete/${id}`, { method: 'DELETE' });
+                    alert(await response.text());
+                    if (response.ok) loadVehicles();
+                } catch (e) { alert('Lỗi kết nối: ' + e.message); }
             }
         }
 
-        // --- XỬ LÝ NÚT SỬA ---
         if (target.classList.contains('btn-edit')) {
             try {
                 const response = await fetch(`/api/vehicles/admin/${id}`);
-                if (!response.ok) throw new Error('Không tìm thấy thông tin xe');
-
+                if (!response.ok) throw new Error('Không tìm thấy xe');
                 const vehicle = await response.json();
 
                 editVehicleForm.querySelector('#edit-vehicleId').value = vehicle.id;
@@ -164,25 +189,23 @@ document.addEventListener("DOMContentLoaded", function() {
                 editVehicleForm.querySelector('#edit-battery').value = vehicle.battery;
                 editVehicleForm.querySelector('#edit-price').value = vehicle.price;
                 editVehicleForm.querySelector('#edit-stationId').value = vehicle.stationId;
-                editVehicleForm.querySelector('#edit-available').value = vehicle.available.toString();
+
+                const statusSelect = editVehicleForm.querySelector('#edit-available');
+                if(statusSelect) {
+                     statusSelect.value = vehicle.available ? "true" : "false";
+                }
 
                 editModal.style.display = "block";
-
-            } catch (error) {
-                alert(error.message);
-            }
+            } catch (e) { alert(e.message); }
         }
     });
 
-    // --- 5. Xử lý Form Sửa xe (Giữ nguyên) ---
     editVehicleForm.addEventListener('submit', async function(event) {
         event.preventDefault();
-
         const formData = new FormData(editVehicleForm);
-        const vehicleId = formData.get('id');
-
+        const id = formData.get('id');
         const vehicleData = {
-            id: vehicleId,
+            id: id,
             plate: formData.get('plate'),
             brand: formData.get('brand'),
             type: formData.get('type'),
@@ -193,35 +216,25 @@ document.addEventListener("DOMContentLoaded", function() {
         };
 
         try {
-            const response = await fetch(`/api/vehicles/admin/update/${vehicleId}`, {
+            const response = await fetch(`/api/vehicles/admin/update/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(vehicleData)
             });
-
             if (response.ok) {
-                alert('Cập nhật (điều phối) xe thành công!');
+                alert('Cập nhật thành công!');
                 editModal.style.display = 'none';
-                loadVehicles(); // Tải lại bảng (đã có sắp xếp)
+                loadVehicles();
             } else {
-                alert('Có lỗi xảy ra. Không thể cập nhật xe.');
+                alert('Lỗi cập nhật.');
             }
-        } catch (error) {
-            console.error('Lỗi khi cập nhật xe:', error);
-            alert('Lỗi kết nối. Vui lòng thử lại.');
-        }
+        } catch (e) { alert('Lỗi kết nối.'); }
     });
 
-    // --- 6. Đóng modal (Giữ nguyên) ---
-    window.onclick = function(event) {
-        if (event.target == addModal) {
-            addModal.style.display = "none";
-        }
-        if (event.target == editModal) {
-            editModal.style.display = "none";
-        }
-    }
-    addCloseButton.onclick = () => addModal.style.display = "none";
     editCloseButton.onclick = () => editModal.style.display = "none";
 
+    window.onclick = function(event) {
+        if (event.target == addModal) addModal.style.display = "none";
+        if (event.target == editModal) editModal.style.display = "none";
+    }
 });

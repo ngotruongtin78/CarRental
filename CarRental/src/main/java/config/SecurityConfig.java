@@ -1,7 +1,9 @@
 package CarRental.example.config;
 
+import CarRental.example.security.CustomAuthenticationFailureHandler;
 import CarRental.example.security.CustomUserDetailsService;
 import CarRental.example.security.CustomLoginSuccessHandler;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -17,13 +19,19 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService customUserDetailsService;
 
+
+    @Autowired
+    private CustomAuthenticationFailureHandler customAuthenticationFailureHandler;
+
     public SecurityConfig(CustomUserDetailsService customUserDetailsService) {
         this.customUserDetailsService = customUserDetailsService;
     }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
     @Bean
     public DaoAuthenticationProvider authProvider() {
         DaoAuthenticationProvider auth = new DaoAuthenticationProvider();
@@ -49,36 +57,22 @@ public class SecurityConfig {
                 )
                 .formLogin(login -> login
                         .loginPage("/login")
-                        .defaultSuccessUrl("/home", true)
+                        .loginProcessingUrl("/login-process")
+                        .successHandler(new CustomLoginSuccessHandler())
+                        .failureHandler(customAuthenticationFailureHandler)
                         .permitAll()
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/home?logout")
+                        .clearAuthentication(true)
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
                         .permitAll()
+                )
+                .sessionManagement(sess -> sess
+                        .invalidSessionUrl("/home")
                 );
-
-
-        http.formLogin(login -> login
-                .loginPage("/login")
-                .loginProcessingUrl("/login-process")
-                .successHandler(new CustomLoginSuccessHandler())
-                .failureUrl("/login?error=true")
-                .permitAll()
-        );
-
-        http.logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/home")
-                .clearAuthentication(true)
-                .invalidateHttpSession(true)
-                .deleteCookies("JSESSIONID")
-                .permitAll()
-        );
-
-        http.sessionManagement(sess -> sess
-                .invalidSessionUrl("/home")
-        );
 
         return http.build();
     }

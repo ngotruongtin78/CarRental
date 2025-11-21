@@ -8,6 +8,24 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let revenueChartInstance = null;
     let peakHoursChartInstance = null;
+
+    window.toggleProfileMenu = function(event) {
+        event.stopPropagation();
+        const dropdown = document.getElementById('profileDropdown');
+        if (dropdown) dropdown.classList.toggle('show');
+    };
+
+    window.addEventListener('click', function(event) {
+        if (!event.target.closest('.admin-profile')) {
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown && dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+            }
+        }
+    });
+
+    loadReportData();
+
     async function loadReportData() {
         try {
             const response = await fetch('/admin/reports/data');
@@ -25,6 +43,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 const util = data.avgUtilization ? (data.avgUtilization * 100).toFixed(1) : 0;
                 kpiUtilizationEl.textContent = util + '%';
             }
+
             if (ctxRevenue) {
                 if (revenueChartInstance) revenueChartInstance.destroy();
 
@@ -64,7 +83,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
             }
 
-
             if (ctxPeakHours) {
                 if (peakHoursChartInstance) peakHoursChartInstance.destroy();
 
@@ -101,6 +119,4 @@ document.addEventListener("DOMContentLoaded", function() {
             console.error('Lỗi tải dữ liệu báo cáo:', error);
         }
     }
-
-    loadReportData();
 });

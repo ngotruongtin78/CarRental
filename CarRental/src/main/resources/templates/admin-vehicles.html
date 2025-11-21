@@ -14,9 +14,7 @@
 
     <div class="main-content">
         <header class="content-header">
-            <div class="search-bar">
-                <input type="text" placeholder="Search...">
-            </div>
+            <div style="flex-grow: 1;"></div>
 
             <div class="admin-profile" onclick="toggleProfileMenu(event)">
                 <img th:src="@{/images/admin-avatar.png}" alt="Admin">
@@ -29,7 +27,6 @@
                     </a>
                 </div>
             </div>
-
         </header>
 
         <main class="content-body">
@@ -49,7 +46,8 @@
                         <th>Mẫu xe</th>
                         <th>Trạm (Station ID)</th>
                         <th>Pin</th>
-                        <th>Giá (VND/giờ)</th> <th>Trạng thái</th>
+                        <th>Giá (VND/giờ)</th>
+                        <th>Trạng thái</th>
                         <th>Hành động</th>
                     </tr>
                     </thead>
@@ -85,7 +83,8 @@
                 <input type="number" id="battery" name="battery" value="100" required>
             </div>
             <div class="form-group">
-                <label for="price">Giá (VND/giờ)</label> <input type="number" id="price" name="price" required>
+                <label for="price">Giá (VND/giờ)</label>
+                <input type="number" id="price" name="price" required>
             </div>
             <div class="form-group">
                 <label for="stationId">Station ID</label>
@@ -122,14 +121,13 @@
                 <input type="number" id="edit-battery" name="battery" required>
             </div>
             <div class="form-group">
-                <label for="edit-price">Giá (VND/giờ)</LAbel> <input type="number" id="edit-price" name="price" required>
+                <label for="edit-price">Giá (VND/giờ)</label>
+                <input type="number" id="edit-price" name="price" required>
             </div>
-
             <div class="form-group">
                 <label for="edit-stationId">Station ID (Điều phối)</label>
                 <input type="text" id="edit-stationId" name="stationId" required>
             </div>
-
             <div class="form-group">
                 <label for="edit-available">Trạng thái</label>
                 <select id="edit-available" name="available">
@@ -137,15 +135,12 @@
                     <option value="false">Đang thuê / Bảo trì</option>
                 </select>
             </div>
-
             <button type="submit" class="btn-primary">Cập nhật</button>
         </form>
     </div>
 </div>
 
 <script th:src="@{/js/admin-vehicles.js}"></script>
-<script>
-</script>
 
 </body>
 </html>
