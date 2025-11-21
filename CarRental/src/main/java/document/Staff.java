@@ -18,6 +18,14 @@ public class Staff extends User {
         this.stationId = stationId;
     }
 
+    public String getStationId() {
+        return stationId;
+    }
+
+    public void setStationId(String stationId) {
+        this.stationId = stationId;
+    }
+
     public String getName() {
         return "";
     }
