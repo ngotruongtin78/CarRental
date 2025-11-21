@@ -258,7 +258,14 @@ public class RentalRecordService {
             return "Chờ xác nhận trả";
         }
 
-        if (status.equals("IN_PROGRESS") || status.equals("CONTRACT_SIGNED")) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startTime = record.getStartTime();
+        LocalDateTime endTime = record.getEndTime();
+        boolean withinRentalTime = startTime != null && endTime != null
+                && !now.isBefore(startTime)
+                && !now.isAfter(endTime);
+
+        if (withinRentalTime || status.equals("IN_PROGRESS") || status.equals("CONTRACT_SIGNED")) {
             return "Đang thuê";
         }
 
