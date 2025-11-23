@@ -15,12 +15,10 @@
     <div class="main-content">
         <header class="content-header">
             <div style="flex-grow: 1;"></div>
-
             <div class="admin-profile" onclick="toggleProfileMenu(event)">
                 <img th:src="@{/images/admin-avatar.png}" alt="Admin">
                 <span>Admin</span>
                 <i class="fas fa-chevron-down" style="font-size: 12px; margin-left: 8px; color: #777;"></i>
-
                 <div class="profile-dropdown" id="profileDropdown">
                     <a th:href="@{/logout}" class="logout-item">
                         <i class="fas fa-sign-out-alt"></i> Đăng xuất
@@ -52,41 +50,27 @@
                 </div>
             </div>
 
-            <div class="page-header-filters">
-                <div class="filter-group">
-                    <label for="dateFrom">Từ ngày</label>
-                    <input type="date" id="dateFrom" name="dateFrom" class="form-control">
-                </div>
-                <div class="filter-group">
-                    <label for="dateTo">Đến ngày</label>
-                    <input type="date" id="dateTo" name="dateTo" class="form-control">
+            <div class="ai-suggestion-box" style="background: #eef9fd; border-left: 5px solid #3498db; padding: 20px; margin-bottom: 25px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                <h3 style="margin-top: 0; color: #2980b9; display: flex; align-items: center; font-size: 18px; margin-bottom: 15px;">
+                    <i class="fas fa-robot" style="margin-right: 10px;"></i> AI Dự báo & Gợi ý chiến lược
+                </h3>
+                <div id="ai-suggestions-content">
+                    <p style="color: #666;">Đang phân tích dữ liệu...</p>
                 </div>
             </div>
-
             <div class="chart-grid-container">
-
                 <div class="chart-grid-left">
                     <div class="chart-container">
                         <h2>Biểu đồ Doanh thu</h2>
                         <canvas id="revenueChart"></canvas>
                     </div>
-
-                    <div class="ai-suggestion-box">
-                        <h3>🤖 AI Gợi ý & Dự báo nhu cầu</h3>
-                        <p id="ai-suggestion">
-                            <b>CẢNH BÁO!</b> Dựa trên tuần trước, Trạm Q.Bình Thạnh có 75% nguy cơ hết xe VF e34 vào 9:00 AM sáng mai.
-                            <b>Gợi ý:</b> Điều phối 3 xe từ Trạm Q.1 về trước 8:00 AM.
-                        </p>
-                    </div>
                 </div>
-
                 <div class="chart-grid-right">
                     <div class="chart-container">
                         <h2>Giờ cao điểm thuê xe</h2>
                         <canvas id="peakHoursChart"></canvas>
                     </div>
                 </div>
-
             </div>
         </main>
     </div>
@@ -94,8 +78,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script th:src="@{/js/admin-reports.js}"></script>
-<script>
-</script>
 
 </body>
 </html>

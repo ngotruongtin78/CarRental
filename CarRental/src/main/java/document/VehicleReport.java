@@ -17,12 +17,12 @@ public class VehicleReport {
     private String stationId;
 
     private String issue;
-    private String severity; // MINOR, MODERATE, CRITICAL
+    private String severity;
 
     private LocalDateTime reportedDate;
-    private String status; // REPORTED, IN_REPAIR, RESOLVED
+    private String status;
 
-    private String notes; // Ghi chú từ kỹ thuật viên
+    private String notes;
 
     public VehicleReport() {
     }
@@ -40,7 +40,6 @@ public class VehicleReport {
         this.status = "REPORTED";
     }
 
-    // Getters and Setters
     public String getId() {
         return id;
     }

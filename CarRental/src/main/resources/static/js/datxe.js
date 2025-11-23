@@ -245,9 +245,6 @@ async function loadStations() {
             container.appendChild(div);
         });
 
-        // ===============================
-        // AUTO CHỌN TRẠM
-        // ===============================
         if (selectedStation) {
             const stObj = stations.find(s => s.id === selectedStation);
 
@@ -416,9 +413,6 @@ if (btnIdCard) btnIdCard.onclick = () => triggerDocumentUpload("idcard");
 if (btnLicense) btnLicense.onclick = () => triggerDocumentUpload("license");
 if (btnRequestVerify) btnRequestVerify.onclick = requestVerification;
 
-// ===============================
-// KHỞI CHẠY
-// ===============================
 initDates();
 requestUserLocation();
 loadStations();

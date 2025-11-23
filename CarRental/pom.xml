@@ -65,7 +65,7 @@
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
 
-        <!-- Lombok (fixed) -->
+        <!-- Lombok  -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

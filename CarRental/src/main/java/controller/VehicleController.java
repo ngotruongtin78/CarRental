@@ -65,7 +65,6 @@ public class VehicleController {
             Station station = stationRepository.findById(stationId).orElse(null);
             String stationName = (station != null) ? station.getName() : "Unknown Station";
 
-            // Tạo response object theo format frontend mong đợi
             Map<String, Object> response = new HashMap<>();
             response.put("stationName", stationName);
             response.put("vehicles", vehicles);
@@ -180,18 +179,14 @@ public class VehicleController {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String staffId = auth.getName();
             String staffName = auth.getName();
-
-            // Try to get staff details
             try {
                 Optional<Staff> staffOpt = staffRepository.findById(staffId);
                 if (staffOpt.isPresent()) {
                     staffName = staffOpt.get().getName();
                 }
             } catch (Exception e) {
-                // If error, just use username
             }
 
-            // Create and save VehicleReport
             VehicleReport report = new VehicleReport(
                     vehicleId,
                     vehicle.getPlate(),
@@ -204,7 +199,6 @@ public class VehicleController {
 
             VehicleReport savedReport = vehicleReportRepository.save(report);
 
-            // Update vehicle with issue info and set status to MAINTENANCE
             vehicle.setIssue(issue);
             vehicle.setIssueSeverity(severity);
             vehicle.setBookingStatus("MAINTENANCE");

@@ -4,6 +4,7 @@ import org.bson.types.Binary;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
+import java.util.Date;
 
 @Document(collection = "users")
 public class User {
@@ -26,6 +27,8 @@ public class User {
     private boolean verificationRequested = false;
 
     private boolean risk = false;
+
+    private Date updatedAt = new Date();
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -56,4 +59,7 @@ public class User {
 
     public boolean isRisk() { return risk; }
     public void setRisk(boolean risk) { this.risk = risk; }
+
+    public Date getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Date updatedAt) { this.updatedAt = updatedAt; }
 }

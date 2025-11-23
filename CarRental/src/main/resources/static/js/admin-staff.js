@@ -167,12 +167,12 @@ document.addEventListener("DOMContentLoaded", function() {
                 const newMenu = menuTemplate.firstElementChild.cloneNode(true);
 
                 const rect = event.target.getBoundingClientRect();
-                if (window.innerHeight - rect.bottom < 160) {
+                const windowHeight = window.innerHeight;
+
+                if (windowHeight - rect.bottom < 180) {
                     newMenu.classList.add('drop-up');
                 }
-
                 newMenu.style.display = 'block';
-
 
                 newMenu.querySelector('.edit-staff').onclick = () => {
                     const staff = allStaffData.find(s => s.id === staffId);
@@ -191,7 +191,6 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
     });
-
     window.addEventListener('click', function(event) {
         if (currentOpenMenu) { currentOpenMenu.remove(); currentOpenMenu = null; }
         if (event.target == addModal) addModal.style.display = "none";

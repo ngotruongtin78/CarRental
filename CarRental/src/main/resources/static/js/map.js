@@ -33,7 +33,7 @@ function getUserLocation() {
 
             loadStations();
         },
-        () => showToast("❌ Bạn từ chối quyền truy cập vị trí!")
+        () => showToast("Bạn từ chối quyền truy cập vị trí!")
     );
 }
 
@@ -44,7 +44,7 @@ function loadStations() {
             stations = data;
             renderStations();
         })
-        .catch(() => showToast("❌ Lỗi tải danh sách trạm!"));
+        .catch(() => showToast("Lỗi tải danh sách trạm!"));
 }
 function renderStations() {
 

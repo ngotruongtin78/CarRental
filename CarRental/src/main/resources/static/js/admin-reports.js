@@ -44,6 +44,20 @@ document.addEventListener("DOMContentLoaded", function() {
                 kpiUtilizationEl.textContent = util + '%';
             }
 
+            const aiBox = document.getElementById('ai-suggestions-content');
+            if (aiBox && data.aiSuggestions) {
+                if (data.aiSuggestions.length > 0) {
+                    let html = '<ul style="padding-left: 20px; margin: 0;">';
+                    data.aiSuggestions.forEach(msg => {
+                        html += `<li style="margin-bottom: 10px; color: #444; line-height: 1.5;">${msg}</li>`;
+                    });
+                    html += '</ul>';
+                    aiBox.innerHTML = html;
+                } else {
+                    aiBox.innerHTML = '<p style="color: #666;">Dữ liệu ổn định, chưa có đề xuất nâng cấp.</p>';
+                }
+            }
+
             if (ctxRevenue) {
                 if (revenueChartInstance) revenueChartInstance.destroy();
 
@@ -75,9 +89,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             }
                         },
                         plugins: {
-                            legend: {
-                                display: false
-                            }
+                            legend: { display: false }
                         }
                     }
                 });

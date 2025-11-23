@@ -3,6 +3,7 @@ package CarRental.example.service.sepay;
 import CarRental.example.document.RentalRecord;
 import CarRental.example.repository.RentalRecordRepository;
 import CarRental.example.service.VehicleService;
+import CarRental.example.service.sepay.SepayWebhookData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -42,7 +43,6 @@ public class SepayWebhookHandler {
 
         if (matcher.find()) {
             rentalId = matcher.group(0);
-            log.info("===> rentalId lấy theo regex rentalXX: {}", rentalId);
         }
 
         if ((rentalId == null || rentalId.isEmpty()) && lower.contains("carrental_")) {
@@ -52,15 +52,12 @@ public class SepayWebhookHandler {
             if (!digits.isEmpty()) {
                 rentalId = "rental" + digits;
             }
-            log.info("===> rentalId từ CARRENTAL_XX: {}", rentalId);
         }
 
         if (rentalId == null || rentalId.isEmpty()) {
             log.warn("Không tìm thấy rentalId trong nội dung: {}", raw);
             return ResponseEntity.ok("NO_RENTAL_ID");
         }
-
-        log.info("===> rentalId chuẩn: {}", rentalId);
 
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record == null) {

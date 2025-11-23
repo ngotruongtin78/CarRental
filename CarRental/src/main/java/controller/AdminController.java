@@ -37,7 +37,6 @@ public class AdminController {
     public ResponseEntity<List<Map<String, Object>>> getAllCustomers() {
         List<User> allUsers = userRepository.findAll();
         List<Map<String, Object>> responseList = new ArrayList<>();
-
         for (User user : allUsers) {
             try {
                 if (user == null) continue;
@@ -46,7 +45,6 @@ public class AdminController {
 
                 String username = user.getUsername() != null ? user.getUsername() : "Unknown";
                 Map<String, Object> stats = rentalRecordService.calculateStats(username);
-
                 Map<String, Object> customerData = new LinkedHashMap<>();
                 customerData.put("id", user.getId());
                 customerData.put("fullName", username);
@@ -56,11 +54,35 @@ public class AdminController {
                 customerData.put("risk", user.isRisk());
                 customerData.put("totalTrips", stats.getOrDefault("totalTrips", 0));
                 customerData.put("totalSpent", stats.getOrDefault("totalSpent", 0));
-
                 responseList.add(customerData);
-            } catch (Exception e) {
-                System.err.println("Error user " + user.getId() + ": " + e.getMessage());
-            }
+            } catch (Exception e) {}
+        }
+        return ResponseEntity.ok(responseList);
+    }
+
+    @GetMapping("/staff/all")
+    @ResponseBody
+    public ResponseEntity<List<Map<String, Object>>> getAllStaff() {
+        List<User> allUsers = userRepository.findAll();
+        List<Map<String, Object>> responseList = new ArrayList<>();
+        for (User user : allUsers) {
+            try {
+                if (user == null) continue;
+                String role = user.getRole() != null ? user.getRole() : "USER";
+                if (!"ROLE_STAFF".equals(role)) continue; // Chỉ lấy Staff
+
+                Map<String, Object> staffData = new LinkedHashMap<>();
+                staffData.put("id", user.getId());
+                staffData.put("fullName", user.getUsername());
+                staffData.put("username", user.getUsername());
+                staffData.put("role", role);
+                staffData.put("status", user.isEnabled() ? "WORKING" : "RESIGNED");
+                if("staff1".equals(user.getUsername())) staffData.put("stationId", "st1");
+                else if("staff2".equals(user.getUsername())) staffData.put("stationId", "st2");
+                else staffData.put("stationId", "st1");
+                staffData.put("performance", 0);
+                responseList.add(staffData);
+            } catch (Exception e) {}
         }
         return ResponseEntity.ok(responseList);
     }
@@ -70,11 +92,9 @@ public class AdminController {
     public ResponseEntity<String> toggleCustomerStatus(@PathVariable("id") String id) {
         User user = userRepository.findById(id).orElse(null);
         if (user == null) return ResponseEntity.badRequest().body("User not found");
-
-        boolean newStatus = !user.isEnabled();
-        user.setEnabled(newStatus);
+        user.setEnabled(!user.isEnabled());
         userRepository.save(user);
-        return ResponseEntity.ok(newStatus ? "ACTIVATED" : "DISABLED");
+        return ResponseEntity.ok(user.isEnabled() ? "ACTIVATED" : "DISABLED");
     }
 
     @PostMapping("/customers/toggle-risk/{id}")
@@ -82,12 +102,9 @@ public class AdminController {
     public ResponseEntity<String> toggleCustomerRisk(@PathVariable("id") String id) {
         User user = userRepository.findById(id).orElse(null);
         if (user == null) return ResponseEntity.badRequest().body("User not found");
-
-        boolean newRiskStatus = !user.isRisk();
-        user.setRisk(newRiskStatus);
+        user.setRisk(!user.isRisk());
         userRepository.save(user);
-
-        return ResponseEntity.ok(newRiskStatus ? "RISK_MARKED" : "RISK_REMOVED");
+        return ResponseEntity.ok(user.isRisk() ? "RISK_MARKED" : "RISK_REMOVED");
     }
 
     @GetMapping("/customers/view/{id}")
@@ -106,6 +123,7 @@ public class AdminController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getReportData() {
         Map<String, Object> stats = rentalRecordService.getGlobalStats();
+        stats.put("aiSuggestions", rentalRecordService.getAiSuggestions());
         return ResponseEntity.ok(stats);
     }
 }

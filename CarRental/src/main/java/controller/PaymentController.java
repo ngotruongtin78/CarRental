@@ -126,13 +126,13 @@ public class PaymentController {
         rentalRepo.save(record);
         vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
 
-        // ==== TẠO QR BẰNG qr.sepay.vn ====
+        // ==== TẠO QR ====
         int amountInt = (int) Math.round(amount);
         String qrUrl = qrService.generateQrUrl(rentalId, amountInt);
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("amount", amountInt);
-        payload.put("description", "Thanh toan don #" + rentalId);
+        payload.put("description", rentalId);
 
         payload.put("qrUrl", qrUrl);
         payload.put("qrBase64", null);
@@ -145,9 +145,6 @@ public class PaymentController {
         return ResponseEntity.ok(payload);
     }
 
-    /**
-     * API tạo QR đơn giản (ít dùng) – cũng chuyển sang dùng qr.sepay.vn
-     */
     @GetMapping("/create-qr")
     public ResponseEntity<?> createQr(@RequestParam int amount,
                                       @RequestParam String description,

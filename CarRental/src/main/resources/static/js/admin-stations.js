@@ -135,7 +135,6 @@ document.addEventListener("DOMContentLoaded", function() {
         const id = target.dataset.id;
         if (!id) return;
 
-        // Xóa
         if (target.classList.contains('btn-delete')) {
             if (confirm(`Bạn có chắc muốn xóa trạm "${id}"?`)) {
                 try {

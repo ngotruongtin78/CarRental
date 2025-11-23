@@ -21,7 +21,6 @@ document.addEventListener("DOMContentLoaded", function() {
             if (!stationId) {
                 throw new Error('Không tìm thấy station ID');
             }
-            // Lấy danh sách xe thuộc trạm này từ Vehicle Database
             console.log("Bước 2: Lấy danh sách xe từ trạm:", stationId);
             const vehicleResponse = await fetch(`/api/vehicles/station/${stationId}/staff-station`);
             console.log("Response vehicles status:", vehicleResponse.status);
@@ -40,12 +39,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
             vehicleGrid.innerHTML = '';
 
-            // Helper function để format model
             const formatModel = (vehicle) => {
                 return vehicle.model || `${vehicle.brand || ''} ${vehicle.type || ''}`.trim() || 'Unknown';
             };
 
-            // Helper function để format trạng thái
             const formatStatus = (bookingStatus) => {
                 const statusMap = {
                     'AVAILABLE': 'Sẵn sàng',
@@ -70,7 +67,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 const modelName = formatModel(vehicle);
                 const statusText = formatStatus(vehicle.bookingStatus);
 
-                // Determine severity badge class
                 const getSeverityClass = (severity) => {
                     const severityMap = {
                         'MINOR': 'severity-minor',
@@ -80,7 +76,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     return severityMap[severity] || '';
                 };
 
-                // Format severity text
                 const formatSeverity = (severity) => {
                     const severityMap = {
                         'MINOR': 'Nhẹ',
@@ -90,7 +85,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     return severityMap[severity] || severity;
                 };
 
-                // Build issue display section if issue exists
                 const issueSection = vehicle.issue ? `
                     <div class="issue-section ${getSeverityClass(vehicle.issueSeverity)}">
                         <div class="issue-label">⚠️ Sự cố</div>
@@ -361,19 +355,4 @@ document.addEventListener("DOMContentLoaded", function() {
             alert('Lỗi khi cập nhật: ' + error.message);
         }
     };
-
-    // Close modal when clicking outside of it
-    window.onclick = function(event) {
-        const updateModal = document.getElementById('updateVehicleModal');
-        const reportModal = document.getElementById('reportIssueModal');
-        if (event.target == updateModal) {
-            updateModal.style.display = 'none';
-            currentEditingVehicle = null;
-        }
-        if (event.target == reportModal) {
-            reportModal.style.display = 'none';
-            currentReportingVehicle = null;
-        }
-    };
-
 });

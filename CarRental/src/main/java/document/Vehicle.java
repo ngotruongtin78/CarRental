@@ -18,7 +18,7 @@ public class Vehicle {
     private String stationId;
     private boolean available = true;
 
-    private String bookingStatus = "AVAILABLE"; // AVAILABLE, PENDING_PAYMENT, RENTED
+    private String bookingStatus = "AVAILABLE";
     private String pendingRentalId;
 
     private String issue;
