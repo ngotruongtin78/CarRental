@@ -41,10 +41,17 @@
                     <a href="/register" class="btn-register">Đăng ký</a>
                 </div>
 
-                <div class="user-info" sec:authorize="isAuthenticated()">
-                    <span class="welcome-text">
-                        Xin chào, <b sec:authentication="name"></b>
-                    </span>
+                <div class="user-menu" sec:authorize="isAuthenticated()">
+                    <button class="user-menu-toggle" type="button">
+                        <span class="welcome-text">Xin chào, <b sec:authentication="name"></b></span>
+                        <span class="avatar-circle"><i class="fas fa-user"></i></span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="user-menu-dropdown">
+                        <a href="/logout" class="dropdown-item logout">
+                            <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -127,6 +134,7 @@
     </div>
 </div>
 
+<script src="/js/user-menu.js"></script>
 <script src="/js/station-search.js"></script>
 <script src="/js/datxe.js"></script>
 

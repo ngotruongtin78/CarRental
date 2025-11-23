@@ -175,6 +175,77 @@ body {
     font-weight: bold;
 }
 
+.user-menu {
+    position: relative;
+}
+
+.user-menu-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 8px 10px;
+    border-radius: 12px;
+    transition: background 0.2s ease;
+}
+
+.user-menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #2f6b2f;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
+.user-menu-dropdown {
+    position: absolute;
+    right: 0;
+    margin-top: 8px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    padding: 10px;
+    display: none;
+    min-width: 160px;
+    z-index: 10;
+}
+
+.user-menu.open .user-menu-dropdown {
+    display: block;
+}
+
+.user-menu-dropdown .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #2f6b2f;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.user-menu-dropdown .dropdown-item.logout {
+    color: #c62828;
+}
+
+.user-menu-dropdown .dropdown-item:hover {
+    background: #f6f6f6;
+}
+
 .top-bar .btn-login {
     background-color: transparent;
     color: #ffffff;
