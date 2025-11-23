@@ -41,8 +41,10 @@ public class RentalRecordService {
         List<Map<String, Object>> response = new ArrayList<>();
         for (RentalRecord record : records) {
             Map<String, Object> item = new LinkedHashMap<>();
+            StatusView statusView = resolveStatus(record);
             item.put("record", record);
-            item.put("displayStatus", translateStatus(record));
+            item.put("displayStatus", statusView.display);
+            item.put("filterStatus", statusView.filterKey);
             vehicleRepository.findById(record.getVehicleId()).ifPresent(vehicle -> {
                 Map<String, Object> vehicleInfo = new LinkedHashMap<>();
                 vehicleInfo.put("id", vehicle.getId());
@@ -212,18 +214,28 @@ public class RentalRecordService {
         String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
         String paymentStatus = Optional.ofNullable(record.getPaymentStatus()).orElse("").toUpperCase();
         boolean cancelled = status.equals("CANCELLED") || status.equals("EXPIRED") || paymentStatus.equals("CANCELLED") || paymentStatus.equals("EXPIRED");
-        boolean unpaid = status.equals("PENDING_PAYMENT") || paymentStatus.equals("PENDING") || paymentStatus.equals("PAY_AT_STATION");
-        if (cancelled || unpaid) return false;
-        return true;
+        return !cancelled;
     }
 
-    private String translateStatus(RentalRecord record) {
+    private StatusView resolveStatus(RentalRecord record) {
         String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
         String paymentStatus = Optional.ofNullable(record.getPaymentStatus()).orElse("").toUpperCase();
-        if (status.equals("COMPLETED") || status.equals("RETURNED")) return "Đã trả xe";
-        if (status.equals("WAITING_INSPECTION")) return "Chờ xác nhận trả";
-        if (status.equals("IN_PROGRESS") || status.equals("CONTRACT_SIGNED")) return "Đang thuê";
-        if (paymentStatus.equals("PAID") || status.equals("PAID")) return "Đã thuê";
-        return "Đã thuê";
+        String paymentMethod = Optional.ofNullable(record.getPaymentMethod()).orElse("").toLowerCase();
+
+        if (status.equals("RETURNED") || status.equals("COMPLETED")) {
+            return new StatusView("Đã trả xe", "returned");
+        }
+        if (status.equals("WAITING_INSPECTION")) {
+            return new StatusView("Chờ xác nhận trả", "returned");
+        }
+        if (paymentStatus.equals("PAID") || status.equals("PAID") || status.equals("IN_PROGRESS") || status.equals("CONTRACT_SIGNED")) {
+            return new StatusView("Đang thuê", "active");
+        }
+        if (paymentMethod.equals("cash") || paymentStatus.equals("PAY_AT_STATION") || status.equals("PENDING_PAYMENT")) {
+            return new StatusView("Đang chờ thanh toán", "rented");
+        }
+        return new StatusView("Đã thuê", "rented");
     }
+
+    private record StatusView(String display, String filterKey) {}
 }

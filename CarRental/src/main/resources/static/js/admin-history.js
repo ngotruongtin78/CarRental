@@ -54,31 +54,7 @@ document.addEventListener("DOMContentLoaded", function() {
         data.forEach(rental => {
             const tr = document.createElement('tr');
 
-            let statusClass = 'status-inactive';
-            if (['PENDING', 'PENDING_PAYMENT', 'AWAITING_CASH'].includes(rental.status)) {
-                statusClass = 'status-pending';
-            } else if (['RETURNED', 'COMPLETED', 'PAID', 'IN_PROGRESS', 'CHECKED_IN', 'CONTRACT_SIGNED'].includes(rental.status)) {
-                statusClass = 'status-available';
-            } else if (['CANCELLED', 'EXPIRED'].includes(rental.status)) {
-                statusClass = 'status-disabled';
-            }
-
-            let statusText = rental.status;
-            switch (rental.status) {
-                case 'PENDING': statusText = 'Chờ xử lý'; break;
-                case 'PENDING_PAYMENT': statusText = 'Chờ thanh toán'; break;
-                case 'AWAITING_CASH': statusText = 'Chờ tiền mặt'; break;
-                case 'PAID': statusText = 'Đã thanh toán'; break;
-                case 'IN_PROGRESS':
-                case 'CHECKED_IN': statusText = 'Đang thuê'; break;
-                case 'RETURNED': statusText = 'Đã trả xe'; break;
-                case 'COMPLETED': statusText = 'Hoàn thành'; break;
-                case 'CANCELLED': statusText = 'Đã hủy'; break;
-                case 'EXPIRED': statusText = 'Hết hạn'; break;
-                case 'CONTRACT_SIGNED': statusText = 'Đã ký HĐ'; break;
-                default: statusText = rental.status;
-            }
-
+            const statusInfo = getStatusInfo(rental);
             const userDisplay = rental.username || rental.userId || "N/A";
 
             tr.innerHTML = `
@@ -86,11 +62,35 @@ document.addEventListener("DOMContentLoaded", function() {
                 <td>${userDisplay}</td>
                 <td>${rental.vehicleId}</td>
                 <td>${rental.stationId}</td>
-                <td><span class="status ${statusClass}">${statusText}</span></td>
+                <td><span class="status ${statusInfo.className}">${statusInfo.text}</span></td>
                 <td>${(rental.total || 0).toLocaleString('vi-VN')}</td>
             `;
             historyTableBody.appendChild(tr);
         });
+    }
+
+    function getStatusInfo(rental) {
+        const status = (rental.status || '').toUpperCase();
+        const paymentStatus = (rental.paymentStatus || '').toUpperCase();
+        const paymentMethod = (rental.paymentMethod || '').toLowerCase();
+
+        const isCancelled = ['CANCELLED', 'EXPIRED'].includes(status) || ['CANCELLED', 'EXPIRED'].includes(paymentStatus);
+        if (isCancelled) return { text: 'Đã hủy', className: 'status-disabled' };
+
+        if (['RETURNED', 'COMPLETED'].includes(status)) {
+            return { text: 'Đã trả xe', className: 'status-available' };
+        }
+        if (status === 'WAITING_INSPECTION') {
+            return { text: 'Chờ xác nhận trả', className: 'status-pending' };
+        }
+        if (paymentStatus === 'PAID' || status === 'PAID' || ['IN_PROGRESS', 'CHECKED_IN', 'CONTRACT_SIGNED'].includes(status)) {
+            return { text: 'Đang thuê', className: 'status-available' };
+        }
+        if (paymentMethod === 'cash' || paymentStatus === 'PAY_AT_STATION' || status === 'PENDING_PAYMENT') {
+            return { text: 'Đang chờ thanh toán', className: 'status-pending' };
+        }
+
+        return { text: 'Chờ xử lý', className: 'status-pending' };
     }
 
     function filterHistory() {
