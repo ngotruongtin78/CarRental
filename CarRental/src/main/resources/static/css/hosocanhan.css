@@ -152,6 +152,15 @@ body {
     gap: 12px;
 }
 
+.welcome-text {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .top-bar .auth-buttons button {
     padding: 10px 20px;
     border: none;
