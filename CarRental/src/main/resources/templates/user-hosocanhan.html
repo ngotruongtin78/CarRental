@@ -26,6 +26,11 @@
     <div class="content-area">
 
         <div class="top-bar">
+            <div class="search-bar">
+                <input id="station-search" type="text" placeholder="Tìm điểm thuê gần bạn">
+                <button id="btn-find-station" type="button"><i class="fas fa-location-crosshairs"></i></button>
+                <div id="station-hint" class="station-hint"></div>
+            </div>
             <div class="auth-buttons">
                 <div sec:authorize="isAnonymous()">
                     <a href="/login" class="btn-login">Đăng nhập</a>
@@ -225,6 +230,8 @@
     loadStats();
     refreshDocs();
 </script>
+
+<script src="/js/station-search.js"></script>
 
 </body>
 </html>

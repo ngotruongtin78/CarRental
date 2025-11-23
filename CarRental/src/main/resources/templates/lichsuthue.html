@@ -22,9 +22,28 @@
 
     <div class="content-area">
         <div class="top-bar">
+            <div class="search-bar">
+                <input id="station-search" type="text" placeholder="Tìm điểm thuê gần bạn">
+                <button id="btn-find-station" type="button"><i class="fas fa-location-crosshairs"></i></button>
+                <div id="station-hint" class="station-hint"></div>
+            </div>
             <div class="auth-buttons">
-                <div class="user-info">
-                    <span class="welcome-text">Xin chào, <b th:text="${#authentication?.name}">---</b></span>
+                <div sec:authorize="isAnonymous()">
+                    <a th:href="@{/login}" class="btn-login">Đăng nhập</a>
+                    <a th:href="@{/register}" class="btn-register">Đăng ký</a>
+                </div>
+
+                <div class="user-menu" sec:authorize="isAuthenticated()">
+                    <button class="user-menu-toggle" type="button">
+                        <span class="welcome-text">Xin chào, <b th:text="${#authentication?.name}">---</b></span>
+                        <span class="avatar-circle"><i class="fas fa-user"></i></span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="user-menu-dropdown">
+                        <a href="/logout" class="dropdown-item logout">
+                            <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -105,6 +124,8 @@
 
     </div>
 </div>
+<script src="/js/user-menu.js"></script>
+<script src="/js/station-search.js"></script>
 <script src="/js/lichsuthue.js"></script>
 </body>
 </html>

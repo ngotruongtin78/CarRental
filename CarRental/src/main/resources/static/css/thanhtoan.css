@@ -177,6 +177,15 @@ body {
     display: inline-block;
 }
 
+.welcome-text {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .top-bar .btn-login {
     background-color: transparent;
     color: #ffffff;
