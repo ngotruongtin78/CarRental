@@ -63,7 +63,10 @@ function renderHistoryItem(item) {
     const statusBadge = document.createElement("span");
     statusBadge.classList.add("status-badge");
     statusBadge.innerText = `Trạng thái: ${displayStatus}`;
-    if (record.status && record.status.toUpperCase() === "WAITING_INSPECTION") {
+    const statusUpper = (record.status || "").toUpperCase();
+    if (displayStatus.toLowerCase().includes("chờ thanh toán") || statusUpper === "PENDING_PAYMENT") {
+        statusBadge.classList.add("warning");
+    } else if (statusUpper === "WAITING_INSPECTION") {
         statusBadge.classList.add("warning");
     }
     actions.appendChild(statusBadge);
@@ -77,8 +80,6 @@ function renderHistoryItem(item) {
         btn.onclick = () => signContract(record.id);
         actions.appendChild(btn);
     }
-
-    const statusUpper = (record.status || "").toUpperCase();
 
     if (!disabled) {
         const btnCheckin = document.createElement("button");
@@ -156,6 +157,18 @@ function matchesVehicleType(vehicleType, filterValue) {
     }
 }
 
+function deriveFilterStatus(item) {
+    const record = item.record || {};
+    const directFilter = (item.filterStatus || record.filterStatus || "").toLowerCase();
+    if (directFilter) return directFilter;
+
+    const display = (item.displayStatus || record.displayStatus || record.status || "").toLowerCase();
+    if (display.includes("trả xe")) return "returned";
+    if (display.includes("đang thuê")) return "active";
+    if (display.includes("chờ thanh toán") || display.includes("đã thuê")) return "rented";
+    return "";
+}
+
 function filterHistory() {
     const period = document.getElementById("period-filter").value;
     const vehicleType = document.getElementById("vehicle-type-filter").value;
@@ -185,7 +198,7 @@ function filterHistory() {
     const filtered = historyData.filter(item => {
         const record = item.record || {};
         const startDate = parseDate(record.startDate || record.startTime);
-        const filterStatus = (item.filterStatus || record.filterStatus || "").toLowerCase();
+        const filterStatus = deriveFilterStatus(item);
 
         if (periodRange.start && (!startDate || startDate < periodRange.start)) return false;
         if (periodRange.end && startDate && startDate > periodRange.end) return false;
