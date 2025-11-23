@@ -8,19 +8,26 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-        document.querySelectorAll(".user-menu-toggle").forEach(btn => {
-            btn.addEventListener("click", (evt) => {
-                evt.stopPropagation();
-                const menu = btn.closest(".user-menu");
-                if (!menu) return;
-                const isOpen = menu.classList.contains("open");
+        document.querySelectorAll(".user-menu").forEach(menu => {
+            menu.addEventListener("mouseenter", () => {
                 closeAllMenus(menu);
-                if (!isOpen) {
-                    menu.classList.add("open");
+                menu.classList.add("open");
+            });
+
+            menu.addEventListener("mouseleave", () => {
+                menu.classList.remove("open");
+            });
+
+            menu.addEventListener("focusin", () => {
+                closeAllMenus(menu);
+                menu.classList.add("open");
+            });
+
+            menu.addEventListener("focusout", (evt) => {
+                if (!menu.contains(evt.relatedTarget)) {
+                    menu.classList.remove("open");
                 }
             });
         });
-
-        document.addEventListener("click", () => closeAllMenus());
     });
 })();
