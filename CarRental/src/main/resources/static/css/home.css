@@ -441,60 +441,10 @@ body {
         margin-bottom: 30px;
     }
 
-    .user-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .welcome-text {
-        color: #ffffff;
-        font-weight: bold;
-        font-size: 14px;
-    }
-
-    .btn-logout {
-        padding: 10px 20px;
-        border-radius: 20px;
-        background-color: #ffffff;
-        color: #388e3c;
-        font-weight: bold;
-        text-decoration: none;
-    }
-
-    .btn-logout:hover {
-        background-color: #f3f3f3;
-    }
-
     .auth-buttons {
         display: flex;
         align-items: center;
         gap: 12px;
-    }
-
-    .user-info {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .welcome-text {
-        color: #ffffff;
-        font-weight: 600;
-        font-size: 14px;
-    }
-
-    .btn-logout {
-        padding: 8px 18px;
-        background-color: #ffffff;
-        color: #388e3c;
-        border-radius: 20px;
-        font-weight: bold;
-        text-decoration: none;
-    }
-
-    .btn-logout:hover {
-        background-color: #f3f3f3;
     }
 
 }

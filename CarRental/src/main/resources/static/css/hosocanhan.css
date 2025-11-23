@@ -152,12 +152,6 @@ body {
     gap: 12px;
 }
 
-.top-bar .welcome-text,
-.top-bar .welcome-text b {
-    color: #ffffff;
-    font-weight: 600;
-}
-
 .top-bar .auth-buttons button {
     padding: 10px 20px;
     border: none;
