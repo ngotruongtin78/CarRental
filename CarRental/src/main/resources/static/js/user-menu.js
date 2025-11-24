@@ -1,33 +1,41 @@
-(function () {
-    function closeAllMenus(except) {
-        document.querySelectorAll(".user-menu").forEach(menu => {
-            if (menu !== except) {
-                menu.classList.remove("open");
-            }
+document.addEventListener("DOMContentLoaded", function () {
+
+
+    const userMenus = document.querySelectorAll(".user-menu");
+
+
+    function closeAllMenus() {
+        userMenus.forEach(menu => {
+            menu.classList.remove("open");
         });
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-        document.querySelectorAll(".user-menu").forEach(menu => {
-            menu.addEventListener("mouseenter", () => {
-                closeAllMenus(menu);
-                menu.classList.add("open");
-            });
+    userMenus.forEach(menu => {
+        const toggleBtn = menu.querySelector(".user-menu-toggle");
 
-            menu.addEventListener("mouseleave", () => {
-                menu.classList.remove("open");
-            });
+        if (toggleBtn) {
 
-            menu.addEventListener("focusin", () => {
-                closeAllMenus(menu);
-                menu.classList.add("open");
-            });
+            toggleBtn.addEventListener("click", function (e) {
 
-            menu.addEventListener("focusout", (evt) => {
-                if (!menu.contains(evt.relatedTarget)) {
-                    menu.classList.remove("open");
+                e.stopPropagation();
+
+
+                const isAlreadyOpen = menu.classList.contains("open");
+
+
+                closeAllMenus();
+
+
+                if (!isAlreadyOpen) {
+                    menu.classList.add("open");
                 }
             });
-        });
+        }
     });
-})();
+
+
+    window.addEventListener("click", function (e) {
+
+        closeAllMenus();
+    });
+});

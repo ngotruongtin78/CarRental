@@ -1,9 +1,7 @@
 package CarRental.example.config;
 
-import CarRental.example.security.CustomAuthenticationFailureHandler;
 import CarRental.example.security.CustomUserDetailsService;
 import CarRental.example.security.CustomLoginSuccessHandler;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -20,8 +18,6 @@ public class SecurityConfig {
     private final CustomUserDetailsService customUserDetailsService;
 
 
-    @Autowired
-    private CustomAuthenticationFailureHandler customAuthenticationFailureHandler;
 
     public SecurityConfig(CustomUserDetailsService customUserDetailsService) {
         this.customUserDetailsService = customUserDetailsService;
@@ -59,7 +55,7 @@ public class SecurityConfig {
                         .loginPage("/login")
                         .loginProcessingUrl("/login-process")
                         .successHandler(new CustomLoginSuccessHandler())
-                        .failureHandler(customAuthenticationFailureHandler)
+                        .failureUrl("/login?error")
                         .permitAll()
                 )
                 .logout(logout -> logout

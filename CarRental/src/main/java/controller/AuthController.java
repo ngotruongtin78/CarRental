@@ -7,6 +7,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class AuthController {
@@ -19,22 +20,24 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // ==========================
-    // REGISTER PAGE
-    // ==========================
     @GetMapping("/register")
     public String registerPage() {
         return "register";
     }
 
-    // ==========================
-    // ĐĂNG KÝ USER
-    // ==========================
     @PostMapping("/register")
-    public String register(User user, Model model) {
+    public String register(User user,
+                           @RequestParam("confirmPassword") String confirmPassword,
+                           Model model) {
 
         if (userRepo.findByUsername(user.getUsername()) != null) {
-            model.addAttribute("error", "Tên đăng nhập đã tồn tại!");
+            model.addAttribute("errorUsername", "Tên đăng nhập đã tồn tại!");
+            return "register";
+        }
+
+        if (!user.getPassword().equals(confirmPassword)) {
+            model.addAttribute("errorConfirmPassword", "Mật khẩu xác nhận không khớp!");
+            model.addAttribute("username", user.getUsername());
             return "register";
         }
 

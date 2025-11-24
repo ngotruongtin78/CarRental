@@ -7,7 +7,7 @@
 
 body {
     height: 100vh;
-    overflow: hidden; /* Ẩn scrollbar thừa */
+    overflow: hidden;
     background-color: #fff;
 }
 
@@ -17,7 +17,6 @@ body {
     width: 100%;
 }
 
-/* --- LEFT PANEL (Banner) --- */
 .left-panel {
     flex: 1;
     background: linear-gradient(135deg, #2e7d32 0%, #388e3c 100%);
@@ -30,7 +29,6 @@ body {
     overflow: hidden;
 }
 
-/* Hiệu ứng nền trang trí */
 .left-panel::before {
     content: '';
     position: absolute;
@@ -71,7 +69,6 @@ body {
     line-height: 1.6;
 }
 
-/* --- RIGHT PANEL (Form) --- */
 .right-panel {
     flex: 1;
     display: flex;
@@ -108,7 +105,7 @@ body {
     font-size: 15px;
 }
 
-/* Inputs */
+/* INPUTS */
 .input-group {
     margin-bottom: 20px;
 }
@@ -136,7 +133,7 @@ body {
 
 .input-field input {
     width: 100%;
-    padding: 14px 15px 14px 45px; /* Padding left chừa chỗ cho icon */
+    padding: 14px 15px 14px 45px;
     border: 1px solid #e0e0e0;
     border-radius: 12px;
     font-size: 15px;
@@ -156,7 +153,30 @@ body {
     color: #388e3c;
 }
 
-/* Actions */
+/* ALERTS (NEW) */
+.auth-alert {
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.auth-alert.error {
+    background-color: #fdeaea;
+    color: #e53935;
+    border: 1px solid #fcd2d2;
+}
+
+.auth-alert.success {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+
+/* ACTIONS */
 .form-actions {
     display: flex;
     justify-content: space-between;
@@ -189,7 +209,6 @@ body {
     text-decoration: underline;
 }
 
-/* Button */
 .btn-submit {
     width: 100%;
     padding: 14px;
@@ -213,7 +232,6 @@ body {
     box-shadow: 0 5px 15px rgba(46, 125, 50, 0.3);
 }
 
-/* Footer */
 .auth-footer {
     text-align: center;
     margin-top: 25px;
@@ -231,39 +249,13 @@ body {
     text-decoration: underline;
 }
 
-/* Alerts */
-.auth-alert {
-    padding: 12px 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.auth-alert.error {
-    background-color: #fdeaea;
-    color: #e53935;
-    border: 1px solid #fcd2d2;
-}
-
-.auth-alert.success {
-    background-color: #e8f5e9;
-    color: #2e7d32;
-    border: 1px solid #c8e6c9;
-}
-
-/* Responsive Tablet/Mobile */
 @media (max-width: 900px) {
     .left-panel {
-        display: none; /* Ẩn phần hình ảnh trên màn hình nhỏ */
+        display: none;
     }
-
     .right-panel {
-        background-color: #f4f7f6; /* Đổi nền sang màu xám nhẹ cho đỡ trống */
+        background-color: #f4f7f6;
     }
-
     .auth-form-wrapper {
         background-color: white;
         padding: 30px;
