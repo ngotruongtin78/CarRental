@@ -17,8 +17,14 @@ function initDates() {
     const today = new Date().toISOString().split("T")[0];
     const startInput = document.getElementById("start-date");
     const endInput = document.getElementById("end-date");
-    if (startInput) startInput.value = today;
-    if (endInput) endInput.value = today;
+    if (startInput) {
+        startInput.value = today;
+        startInput.min = today;
+    }
+    if (endInput) {
+        endInput.value = today;
+        endInput.min = today;
+    }
 }
 
 function requestUserLocation() {
@@ -421,5 +427,26 @@ loadDocumentStatus();
 
 const startInput = document.getElementById("start-date");
 const endInput = document.getElementById("end-date");
-if (startInput) startInput.addEventListener("change", renderSelectionDetails);
-if (endInput) endInput.addEventListener("change", renderSelectionDetails);
+if (startInput) {
+    startInput.addEventListener("change", () => {
+        const today = new Date().toISOString().split("T")[0];
+        if (startInput.value < today) {
+            startInput.value = today;
+        }
+        if (endInput) {
+            endInput.min = startInput.value;
+            if (endInput.value < startInput.value) {
+                endInput.value = startInput.value;
+            }
+        }
+        renderSelectionDetails();
+    });
+}
+if (endInput) {
+    endInput.addEventListener("change", () => {
+        if (startInput && endInput.value < startInput.value) {
+            endInput.value = startInput.value;
+        }
+        renderSelectionDetails();
+    });
+}
