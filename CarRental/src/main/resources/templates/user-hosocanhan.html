@@ -242,7 +242,31 @@
         input.click();
     }
 
-    function setDocPreview(targetId, dataUri, label) {
+    function handleDocAction(type, action) {
+        if (action === "replace") {
+            upload(type);
+            return;
+        }
+
+        if (action === "delete") {
+            const confirmDelete = confirm("Bạn chắc chắn muốn xóa ảnh này?");
+            if (!confirmDelete) return;
+
+            fetch(`/api/renter/documents/${type}`, { method: "DELETE" })
+                .then(async (res) => {
+                    if (!res.ok) {
+                        const text = await res.text();
+                        throw new Error(text || "Không thể xóa giấy tờ");
+                    }
+                    alert("Đã xóa giấy tờ");
+                    refreshDocs();
+                    loadUploadedDocs();
+                })
+                .catch((err) => alert(err.message));
+        }
+    }
+
+    function setDocPreview(targetId, dataUri, label, type) {
         const container = document.getElementById(targetId);
         if (!container) return;
 
@@ -251,14 +275,30 @@
                 <div class="doc-preview-image">
                     <img src="${dataUri}" alt="${label} đã tải lên" />
                 </div>
-                <div class="doc-preview-label">${label}</div>
+                <div class="doc-preview-footer">
+                    <div class="doc-preview-label">${label}</div>
+                    <div class="doc-preview-actions">
+                        <button class="doc-action" data-action="replace">Thay ảnh</button>
+                        <button class="doc-action danger" data-action="delete">Xóa ảnh</button>
+                    </div>
+                </div>
             `;
+
+            container.querySelectorAll(".doc-action").forEach(btn => {
+                btn.onclick = () => handleDocAction(type, btn.dataset.action);
+            });
         } else {
             container.innerHTML = `
                 <div class="doc-preview-empty">
                     <i class="fas fa-image"></i>
                     <p>Chưa có ${label}</p>
+                    <button class="doc-action" data-action="replace">Tải lên</button>
                 </div>`;
+
+            const actionBtn = container.querySelector(".doc-action");
+            if (actionBtn) {
+                actionBtn.onclick = () => handleDocAction(type, "replace");
+            }
         }
     }
 
@@ -267,8 +307,8 @@
             const res = await fetch("/api/renter/documents");
             if (!res.ok) return;
             const data = await res.json();
-            setDocPreview("preview-license", data.licenseData, "GPLX");
-            setDocPreview("preview-idcard", data.idCardData, "CCCD");
+            setDocPreview("preview-license", data.licenseData, "GPLX", "license");
+            setDocPreview("preview-idcard", data.idCardData, "CCCD", "idcard");
         } catch (e) {
             console.error("Không thể tải hình ảnh giấy tờ", e);
         }

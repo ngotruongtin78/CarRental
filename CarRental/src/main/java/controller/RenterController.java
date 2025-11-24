@@ -74,6 +74,23 @@ public class RenterController {
         }
     }
 
+    private ResponseEntity<?> removeDocument(Consumer<User> clearer) {
+        ResponseEntity<User> resolved = resolveCurrentUser();
+        if (!resolved.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(resolved.getStatusCode()).body("Unauthorized");
+        }
+
+        User user = resolved.getBody();
+        clearer.accept(user);
+        repo.save(user);
+
+        return ResponseEntity.ok(Map.of(
+                "status", "DELETED",
+                "licenseUploaded", user.getLicenseData() != null,
+                "idCardUploaded", user.getIdCardData() != null
+        ));
+    }
+
     @PostMapping("/upload-license")
     public ResponseEntity<?> uploadLicense(@RequestParam("file") MultipartFile file) {
         Binary licenseBinary;
@@ -96,6 +113,17 @@ public class RenterController {
         }
 
         return storeDocument(file, user -> user.setIdCardData(idBinary));
+    }
+
+    @DeleteMapping("/documents/{type}")
+    public ResponseEntity<?> deleteDocument(@PathVariable("type") String type) {
+        if ("license".equalsIgnoreCase(type)) {
+            return removeDocument(user -> user.setLicenseData(null));
+        } else if ("idcard".equalsIgnoreCase(type)) {
+            return removeDocument(user -> user.setIdCardData(null));
+        }
+
+        return ResponseEntity.badRequest().body("Loại giấy tờ không hợp lệ");
     }
 
     @PostMapping("/request-verification")
