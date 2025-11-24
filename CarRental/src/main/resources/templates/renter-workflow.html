@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Quy trình thuê EV - EV Station</title>
+    <link rel="stylesheet" href="/css/hosocanhan.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+<div class="main-container">
+    <div class="sidebar">
+        <div class="sidebar-header">EV Station</div>
+        <ul class="sidebar-menu">
+            <li><a href="/home"><i class="fas fa-home"></i> Trang chủ</a></li>
+            <li><a href="/datxe"><i class="fas fa-bicycle"></i> Đặt xe</a></li>
+            <li><a href="/lichsuthue"><i class="fas fa-history"></i> Lịch sử thuê</a></li>
+            <li><a href="/ho-so"><i class="fas fa-user-circle"></i> Hồ sơ cá nhân</a></li>
+            <li class="active"><a href="/quy-trinh-ev"><i class="fas fa-route"></i> Quy trình EV</a></li>
+        </ul>
+    </div>
+
+    <div class="content-area">
+        <div class="top-bar">
+            <div class="search-bar">
+                <input id="station-search" type="text" placeholder="Tìm điểm thuê gần bạn">
+                <button id="btn-find-station" type="button"><i class="fas fa-location-crosshairs"></i></button>
+                <div id="station-hint" class="station-hint"></div>
+            </div>
+            <div class="auth-buttons">
+                <div class="user-info" th:if="${#authentication.principal != null}">
+                    <span class="welcome-text">Xin chào, <b th:text="${#authentication.name}"></b></span>
+                </div>
+            </div>
+        </div>
+
+        <h1 class="page-title">Theo dõi quy trình thuê EV</h1>
+
+        <div class="card workflow-card">
+            <div class="workflow-header">
+                <h2>Cập nhật trạng thái từng bước</h2>
+                <p>Đánh dấu tiến độ thực tế thay vì chỉ xem mô tả.</p>
+            </div>
+            <div id="workflow-list" class="workflow-list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const steps = [
+        { key: 'checkin', section: '1c. Nhận xe', title: 'Check-in nhận xe', detail: 'Quét mã QR tại xe/trạm hoặc check-in qua app.' },
+        { key: 'contract', section: '1c. Nhận xe', title: 'Ký hợp đồng điện tử', detail: 'Xem và nhấn nút "Ký/Đồng ý" các điều khoản thuê xe.' },
+        { key: 'handover', section: '1c. Nhận xe', title: 'Xác nhận bàn giao', detail: 'Xác nhận tình trạng xe (vỏ, pin) khớp với thực tế nhân viên giao.' },
+        { key: 'returning', section: '1d. Trả xe', title: 'Yêu cầu trả xe', detail: 'Định vị đúng điểm trả xe quy định mới cho phép bấm trả.' },
+        { key: 'payment', section: '1d. Trả xe', title: 'Thanh toán', detail: 'Hiển thị tổng tiền, cổng thanh toán online hoặc xác nhận tiền mặt.' }
+    ];
+
+    const statusOptions = [
+        { value: 'Pending', label: 'Chưa làm' },
+        { value: 'InProgress', label: 'Đang thực hiện' },
+        { value: 'Done', label: 'Hoàn thành' }
+    ];
+
+    function statusBadge(status) {
+        switch (status) {
+            case 'Done': return 'badge-done';
+            case 'InProgress': return 'badge-progress';
+            default: return 'badge-pending';
+        }
+    }
+
+    function renderWorkflow(data) {
+        const container = document.getElementById('workflow-list');
+        container.innerHTML = '';
+
+        steps.forEach(step => {
+            const currentStatus = data?.[step.key] || 'Pending';
+            const row = document.createElement('div');
+            row.className = 'workflow-item';
+            row.innerHTML = `
+                <div class="workflow-icon"><i class="fas fa-flag"></i></div>
+                <div class="workflow-body">
+                    <div class="workflow-meta">${step.section}</div>
+                    <div class="workflow-title">${step.title}</div>
+                    <div class="workflow-detail">${step.detail}</div>
+                </div>
+                <div class="workflow-actions">
+                    <select class="status-select" data-key="${step.key}">
+                        ${statusOptions.map(opt => `<option value="${opt.value}" ${opt.value === currentStatus ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                    </select>
+                    <span class="workflow-status ${statusBadge(currentStatus)}">${currentStatus}</span>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+
+        document.querySelectorAll('.status-select').forEach(sel => {
+            sel.addEventListener('change', async (e) => {
+                const key = e.target.getAttribute('data-key');
+                const status = e.target.value;
+                try {
+                    const res = await fetch(`/api/renter/workflow/${key}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `status=${encodeURIComponent(status)}`
+                    });
+                    if (!res.ok) throw new Error();
+                    await loadWorkflow();
+                } catch (err) {
+                    alert('Không cập nhật được trạng thái.');
+                    await loadWorkflow();
+                }
+            });
+        });
+    }
+
+    async function loadWorkflow() {
+        try {
+            const res = await fetch('/api/renter/workflow');
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            renderWorkflow(data);
+        } catch (e) {
+            alert('Không tải được tiến trình, vui lòng đăng nhập lại.');
+        }
+    }
+
+    loadWorkflow();
+</script>
+<script src="/js/station-search.js"></script>
+</body>
+</html>
