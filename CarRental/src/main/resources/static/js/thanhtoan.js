@@ -22,6 +22,8 @@ let rentalData = null;
 let vehicleData = null;
 let stationData = null;
 let rentalDays = 1;
+let lastDepositAmount = 0;
+let depositPrompted = false;
 
 function formatDate(dateStr) {
     if (!dateStr) return "-";
@@ -101,10 +103,67 @@ async function loadRentalInfo() {
         document.getElementById("payment-method-text").innerText =
             (methodSelect.value || rentalData.paymentMethod) === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt";
 
+        const depositRequired = rentalData.depositRequiredAmount || 0;
+        const depositPaid = rentalData.depositPaidAmount || 0;
+        if (rentalData.paymentMethod === "cash" && depositRequired > 0 && depositPaid < depositRequired) {
+            lastDepositAmount = depositRequired - depositPaid;
+        }
+
+        maybePromptDeposit();
+
         refreshUploadStatus();
     } catch (err) {
         console.error("Lỗi loadRentalInfo:", err);
     }
+}
+
+async function maybePromptDeposit() {
+    if (depositPrompted || !rentalData) return;
+
+    const method = rentalData.paymentMethod || document.getElementById("payment-method").value;
+    const depositRequired = rentalData.depositRequiredAmount || Math.round((totalAmount || 0) * 0.3);
+    const depositPaid = rentalData.depositPaidAmount || 0;
+    const needDeposit = method === "cash" && depositRequired > 0 && depositPaid < depositRequired;
+
+    if (!needDeposit) return;
+
+    try {
+        const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}`, { method: "POST" });
+        if (!qrRes.ok) {
+            console.error("Không tạo được QR cho đặt cọc", await qrRes.text());
+            return;
+        }
+
+        const qr = await qrRes.json();
+        lastDepositAmount = qr.depositRemaining || lastDepositAmount || qr.amount;
+        depositPrompted = true;
+        openQrModal(qr, { isDeposit: true, depositAmount: lastDepositAmount });
+        alert("Vui lòng đặt cọc 30% để giữ xe. Sau khi thanh toán thành công hệ thống sẽ xác nhận.");
+    } catch (err) {
+        console.error("Lỗi tự động hiển thị QR đặt cọc", err);
+    }
+}
+
+function openQrModal(qrData, options = {}) {
+    document.getElementById("qrImage").src = qrData.qrBase64 || qrData.qrUrl;
+    document.getElementById("qrAmount").innerText = qrData.amount.toLocaleString("vi-VN");
+    document.getElementById("qrAccountName").innerText = qrData.accountName;
+    document.getElementById("qrAccountNumber").innerText = qrData.accountNumber;
+    document.getElementById("qrOrder").innerText = qrData.rentalId || rentalId;
+
+    const depositNote = document.getElementById("depositNote");
+    if (depositNote) {
+        if (options.isDeposit) {
+            const depositAmount = options.depositAmount || qrData.amount;
+            depositNote.style.display = "block";
+            depositNote.innerText = `Bạn cần đặt cọc 30% (${depositAmount.toLocaleString("vi-VN")} VNĐ) để giữ xe. Phần còn lại sẽ thanh toán tại trạm.`;
+        } else {
+            depositNote.style.display = "none";
+            depositNote.innerText = "";
+        }
+    }
+
+    document.getElementById("qrModal").style.display = "flex";
 }
 
 function applyUploadState(data) {
@@ -205,11 +264,15 @@ async function confirmPayment() {
     document.querySelector(".detail-value.total-fee").innerText =
         latestTotal.toLocaleString("vi-VN") + " VNĐ";
 
+    if (method === "cash") {
+        lastDepositAmount = data.depositRequired || lastDepositAmount || Math.round(latestTotal * 0.3);
+    }
+
 
     // ==============================
     // SEPAY
     // ==============================
-    if (method === "bank_transfer") {
+    if (method === "bank_transfer" || data?.depositPending === true) {
         const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}`, {
             method: "POST"
         });
@@ -223,13 +286,13 @@ async function confirmPayment() {
 
         const qr = await qrRes.json();
 
-        document.getElementById("qrImage").src = qr.qrBase64 || qr.qrUrl;
-        document.getElementById("qrAmount").innerText = qr.amount.toLocaleString("vi-VN");
-        document.getElementById("qrAccountName").innerText = qr.accountName;
-        document.getElementById("qrAccountNumber").innerText = qr.accountNumber;
-        document.getElementById("qrOrder").innerText = rentalId;
-
-        document.getElementById("qrModal").style.display = "flex";
+        openQrModal(qr, {
+            isDeposit: method === "cash" || data?.depositPending,
+            depositAmount: lastDepositAmount || data?.depositRequired || qr.amount
+        });
+        if (method === "cash") {
+            alert("Vui lòng chuyển khoản 30% đặt cọc để giữ xe. Phần còn lại sẽ thanh toán tại trạm.");
+        }
         return;
     }
 
@@ -258,9 +321,17 @@ async function checkPaymentStatus() {
     if (data?.paid === true) {
         alert("Thanh toán thành công!");
         window.location.href = "/lichsuthue";
-    } else {
-        alert("Chưa nhận được thanh toán! Vui lòng đợi ngân hàng xử lý (1–3s).");
+        return;
     }
+
+    if (data?.depositPaid === true) {
+        alert("Đã đặt cọc 30% thành công! Vui lòng tới trạm để thanh toán phần còn lại và nhận xe.");
+        closeQR();
+        window.location.href = "/lichsuthue";
+        return;
+    }
+
+    alert("Chưa nhận được thanh toán! Vui lòng đợi ngân hàng xử lý (1–3s).");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
