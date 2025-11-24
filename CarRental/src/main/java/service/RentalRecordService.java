@@ -59,6 +59,8 @@ public class RentalRecordService {
                 stationInfo.put("id", station.getId());
                 stationInfo.put("name", station.getName());
                 stationInfo.put("address", station.getAddress());
+                stationInfo.put("latitude", station.getLatitude());
+                stationInfo.put("longitude", station.getLongitude());
                 item.put("station", stationInfo);
             });
             response.add(item);
@@ -102,19 +104,25 @@ public class RentalRecordService {
         return repo.save(record);
     }
 
-    public RentalRecord checkIn(String rentalId, String username, String notes) {
+    public RentalRecord checkIn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
         if (record.getStartTime() == null) record.setStartTime(LocalDateTime.now());
         record.setCheckinNotes(notes);
+        record.setCheckinPhotoData(photoData);
+        record.setCheckinLatitude(latitude);
+        record.setCheckinLongitude(longitude);
         record.setStatus("IN_PROGRESS");
         return repo.save(record);
     }
 
-    public RentalRecord requestReturn(String rentalId, String username, String notes) {
+    public RentalRecord requestReturn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
         record.setReturnNotes(notes);
+        record.setReturnPhotoData(photoData);
+        record.setReturnLatitude(latitude);
+        record.setReturnLongitude(longitude);
         record.setEndTime(LocalDateTime.now());
         record.setStatus("WAITING_INSPECTION");
         return repo.save(record);
