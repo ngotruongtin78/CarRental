@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -338,20 +339,53 @@ public class RentalController {
         return Map.of("status", "SIGNED", "contractSigned", true);
     }
 
-    @PostMapping("/{rentalId}/check-in")
-    public Map<String, Object> checkIn(@PathVariable("rentalId") String rentalId, @RequestBody(required = false) Map<String, String> body) {
+    @PostMapping(value = "/{rentalId}/check-in", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> checkIn(
+            @PathVariable("rentalId") String rentalId,
+            @RequestPart(value = "photo", required = false) MultipartFile photo,
+            @RequestPart(value = "notes", required = false) String notes) {
         String username = getCurrentUsername();
-        String notes = body != null ? body.getOrDefault("notes", "") : "";
+        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
-        RentalRecord record = rentalRecordService.checkIn(rentalId, username, notes);
-        if (record == null) return Map.of("error", "Rental not found or unauthorized");
+        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        if (record == null || !Objects.equals(record.getUsername(), username)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
+        }
 
-        vehicleService.updateAvailable(record.getVehicleId(), false);
-        return Map.of(
-                "status", record.getStatus(),
-                "checkinNotes", record.getCheckinNotes(),
-                "startTime", record.getStartTime()
-        );
+        if (record.getStartTime() != null || "IN_PROGRESS".equalsIgnoreCase(record.getStatus())
+                || "WAITING_INSPECTION".equalsIgnoreCase(record.getStatus())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("Bạn đã check-in hoặc đang trong quá trình thuê xe.");
+        }
+
+        if (!record.isContractSigned()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Vui lòng đọc và chấp thuận hợp đồng trước khi check-in.");
+        }
+
+        if (photo == null || photo.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Vui lòng chụp hoặc tải ảnh tình trạng xe để check-in.");
+        }
+
+        byte[] photoData;
+        try {
+            photoData = photo.getBytes();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Không đọc được ảnh check-in. Vui lòng thử lại.");
+        }
+
+        RentalRecord updated = rentalRecordService.checkIn(rentalId, username, notes != null ? notes : "", photoData);
+        if (updated == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found or unauthorized");
+
+        vehicleService.updateAvailable(updated.getVehicleId(), false);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", updated.getStatus());
+        response.put("checkinNotes", updated.getCheckinNotes());
+        response.put("startTime", updated.getStartTime());
+        response.put("photoUploaded", true);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{rentalId}/return")

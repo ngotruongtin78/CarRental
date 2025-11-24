@@ -37,6 +37,7 @@ public class RentalRecord {
     private boolean contractSigned;
     private String checkinNotes;
     private String returnNotes;
+    private byte[] checkinPhotoData;
     
     private String walletReference;
 
@@ -123,6 +124,9 @@ public class RentalRecord {
 
     public String getReturnNotes() { return returnNotes; }
     public void setReturnNotes(String returnNotes) { this.returnNotes = returnNotes; }
+
+    public byte[] getCheckinPhotoData() { return checkinPhotoData; }
+    public void setCheckinPhotoData(byte[] checkinPhotoData) { this.checkinPhotoData = checkinPhotoData; }
 
     public String getWalletReference() {
         return walletReference;
