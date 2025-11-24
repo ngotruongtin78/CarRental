@@ -161,7 +161,7 @@
             <button class="dialog-close" type="button" aria-label="Đóng">&times;</button>
         </div>
         <div class="dialog-body">
-            <p class="dialog-hint">Chụp ảnh hoặc tải ảnh lên để xác nhận tình trạng hiện tại của xe. Vui lòng đảm bảo ảnh rõ biển số và bề mặt xe.</p>
+            <p class="dialog-hint">Hệ thống sẽ lấy vị trí hiện tại và chỉ cho check-in khi bạn đang ở đúng trạm (bán kính 50m). Chụp ảnh hoặc tải ảnh lên để xác nhận tình trạng hiện tại của xe.</p>
             <div class="upload-grid">
                 <div class="upload-box">
                     <label for="checkin-photo" class="upload-label">Ảnh check-in</label>
@@ -177,6 +177,33 @@
         <div class="dialog-actions">
             <button type="button" class="btn-primary" id="btn-checkin-confirm">Xác nhận check-in</button>
             <button type="button" class="btn-tertiary" id="btn-checkin-cancel">Hủy</button>
+        </div>
+    </div>
+</div>
+<div id="return-modal" class="dialog-modal">
+    <div class="dialog-overlay"></div>
+    <div class="dialog-content wide">
+        <div class="dialog-header">
+            <h3>Trả xe tại trạm</h3>
+            <button class="dialog-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="dialog-body">
+            <p class="dialog-hint">Hệ thống sẽ tự động lấy vị trí hiện tại của bạn. Chỉ gửi yêu cầu trả xe khi đang đứng tại trạm (bán kính 50m) và hãy chụp ảnh tình trạng xe.</p>
+            <div class="upload-grid">
+                <div class="upload-box">
+                    <label for="return-photo" class="upload-label">Ảnh trả xe</label>
+                    <input type="file" id="return-photo" accept="image/*" capture="environment">
+                    <div class="preview" id="return-preview" aria-live="polite"></div>
+                </div>
+                <div class="upload-box">
+                    <label for="return-notes" class="upload-label">Ghi chú tình trạng xe sau khi trả</label>
+                    <textarea id="return-notes" rows="5" placeholder="Ví dụ: Xe sạch sẽ, không hư hỏng..."></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn-primary" id="btn-return-confirm">Xác nhận trả xe</button>
+            <button type="button" class="btn-tertiary" id="btn-return-cancel">Hủy</button>
         </div>
     </div>
 </div>

@@ -1,5 +1,6 @@
 let historyData = [];
-let latestGeoPosition = null;
+let latestCheckinPosition = null;
+let latestReturnPosition = null;
 
 const rentalModal = {
     el: null,
@@ -21,9 +22,19 @@ const checkinModalState = {
     preview: null,
 };
 
+const returnModalState = {
+    el: null,
+    notesInput: null,
+    photoInput: null,
+    preview: null,
+};
+
 let pendingContractRentalId = null;
 let contractAcceptedCallback = null;
 let activeCheckinRecord = null;
+let activeReturnRecord = null;
+let activeCheckinStation = null;
+let activeReturnStation = null;
 
 const CONTRACT_HTML = `
     <p><strong>CHÍNH SÁCH THUÊ XE – EV RENTAL</strong></p>
@@ -79,6 +90,41 @@ function getCurrentPosition() {
     });
 }
 
+function isWithinRentalWindow(record) {
+    if (!record) return true;
+    const start = parseDate(record.startDate || record.startTime);
+    const end = parseDate(record.endDate || record.endTime);
+    const now = new Date();
+
+    if (start) {
+        const startWindow = new Date(start);
+        startWindow.setHours(0, 0, 0, 0);
+        if (now < startWindow) return false;
+    }
+
+    if (end) {
+        const endWindow = new Date(end);
+        endWindow.setHours(23, 59, 59, 999);
+        if (now > endWindow) return false;
+    }
+
+    return true;
+}
+
+async function ensureWithinStationRadius(station) {
+    if (!station || typeof station.latitude !== "number" || typeof station.longitude !== "number") {
+        throw new Error("Không lấy được vị trí trạm.");
+    }
+    const coords = await getCurrentPosition();
+    const distance = haversineDistanceMeters(coords.latitude, coords.longitude, station.latitude, station.longitude);
+    if (Number.isNaN(distance)) throw new Error("Không xác định được khoảng cách tới trạm.");
+    if (distance > 50) {
+        const rounded = Math.round(distance);
+        throw new Error(`Vị trí nằm ngoài khu vực trạm hoặc sai trạm (cách ${rounded}m).`);
+    }
+    return { coords, distance };
+}
+
 function isCancelled(record) {
     const status = (record.status || "").toUpperCase();
     const paymentStatus = (record.paymentStatus || "").toUpperCase();
@@ -130,27 +176,23 @@ async function startCheckinFlow(record, station) {
         alert("Vui lòng ký hợp đồng trước khi thực hiện check-in.");
         return;
     }
+    if (!isWithinRentalWindow(record)) {
+        alert("Chỉ được check-in trong đúng thời gian thuê đã đăng ký.");
+        return;
+    }
     if (!station || typeof station.latitude !== "number" || typeof station.longitude !== "number") {
         alert("Không lấy được vị trí trạm thuê. Vui lòng thử lại sau.");
         return;
     }
 
     try {
-        const coords = await getCurrentPosition();
-        const distance = haversineDistanceMeters(coords.latitude, coords.longitude, station.latitude, station.longitude);
-        if (Number.isNaN(distance)) {
-            alert("Không xác định được khoảng cách tới trạm.");
-            return;
-        }
-        if (distance > 50) {
-            alert(`Bạn cần đứng gần trạm (<= 50m) để check-in. Khoảng cách hiện tại: ${Math.round(distance)}m.`);
-            return;
-        }
-        latestGeoPosition = { latitude: coords.latitude, longitude: coords.longitude };
+        const { coords } = await ensureWithinStationRadius(station);
+        latestCheckinPosition = { latitude: coords.latitude, longitude: coords.longitude };
+        activeCheckinStation = station;
         openCheckinModal(record);
     } catch (err) {
         console.error("Geo error", err);
-        alert("Không lấy được vị trí hiện tại. Vui lòng bật GPS và thử lại.");
+        alert(err.message || "Không lấy được vị trí hiện tại. Vui lòng bật GPS và thử lại.");
     }
 }
 
@@ -162,11 +204,12 @@ function openCheckinModal(record) {
 
 function closeCheckinModal() {
     activeCheckinRecord = null;
+    activeCheckinStation = null;
     checkinModalState.el?.classList.remove("show");
 }
 
 function resetCheckinModal() {
-    latestGeoPosition = null;
+    latestCheckinPosition = null;
     if (checkinModalState.notesInput) checkinModalState.notesInput.value = "";
     if (checkinModalState.photoInput) checkinModalState.photoInput.value = "";
     if (checkinModalState.preview) {
@@ -196,16 +239,19 @@ async function submitCheckin() {
         return;
     }
 
-    if (!latestGeoPosition) {
-        alert("Vui lòng xác nhận vị trí gần trạm trước khi check-in.");
+    try {
+        const { coords } = await ensureWithinStationRadius(activeCheckinStation);
+        latestCheckinPosition = { latitude: coords.latitude, longitude: coords.longitude };
+    } catch (err) {
+        alert(err.message || "Không lấy được vị trí hiện tại để check-in.");
         return;
     }
 
     const formData = new FormData();
     formData.append("photo", photoFile);
     formData.append("notes", checkinModalState.notesInput?.value || "");
-    formData.append("latitude", latestGeoPosition.latitude);
-    formData.append("longitude", latestGeoPosition.longitude);
+    formData.append("latitude", latestCheckinPosition.latitude);
+    formData.append("longitude", latestCheckinPosition.longitude);
 
     try {
         const res = await fetch(`/api/rental/${activeCheckinRecord.id}/check-in`, {
@@ -219,6 +265,97 @@ async function submitCheckin() {
         loadHistory();
     } catch (e) {
         alert("Không check-in được. Thử lại sau.");
+    }
+}
+
+function openReturnModal(record) {
+    activeReturnRecord = record;
+    resetReturnModal();
+    returnModalState.el?.classList.add("show");
+}
+
+function closeReturnModal() {
+    activeReturnRecord = null;
+    activeReturnStation = null;
+    returnModalState.el?.classList.remove("show");
+}
+
+function resetReturnModal() {
+    latestReturnPosition = null;
+    if (returnModalState.notesInput) returnModalState.notesInput.value = "";
+    if (returnModalState.photoInput) returnModalState.photoInput.value = "";
+    if (returnModalState.preview) returnModalState.preview.innerHTML = "<span>Chưa có ảnh</span>";
+}
+
+function handleReturnPhotoChange(event) {
+    const file = event?.target?.files?.[0];
+    if (!file || !returnModalState.preview) {
+        if (returnModalState.preview) returnModalState.preview.innerHTML = "<span>Chưa có ảnh</span>";
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        returnModalState.preview.innerHTML = `<img src="${e.target?.result}" alt="Ảnh trả xe">`;
+    };
+    reader.readAsDataURL(file);
+}
+
+async function startReturnFlow(record, station) {
+    if (!record) return;
+    if (!hasCheckedIn(record)) {
+        alert("Bạn cần check-in nhận xe trước khi trả.");
+        return;
+    }
+    if (!station || typeof station.latitude !== "number" || typeof station.longitude !== "number") {
+        alert("Không lấy được vị trí trạm trả. Vui lòng thử lại sau.");
+        return;
+    }
+
+    try {
+        const { coords } = await ensureWithinStationRadius(station);
+        latestReturnPosition = { latitude: coords.latitude, longitude: coords.longitude };
+        activeReturnStation = station;
+        openReturnModal(record);
+    } catch (err) {
+        alert(err.message || "Không lấy được vị trí hiện tại để trả xe.");
+    }
+}
+
+async function submitReturn() {
+    if (!activeReturnRecord) return;
+    const photoFile = returnModalState.photoInput?.files?.[0];
+    if (!photoFile) {
+        alert("Vui lòng chụp hoặc tải ảnh tình trạng xe trước khi trả.");
+        return;
+    }
+
+    try {
+        const { coords } = await ensureWithinStationRadius(activeReturnStation);
+        latestReturnPosition = { latitude: coords.latitude, longitude: coords.longitude };
+    } catch (err) {
+        alert(err.message || "Không lấy được vị trí hiện tại để trả xe.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("photo", photoFile);
+    formData.append("notes", returnModalState.notesInput?.value || "");
+    formData.append("latitude", latestReturnPosition.latitude);
+    formData.append("longitude", latestReturnPosition.longitude);
+
+    try {
+        const res = await fetch(`/api/rental/${activeReturnRecord.id}/return`, {
+            method: "POST",
+            body: formData,
+        });
+        const txt = await res.text();
+        if (!res.ok) return alert(txt || "Không gửi được yêu cầu trả xe");
+        alert("Đã yêu cầu trả xe và lưu ảnh tình trạng.");
+        closeReturnModal();
+        loadHistory();
+    } catch (e) {
+        alert("Không gửi được yêu cầu trả xe. Thử lại sau.");
     }
 }
 
@@ -297,6 +434,7 @@ function renderHistoryItem(item) {
 
     const disabled = isCancelled(record) || isCompleted(record);
     const checkedIn = hasCheckedIn(record);
+    const withinWindow = isWithinRentalWindow(record);
 
     if (!disabled && !record.contractSigned) {
         const btn = document.createElement("button");
@@ -310,9 +448,11 @@ function renderHistoryItem(item) {
         const btnCheckin = document.createElement("button");
         btnCheckin.className = "action-button";
         btnCheckin.innerHTML = '<i class="fas fa-check"></i> Check-in nhận xe';
-        btnCheckin.disabled = !record.contractSigned;
+        btnCheckin.disabled = !record.contractSigned || !withinWindow;
         if (!record.contractSigned) {
             btnCheckin.title = "Ký hợp đồng điện tử trước khi check-in";
+        } else if (!withinWindow) {
+            btnCheckin.title = "Chỉ check-in trong thời gian thuê đã đăng ký";
         }
         btnCheckin.onclick = () => startCheckinFlow(record, station);
         actions.appendChild(btnCheckin);
@@ -322,7 +462,7 @@ function renderHistoryItem(item) {
         const btnReturn = document.createElement("button");
         btnReturn.className = "action-button secondary";
         btnReturn.innerHTML = '<i class="fas fa-undo"></i> Yêu cầu trả xe';
-        btnReturn.onclick = () => requestReturn(record.id);
+        btnReturn.onclick = () => startReturnFlow(record, station);
         actions.appendChild(btnReturn);
     } else if (statusUpper === "WAITING_INSPECTION") {
         const note = document.createElement("span");
@@ -451,23 +591,6 @@ function filterHistory() {
     });
 
     renderHistoryList(filtered);
-}
-
-async function requestReturn(rentalId) {
-    const notes = prompt("Nhập ghi chú khi trả xe (hư hỏng, tình trạng...):", "");
-    try {
-        const res = await fetch(`/api/rental/${rentalId}/return`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ notes: notes || "" })
-        });
-        const txt = await res.text();
-        if (!res.ok) return alert(txt || "Không gửi được yêu cầu trả xe");
-        alert("Đã yêu cầu trả xe. Vui lòng bàn giao tại điểm thuê để nhân viên kiểm tra.");
-        loadHistory();
-    } catch (e) {
-        alert("Không gửi được yêu cầu trả xe. Thử lại sau.");
-    }
 }
 
 async function loadHistory() {
@@ -658,6 +781,20 @@ function initCheckinModal() {
     checkinModalState.el?.querySelector(".dialog-close")?.addEventListener("click", closeCheckinModal);
 }
 
+function initReturnModal() {
+    returnModalState.el = document.getElementById("return-modal");
+    returnModalState.notesInput = document.getElementById("return-notes");
+    returnModalState.photoInput = document.getElementById("return-photo");
+    returnModalState.preview = document.getElementById("return-preview");
+
+    resetReturnModal();
+    returnModalState.photoInput?.addEventListener("change", handleReturnPhotoChange);
+    document.getElementById("btn-return-confirm")?.addEventListener("click", submitReturn);
+    document.getElementById("btn-return-cancel")?.addEventListener("click", closeReturnModal);
+    returnModalState.el?.querySelector(".dialog-overlay")?.addEventListener("click", closeReturnModal);
+    returnModalState.el?.querySelector(".dialog-close")?.addEventListener("click", closeReturnModal);
+}
+
 function initRentalModal() {
     rentalModal.el = document.getElementById("rental-modal");
     rentalModal.body = document.getElementById("modal-body");
@@ -679,6 +816,7 @@ window.addEventListener("DOMContentLoaded", () => {
     initRentalModal();
     initContractModal();
     initCheckinModal();
+    initReturnModal();
 
     document.querySelector(".btn-filter")?.addEventListener("click", filterHistory);
     document.getElementById("period-filter")?.addEventListener("change", filterHistory);
