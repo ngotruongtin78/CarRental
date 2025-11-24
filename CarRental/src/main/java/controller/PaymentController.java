@@ -287,14 +287,25 @@ public class PaymentController {
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record == null) {
             resp.put("paid", false);
+            resp.put("depositPaid", false);
             resp.put("message", "Không tìm thấy chuyến thuê");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(resp);
         }
 
         boolean paid = "PAID".equalsIgnoreCase(record.getPaymentStatus());
+        double depositPaidAmount = Optional.ofNullable(record.getDepositPaidAmount()).orElse(0.0);
+        double depositRequired = Optional.ofNullable(record.getDepositRequiredAmount()).orElse(0.0);
+
+        boolean depositSatisfied = paid
+                || "PAY_AT_STATION".equalsIgnoreCase(record.getPaymentStatus())
+                || (depositRequired > 0 && depositPaidAmount >= depositRequired);
+
         resp.put("paid", paid);
+        resp.put("depositPaid", depositSatisfied);
         resp.put("status", record.getPaymentStatus());
         resp.put("rentalId", rentalId);
+        resp.put("depositRequired", depositRequired);
+        resp.put("depositPaidAmount", depositPaidAmount);
 
         return ResponseEntity.ok(resp);
     }
