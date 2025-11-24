@@ -44,9 +44,18 @@ public class RenterController {
     }
 
     private String toDataUri(Binary binaryData) {
-        if (binaryData == null) return null;
+        if (binaryData == null || binaryData.getData() == null) return null;
         String base64 = Base64.getEncoder().encodeToString(binaryData.getData());
         return "data:image/png;base64," + base64;
+    }
+
+    private Map<String, Object> buildDocumentPayload(User user) {
+        return Map.of(
+                "licenseData", toDataUri(user.getLicenseData()),
+                "idCardData", toDataUri(user.getIdCardData()),
+                "licenseUploaded", user.getLicenseData() != null,
+                "idCardUploaded", user.getIdCardData() != null
+        );
     }
 
     private ResponseEntity<?> storeDocument(MultipartFile file, Consumer<User> setter) {
@@ -81,14 +90,13 @@ public class RenterController {
         }
 
         User user = resolved.getBody();
+        if (user == null) {
+            return ResponseEntity.status(404).body("User not found");
+        }
         clearer.accept(user);
         repo.save(user);
 
-        return ResponseEntity.ok(Map.of(
-                "status", "DELETED",
-                "licenseUploaded", user.getLicenseData() != null,
-                "idCardUploaded", user.getIdCardData() != null
-        ));
+        return ResponseEntity.ok(buildDocumentPayload(user));
     }
 
     @PostMapping("/upload-license")
@@ -170,10 +178,11 @@ public class RenterController {
 
         User user = resolved.getBody();
 
-        return ResponseEntity.ok(Map.of(
-                "licenseData", toDataUri(user.getLicenseData()),
-                "idCardData", toDataUri(user.getIdCardData())
-        ));
+        if (user == null) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        return ResponseEntity.ok(buildDocumentPayload(user));
     }
 
     @GetMapping("/profile")

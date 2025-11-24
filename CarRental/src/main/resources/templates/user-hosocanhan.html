@@ -258,9 +258,11 @@
                         const text = await res.text();
                         throw new Error(text || "Không thể xóa giấy tờ");
                     }
+                    const data = await res.json();
+                    setDocPreview("preview-license", data.licenseData, "GPLX", "license");
+                    setDocPreview("preview-idcard", data.idCardData, "CCCD", "idcard");
                     alert("Đã xóa giấy tờ");
                     refreshDocs();
-                    loadUploadedDocs();
                 })
                 .catch((err) => alert(err.message));
         }
