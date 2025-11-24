@@ -36,7 +36,13 @@ public class RentalRecord {
 
     private boolean contractSigned;
     private String checkinNotes;
+    private Double checkinLatitude;
+    private Double checkinLongitude;
     private String returnNotes;
+    private Double returnLatitude;
+    private Double returnLongitude;
+    private byte[] checkinPhotoData;
+    private byte[] returnPhotoData;
     
     private String walletReference;
 
@@ -121,8 +127,26 @@ public class RentalRecord {
     public String getCheckinNotes() { return checkinNotes; }
     public void setCheckinNotes(String checkinNotes) { this.checkinNotes = checkinNotes; }
 
+    public Double getCheckinLatitude() { return checkinLatitude; }
+    public void setCheckinLatitude(Double checkinLatitude) { this.checkinLatitude = checkinLatitude; }
+
+    public Double getCheckinLongitude() { return checkinLongitude; }
+    public void setCheckinLongitude(Double checkinLongitude) { this.checkinLongitude = checkinLongitude; }
+
     public String getReturnNotes() { return returnNotes; }
     public void setReturnNotes(String returnNotes) { this.returnNotes = returnNotes; }
+
+    public Double getReturnLatitude() { return returnLatitude; }
+    public void setReturnLatitude(Double returnLatitude) { this.returnLatitude = returnLatitude; }
+
+    public Double getReturnLongitude() { return returnLongitude; }
+    public void setReturnLongitude(Double returnLongitude) { this.returnLongitude = returnLongitude; }
+
+    public byte[] getCheckinPhotoData() { return checkinPhotoData; }
+    public void setCheckinPhotoData(byte[] checkinPhotoData) { this.checkinPhotoData = checkinPhotoData; }
+
+    public byte[] getReturnPhotoData() { return returnPhotoData; }
+    public void setReturnPhotoData(byte[] returnPhotoData) { this.returnPhotoData = returnPhotoData; }
 
     public String getWalletReference() {
         return walletReference;
