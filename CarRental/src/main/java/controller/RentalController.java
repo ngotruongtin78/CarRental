@@ -308,6 +308,8 @@ public class RentalController {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("rentalDays", rentalDays);
 
+        record.setStatus("PENDING_PAYMENT");
+
         if (paymentMethod.equals("cash")) {
             double deposit = Math.round(calculatedTotal * 0.3 * 100.0) / 100.0;
             record.setDepositRequiredAmount(deposit);
