@@ -138,6 +138,48 @@
         <div id="modal-body"></div>
     </div>
 </div>
+<div id="contract-modal" class="dialog-modal">
+    <div class="dialog-overlay"></div>
+    <div class="dialog-content">
+        <div class="dialog-header">
+            <h3>Hợp đồng thuê xe & Chính sách</h3>
+            <button class="dialog-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="dialog-body" id="contract-body"></div>
+        <div class="dialog-actions">
+            <button type="button" class="btn-primary" id="btn-contract-accept">Chấp thuận</button>
+            <button type="button" class="btn-tertiary" id="btn-contract-cancel">Hủy</button>
+        </div>
+    </div>
+</div>
+
+<div id="checkin-modal" class="dialog-modal">
+    <div class="dialog-overlay"></div>
+    <div class="dialog-content wide">
+        <div class="dialog-header">
+            <h3>Check-in nhận xe</h3>
+            <button class="dialog-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="dialog-body">
+            <p class="dialog-hint">Chụp ảnh hoặc tải ảnh lên để xác nhận tình trạng hiện tại của xe. Vui lòng đảm bảo ảnh rõ biển số và bề mặt xe.</p>
+            <div class="upload-grid">
+                <div class="upload-box">
+                    <label for="checkin-photo" class="upload-label">Ảnh check-in</label>
+                    <input type="file" id="checkin-photo" accept="image/*" capture="environment">
+                    <div class="preview" id="checkin-preview" aria-live="polite"></div>
+                </div>
+                <div class="upload-box">
+                    <label for="checkin-notes" class="upload-label">Ghi chú tình trạng xe (tùy chọn)</label>
+                    <textarea id="checkin-notes" rows="5" placeholder="Ví dụ: Xe không trầy xước, đủ phụ kiện..."></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn-primary" id="btn-checkin-confirm">Xác nhận check-in</button>
+            <button type="button" class="btn-tertiary" id="btn-checkin-cancel">Hủy</button>
+        </div>
+    </div>
+</div>
 <script src="/js/user-menu.js"></script>
 <script src="/js/station-search.js"></script>
 <script src="/js/lichsuthue.js"></script>

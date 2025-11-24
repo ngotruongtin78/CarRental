@@ -1,4 +1,5 @@
 let historyData = [];
+let latestGeoPosition = null;
 
 const rentalModal = {
     el: null,
@@ -6,6 +7,38 @@ const rentalModal = {
     badges: null,
     title: null,
 };
+
+const contractModalState = {
+    el: null,
+    body: null,
+    acceptBtn: null,
+};
+
+const checkinModalState = {
+    el: null,
+    notesInput: null,
+    photoInput: null,
+    preview: null,
+};
+
+let pendingContractRentalId = null;
+let contractAcceptedCallback = null;
+let activeCheckinRecord = null;
+
+const CONTRACT_HTML = `
+    <p><strong>CHÍNH SÁCH THUÊ XE – EV RENTAL</strong></p>
+    <p><strong>1. Mục đích</strong><br>Chính sách này quy định quyền lợi, nghĩa vụ và trách nhiệm của Người thuê xe và Đơn vị cung cấp dịch vụ EV Rental, nhằm đảm bảo trải nghiệm thuê xe an toàn – minh bạch – hiệu quả.</p>
+    <p><strong>2. Điều kiện thuê xe</strong><br><strong>2.1. Yêu cầu đối với người thuê</strong><br>Công dân Việt Nam hoặc người nước ngoài có giấy tờ hợp lệ.<br>Đủ 18 tuổi trở lên.<br>Có CMND/CCCD/Hộ chiếu còn hiệu lực.<br>Có Giấy phép lái xe phù hợp (đối với xe máy ≥175cc hoặc ô tô).<br>Tài khoản đã được xác thực trên hệ thống hoặc qua trạm thuê.</p>
+    <p><strong>2.2. Hồ sơ cần xuất trình</strong><br>CMND/CCCD bản gốc (hoặc hộ chiếu).<br>Bằng lái xe hợp lệ.<br>Thông tin liên hệ (số điện thoại, email).</p>
+    <p><strong>3. Quy định nhận xe</strong><br>Người thuê đến đúng điểm thuê đã chọn.<br>Kiểm tra hiện trạng xe cùng nhân viên → lập biên bản bàn giao.<br>Kiểm tra: Thắng, đèn xe, lốp xe. Giấy tờ xe. Ký hợp đồng thuê hoặc xác nhận điện tử trên hệ thống. Nhận mũ bảo hiểm/thiết bị kèm theo (nếu có).</p>
+    <p><strong>4. Quy định trong thời gian thuê</strong><br>Người thuê tự chịu trách nhiệm khi điều khiển xe.<br>Tuyệt đối không cho người khác thuê lại hoặc giao xe cho người không có GPLX.<br>Không sử dụng xe cho: Đua xe, chạy quá tốc độ quy định. Chở hàng cấm / hàng quá tải trọng. Mục đích phạm pháp.<br>Bảo quản xe, khóa xe khi dừng đỗ.<br>Báo ngay cho tổng đài nếu: xe hư, cháy nổ, tai nạn, mất giấy tờ…</p>
+    <p><strong>5. Quy định trả xe</strong><br>Trả xe tại đúng điểm thuê ban đầu (hoặc điểm khác nếu hệ thống hỗ trợ).<br>Nhân viên kiểm tra: Tình trạng xe. Thiết bị đi kèm.<br>Quyết toán chi phí còn lại: Phí thuê. Phí phát sinh (nếu có). Hoàn lại tiền cọc (nếu đủ điều kiện).</p>
+    <p><strong>6. Chính sách giá & thanh toán</strong><br><strong>6.1. Hình thức thanh toán</strong><br>Tiền mặt. Chuyển khoản ngân hàng. Thanh toán trên website.<br><strong>6.2. Phụ phí có thể phát sinh</strong><br>Trả xe trễ giờ. Hư hỏng nhẹ hoặc nặng (tùy mức độ). Mất mũ bảo hiểm / phụ kiện. Trả sai điểm thuê.</p>
+    <p><strong>7. Chính sách hủy & hoàn tiền</strong><br><strong>7.1. Hủy trước giờ thuê</strong><br>Hủy trước ≥ 2 giờ: hoàn 100%.<br>Hủy &lt; 2 giờ: hoàn 50%.<br>Đã nhận xe: không hoàn.<br><strong>7.2. Trường hợp từ chối thuê</strong><br>Đơn vị có quyền từ chối nếu: Người thuê không đủ giấy tờ. Có dấu hiệu sử dụng xe sai mục đích. Hành vi không hợp tác với nhân viên trạm.</p>
+    <p><strong>8. Trách nhiệm & bồi thường</strong><br><strong>8.1. Trách nhiệm của người thuê</strong><br>Bồi thường 100% khi: Làm mất xe. Làm hỏng nặng do lỗi chủ quan. Chịu trách nhiệm pháp lý khi vi phạm luật giao thông.<br><strong>8.2. Trách nhiệm của đơn vị cho thuê</strong><br>Đảm bảo xe đủ tiêu chuẩn kỹ thuật, an toàn. Hỗ trợ khẩn cấp 24/7. Bảo mật thông tin khách hàng.</p>
+    <p><strong>9. Cam kết bảo mật thông tin</strong><br>Thông tin người thuê được bảo vệ tuyệt đối. Không chia sẻ cho bên thứ ba trừ khi pháp luật yêu cầu.</p>
+    <p><strong>10. Liên hệ hỗ trợ</strong><br>Hotline: 0915907623<br>Email: ngotruongtin0111@gmail.com<br>Website: https://carrental.com</p>
+`;
 
 function formatDate(dateStr) {
     if (!dateStr) return "";
@@ -25,6 +58,27 @@ function formatMoney(value) {
     return `${Number(value).toLocaleString("vi-VN")} VNĐ`;
 }
 
+function haversineDistanceMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // m
+    const toRad = deg => (deg * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function getCurrentPosition() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error("Thiết bị không hỗ trợ định vị."));
+        navigator.geolocation.getCurrentPosition(
+            (pos) => resolve(pos.coords),
+            (err) => reject(err),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    });
+}
+
 function isCancelled(record) {
     const status = (record.status || "").toUpperCase();
     const paymentStatus = (record.paymentStatus || "").toUpperCase();
@@ -34,6 +88,157 @@ function isCancelled(record) {
 function isCompleted(record) {
     const status = (record.status || "").toUpperCase();
     return ["COMPLETED", "RETURNED"].includes(status);
+}
+
+function hasCheckedIn(record) {
+    if (!record) return false;
+    const status = (record.status || "").toUpperCase();
+    if (["IN_PROGRESS", "WAITING_INSPECTION", "RETURNED", "COMPLETED"].includes(status)) return true;
+    return Boolean(record.startTime);
+}
+
+function openContractModal(rentalId, afterAccept) {
+    pendingContractRentalId = rentalId;
+    contractAcceptedCallback = afterAccept || null;
+    contractModalState.el?.classList.add("show");
+}
+
+function closeContractModal() {
+    pendingContractRentalId = null;
+    contractAcceptedCallback = null;
+    contractModalState.el?.classList.remove("show");
+}
+
+async function acceptContract() {
+    if (!pendingContractRentalId) return closeContractModal();
+    try {
+        const res = await fetch(`/api/rental/${pendingContractRentalId}/sign-contract`, { method: "POST" });
+        const txt = await res.text();
+        if (!res.ok) return alert(txt || "Không ký được hợp đồng");
+        alert("Bạn đã chấp thuận hợp đồng. Có thể tiếp tục check-in nhận xe.");
+        closeContractModal();
+        if (typeof contractAcceptedCallback === "function") contractAcceptedCallback();
+        loadHistory();
+    } catch (e) {
+        alert("Không ký được hợp đồng. Thử lại sau.");
+    }
+}
+
+async function startCheckinFlow(record, station) {
+    if (!record) return;
+    if (!record.contractSigned) {
+        alert("Vui lòng ký hợp đồng trước khi thực hiện check-in.");
+        return;
+    }
+    if (!station || typeof station.latitude !== "number" || typeof station.longitude !== "number") {
+        alert("Không lấy được vị trí trạm thuê. Vui lòng thử lại sau.");
+        return;
+    }
+
+    try {
+        const coords = await getCurrentPosition();
+        const distance = haversineDistanceMeters(coords.latitude, coords.longitude, station.latitude, station.longitude);
+        if (Number.isNaN(distance)) {
+            alert("Không xác định được khoảng cách tới trạm.");
+            return;
+        }
+        if (distance > 50) {
+            alert(`Bạn cần đứng gần trạm (<= 50m) để check-in. Khoảng cách hiện tại: ${Math.round(distance)}m.`);
+            return;
+        }
+        latestGeoPosition = { latitude: coords.latitude, longitude: coords.longitude };
+        openCheckinModal(record);
+    } catch (err) {
+        console.error("Geo error", err);
+        alert("Không lấy được vị trí hiện tại. Vui lòng bật GPS và thử lại.");
+    }
+}
+
+function openCheckinModal(record) {
+    activeCheckinRecord = record;
+    resetCheckinModal();
+    checkinModalState.el?.classList.add("show");
+}
+
+function closeCheckinModal() {
+    activeCheckinRecord = null;
+    checkinModalState.el?.classList.remove("show");
+}
+
+function resetCheckinModal() {
+    latestGeoPosition = null;
+    if (checkinModalState.notesInput) checkinModalState.notesInput.value = "";
+    if (checkinModalState.photoInput) checkinModalState.photoInput.value = "";
+    if (checkinModalState.preview) {
+        checkinModalState.preview.innerHTML = "<span>Chưa có ảnh</span>";
+    }
+}
+
+function handleCheckinPhotoChange(event) {
+    const file = event?.target?.files?.[0];
+    if (!file || !checkinModalState.preview) {
+        if (checkinModalState.preview) checkinModalState.preview.innerHTML = "<span>Chưa có ảnh</span>";
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        checkinModalState.preview.innerHTML = `<img src="${e.target?.result}" alt="Ảnh check-in">`;
+    };
+    reader.readAsDataURL(file);
+}
+
+async function submitCheckin() {
+    if (!activeCheckinRecord) return;
+    const photoFile = checkinModalState.photoInput?.files?.[0];
+    if (!photoFile) {
+        alert("Vui lòng chụp hoặc tải ảnh tình trạng xe trước khi check-in.");
+        return;
+    }
+
+    if (!latestGeoPosition) {
+        alert("Vui lòng xác nhận vị trí gần trạm trước khi check-in.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("photo", photoFile);
+    formData.append("notes", checkinModalState.notesInput?.value || "");
+    formData.append("latitude", latestGeoPosition.latitude);
+    formData.append("longitude", latestGeoPosition.longitude);
+
+    try {
+        const res = await fetch(`/api/rental/${activeCheckinRecord.id}/check-in`, {
+            method: "POST",
+            body: formData,
+        });
+        const txt = await res.text();
+        if (!res.ok) return alert(txt || "Check-in thất bại");
+        alert("Đã check-in thành công. Ảnh được lưu làm bằng chứng tình trạng xe.");
+        closeCheckinModal();
+        loadHistory();
+    } catch (e) {
+        alert("Không check-in được. Thử lại sau.");
+    }
+}
+
+function canContinuePayment(record) {
+    if (!record) return false;
+    if (isCancelled(record) || isCompleted(record)) return false;
+
+    const statusUpper = (record.status || "").toUpperCase();
+    const paymentStatus = (record.paymentStatus || "").toUpperCase();
+
+    const hasPendingPayment =
+        statusUpper === "PENDING_PAYMENT" ||
+        paymentStatus === "PENDING" ||
+        !record.paymentMethod;
+
+    if (!hasPendingPayment) return false;
+
+    if (!record.holdExpiresAt) return true;
+    const holdExpiry = new Date(record.holdExpiresAt);
+    return !isNaN(holdExpiry.getTime()) && holdExpiry > new Date();
 }
 
 function renderHistoryItem(item) {
@@ -91,20 +296,25 @@ function renderHistoryItem(item) {
     actions.appendChild(statusBadge);
 
     const disabled = isCancelled(record) || isCompleted(record);
+    const checkedIn = hasCheckedIn(record);
 
     if (!disabled && !record.contractSigned) {
         const btn = document.createElement("button");
         btn.className = "action-button";
         btn.innerHTML = '<i class="fas fa-file-signature"></i> Ký hợp đồng điện tử';
-        btn.onclick = () => signContract(record.id);
+        btn.onclick = () => openContractModal(record.id);
         actions.appendChild(btn);
     }
 
-    if (!disabled) {
+    if (!disabled && !checkedIn) {
         const btnCheckin = document.createElement("button");
         btnCheckin.className = "action-button";
         btnCheckin.innerHTML = '<i class="fas fa-check"></i> Check-in nhận xe';
-        btnCheckin.onclick = () => checkIn(record.id);
+        btnCheckin.disabled = !record.contractSigned;
+        if (!record.contractSigned) {
+            btnCheckin.title = "Ký hợp đồng điện tử trước khi check-in";
+        }
+        btnCheckin.onclick = () => startCheckinFlow(record, station);
         actions.appendChild(btnCheckin);
     }
 
@@ -241,35 +451,6 @@ function filterHistory() {
     });
 
     renderHistoryList(filtered);
-}
-
-async function signContract(rentalId) {
-    try {
-        const res = await fetch(`/api/rental/${rentalId}/sign-contract`, { method: "POST" });
-        const txt = await res.text();
-        if (!res.ok) return alert(txt || "Không ký được hợp đồng");
-        alert("Đã ký hợp đồng điện tử. Vui lòng check-in để nhận xe.");
-        loadHistory();
-    } catch (e) {
-        alert("Không ký được hợp đồng. Thử lại sau.");
-    }
-}
-
-async function checkIn(rentalId) {
-    const notes = prompt("Nhập ghi chú tình trạng xe khi nhận (tuỳ chọn):", "");
-    try {
-        const res = await fetch(`/api/rental/${rentalId}/check-in`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ notes: notes || "" })
-        });
-        const txt = await res.text();
-        if (!res.ok) return alert(txt || "Check-in thất bại");
-        alert("Đã check-in. Hãy chụp ảnh và lưu ý với nhân viên tại quầy.");
-        loadHistory();
-    } catch (e) {
-        alert("Không check-in được. Thử lại sau.");
-    }
 }
 
 async function requestReturn(rentalId) {
@@ -424,7 +605,57 @@ function openRentalModal(item) {
         notes.length ? `<div class="modal-section">${notes.join("")}</div>` : "",
     ].join("");
 
+    if (canContinuePayment(record)) {
+        const paymentSection = document.createElement("div");
+        paymentSection.className = "modal-section payment-action";
+        paymentSection.innerHTML = `
+            <div class="payment-callout">
+                <div class="payment-text">
+                    <h4>Chưa hoàn tất thanh toán</h4>
+                    <p>${record.holdExpiresAt
+                        ? `Giữ chỗ tới: ${formatDateTime(record.holdExpiresAt)}`
+                        : "Bạn có thể chọn phương thức thanh toán để tiếp tục giữ xe."}</p>
+                </div>
+                <button type="button" class="btn-continue-payment">
+                    <i class="fas fa-credit-card"></i> Thanh toán ngay
+                </button>
+            </div>
+        `;
+
+        paymentSection.querySelector(".btn-continue-payment")?.addEventListener("click", () => {
+            window.location.href = `/thanhtoan?rentalId=${encodeURIComponent(record.id)}`;
+        });
+
+        rentalModal.body.appendChild(paymentSection);
+    }
+
     rentalModal.el.classList.add("show");
+}
+
+function initContractModal() {
+    contractModalState.el = document.getElementById("contract-modal");
+    contractModalState.body = document.getElementById("contract-body");
+    contractModalState.acceptBtn = document.getElementById("btn-contract-accept");
+
+    if (contractModalState.body) contractModalState.body.innerHTML = CONTRACT_HTML;
+    contractModalState.acceptBtn?.addEventListener("click", acceptContract);
+    document.getElementById("btn-contract-cancel")?.addEventListener("click", closeContractModal);
+    contractModalState.el?.querySelector(".dialog-overlay")?.addEventListener("click", closeContractModal);
+    contractModalState.el?.querySelector(".dialog-close")?.addEventListener("click", closeContractModal);
+}
+
+function initCheckinModal() {
+    checkinModalState.el = document.getElementById("checkin-modal");
+    checkinModalState.notesInput = document.getElementById("checkin-notes");
+    checkinModalState.photoInput = document.getElementById("checkin-photo");
+    checkinModalState.preview = document.getElementById("checkin-preview");
+
+    resetCheckinModal();
+    checkinModalState.photoInput?.addEventListener("change", handleCheckinPhotoChange);
+    document.getElementById("btn-checkin-confirm")?.addEventListener("click", submitCheckin);
+    document.getElementById("btn-checkin-cancel")?.addEventListener("click", closeCheckinModal);
+    checkinModalState.el?.querySelector(".dialog-overlay")?.addEventListener("click", closeCheckinModal);
+    checkinModalState.el?.querySelector(".dialog-close")?.addEventListener("click", closeCheckinModal);
 }
 
 function initRentalModal() {
@@ -446,6 +677,8 @@ window.addEventListener("DOMContentLoaded", () => {
     loadHistory();
     loadStats();
     initRentalModal();
+    initContractModal();
+    initCheckinModal();
 
     document.querySelector(".btn-filter")?.addEventListener("click", filterHistory);
     document.getElementById("period-filter")?.addEventListener("change", filterHistory);
