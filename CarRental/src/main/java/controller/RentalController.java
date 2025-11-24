@@ -71,6 +71,14 @@ public class RentalController {
         return false;
     }
 
+    private void expirePendingHoldsForUser(String username) {
+        if (username == null) return;
+        List<RentalRecord> rentals = rentalRepo.findByUsername(username);
+        for (RentalRecord record : rentals) {
+            expireIfNeeded(record);
+        }
+    }
+
     @PostMapping("/checkout")
     public Map<String, Object> checkout(@RequestBody Map<String, Object> req) {
 
@@ -166,6 +174,7 @@ public class RentalController {
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
+        expirePendingHoldsForUser(username);
         return ResponseEntity.ok(rentalRecordService.getHistoryDetails(username));
     }
 
@@ -272,13 +281,18 @@ public class RentalController {
         record.setPaymentMethod(paymentMethod);
         record.setPaymentStatus(paymentMethod.equals("cash") ? "PAY_AT_STATION" : "BANK_TRANSFER");
 
+        record.setStatus("PENDING_PAYMENT");
+
         if (paymentMethod.equals("cash")) {
-            record.setStatus("PENDING_PAYMENT");
-            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
+            LocalDate holdStart = Optional.ofNullable(record.getStartDate()).orElse(LocalDate.now());
+            LocalDateTime holdUntil = holdStart.atStartOfDay().plusDays(1);
+            if (holdUntil.isBefore(LocalDateTime.now())) {
+                holdUntil = LocalDateTime.now().plusDays(1);
+            }
+            record.setHoldExpiresAt(holdUntil);
             rentalRepo.save(record);
-            vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
+            vehicleService.markPendingPaymentHidden(record.getVehicleId(), rentalId);
         } else {
-            record.setStatus("PENDING_PAYMENT");
             record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
             rentalRepo.save(record);
             vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
