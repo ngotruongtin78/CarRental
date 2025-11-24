@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -69,6 +70,14 @@ public class RentalController {
             return true;
         }
         return false;
+    }
+
+    private void expirePendingHoldsForUser(String username) {
+        if (username == null) return;
+        List<RentalRecord> rentals = rentalRepo.findByUsername(username);
+        for (RentalRecord record : rentals) {
+            expireIfNeeded(record);
+        }
     }
 
     @PostMapping("/checkout")
@@ -127,6 +136,13 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid date format");
         }
 
+        if (startDate.isBefore(LocalDate.now())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày bắt đầu không được ở quá khứ");
+        }
+        if (endDate.isBefore(startDate)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
+        }
+
         final long daySpan = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         int rentalDays = (int) Math.max(1, daySpan);
 
@@ -166,6 +182,7 @@ public class RentalController {
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
+        expirePendingHoldsForUser(username);
         return ResponseEntity.ok(rentalRecordService.getHistoryDetails(username));
     }
 
@@ -272,13 +289,18 @@ public class RentalController {
         record.setPaymentMethod(paymentMethod);
         record.setPaymentStatus(paymentMethod.equals("cash") ? "PAY_AT_STATION" : "BANK_TRANSFER");
 
+        record.setStatus("PENDING_PAYMENT");
+
         if (paymentMethod.equals("cash")) {
-            record.setStatus("PENDING_PAYMENT");
-            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
+            LocalDate holdStart = Optional.ofNullable(record.getStartDate()).orElse(LocalDate.now());
+            LocalDateTime holdUntil = holdStart.atStartOfDay().plusDays(1);
+            if (holdUntil.isBefore(LocalDateTime.now())) {
+                holdUntil = LocalDateTime.now().plusDays(1);
+            }
+            record.setHoldExpiresAt(holdUntil);
             rentalRepo.save(record);
-            vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
+            vehicleService.markPendingPaymentHidden(record.getVehicleId(), rentalId);
         } else {
-            record.setStatus("PENDING_PAYMENT");
             record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
             rentalRepo.save(record);
             vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
@@ -317,20 +339,53 @@ public class RentalController {
         return Map.of("status", "SIGNED", "contractSigned", true);
     }
 
-    @PostMapping("/{rentalId}/check-in")
-    public Map<String, Object> checkIn(@PathVariable("rentalId") String rentalId, @RequestBody(required = false) Map<String, String> body) {
+    @PostMapping(value = "/{rentalId}/check-in", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> checkIn(
+            @PathVariable("rentalId") String rentalId,
+            @RequestPart(value = "photo", required = false) MultipartFile photo,
+            @RequestPart(value = "notes", required = false) String notes) {
         String username = getCurrentUsername();
-        String notes = body != null ? body.getOrDefault("notes", "") : "";
+        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
-        RentalRecord record = rentalRecordService.checkIn(rentalId, username, notes);
-        if (record == null) return Map.of("error", "Rental not found or unauthorized");
+        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        if (record == null || !Objects.equals(record.getUsername(), username)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
+        }
 
-        vehicleService.updateAvailable(record.getVehicleId(), false);
-        return Map.of(
-                "status", record.getStatus(),
-                "checkinNotes", record.getCheckinNotes(),
-                "startTime", record.getStartTime()
-        );
+        if (record.getStartTime() != null || "IN_PROGRESS".equalsIgnoreCase(record.getStatus())
+                || "WAITING_INSPECTION".equalsIgnoreCase(record.getStatus())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("Bạn đã check-in hoặc đang trong quá trình thuê xe.");
+        }
+
+        if (!record.isContractSigned()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Vui lòng đọc và chấp thuận hợp đồng trước khi check-in.");
+        }
+
+        if (photo == null || photo.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Vui lòng chụp hoặc tải ảnh tình trạng xe để check-in.");
+        }
+
+        byte[] photoData;
+        try {
+            photoData = photo.getBytes();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Không đọc được ảnh check-in. Vui lòng thử lại.");
+        }
+
+        RentalRecord updated = rentalRecordService.checkIn(rentalId, username, notes != null ? notes : "", photoData);
+        if (updated == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found or unauthorized");
+
+        vehicleService.updateAvailable(updated.getVehicleId(), false);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", updated.getStatus());
+        response.put("checkinNotes", updated.getCheckinNotes());
+        response.put("startTime", updated.getStartTime());
+        response.put("photoUploaded", true);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{rentalId}/return")
