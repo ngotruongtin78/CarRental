@@ -138,6 +138,101 @@
         <div id="modal-body"></div>
     </div>
 </div>
+<div id="contract-modal" class="dialog-modal">
+    <div class="dialog-overlay"></div>
+    <div class="dialog-content">
+        <div class="dialog-header">
+            <h3>Hợp đồng thuê xe & Chính sách</h3>
+            <button class="dialog-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="dialog-body" id="contract-body"></div>
+        <div class="dialog-actions">
+            <button type="button" class="btn-primary" id="btn-contract-accept">Chấp thuận</button>
+            <button type="button" class="btn-tertiary" id="btn-contract-cancel">Hủy</button>
+        </div>
+    </div>
+</div>
+
+<div id="checkin-modal" class="dialog-modal">
+    <div class="dialog-overlay"></div>
+    <div class="dialog-content wide">
+        <div class="dialog-header">
+            <h3>Check-in nhận xe</h3>
+            <button class="dialog-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="dialog-body">
+            <p class="dialog-hint">Hệ thống sẽ lấy vị trí hiện tại và chỉ cho check-in khi bạn đang ở đúng trạm (bán kính 50m). Chụp ảnh hoặc tải ảnh lên để xác nhận tình trạng hiện tại của xe.</p>
+            <div class="upload-grid">
+                <div class="upload-box">
+                    <label for="checkin-photo" class="upload-label">Ảnh check-in</label>
+                    <input type="file" id="checkin-photo" accept="image/*" capture="environment">
+                    <div class="preview" id="checkin-preview" aria-live="polite"></div>
+                </div>
+                <div class="upload-box">
+                    <label for="checkin-notes" class="upload-label">Ghi chú tình trạng xe (tùy chọn)</label>
+                    <textarea id="checkin-notes" rows="5" placeholder="Ví dụ: Xe không trầy xước, đủ phụ kiện..."></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn-primary" id="btn-checkin-confirm">Xác nhận check-in</button>
+            <button type="button" class="btn-tertiary" id="btn-checkin-cancel">Hủy</button>
+        </div>
+    </div>
+</div>
+<div id="return-modal" class="dialog-modal">
+    <div class="dialog-overlay"></div>
+    <div class="dialog-content wide">
+        <div class="dialog-header">
+            <h3>Trả xe tại trạm</h3>
+            <button class="dialog-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="dialog-body">
+            <p class="dialog-hint">Hệ thống sẽ tự động lấy vị trí hiện tại của bạn. Chỉ gửi yêu cầu trả xe khi đang đứng tại trạm (bán kính 50m) và hãy chụp ảnh tình trạng xe.</p>
+            <div class="upload-grid">
+                <div class="upload-box">
+                    <label for="return-photo" class="upload-label">Ảnh trả xe</label>
+                    <input type="file" id="return-photo" accept="image/*" capture="environment">
+                    <div class="preview" id="return-preview" aria-live="polite"></div>
+                </div>
+                <div class="upload-box">
+                    <label for="return-notes" class="upload-label">Ghi chú tình trạng xe sau khi trả</label>
+                    <textarea id="return-notes" rows="5" placeholder="Ví dụ: Xe sạch sẽ, không hư hỏng..."></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn-primary" id="btn-return-confirm">Xác nhận trả xe</button>
+            <button type="button" class="btn-tertiary" id="btn-return-cancel">Hủy</button>
+        </div>
+    </div>
+</div>
+<div id="edit-dates-modal" class="dialog-modal">
+    <div class="dialog-overlay"></div>
+    <div class="dialog-content">
+        <div class="dialog-header">
+            <h3>Chỉnh sửa ngày thuê</h3>
+            <button class="dialog-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="dialog-body">
+            <p class="dialog-hint">Chỉ thay đổi được khi chuyến chưa bắt đầu và chưa check-in.</p>
+            <div class="edit-dates-grid">
+                <div class="form-field">
+                    <label for="edit-start-date">Ngày bắt đầu</label>
+                    <input type="date" id="edit-start-date">
+                </div>
+                <div class="form-field">
+                    <label for="edit-end-date">Ngày kết thúc</label>
+                    <input type="date" id="edit-end-date">
+                </div>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn-primary" id="btn-edit-dates-confirm">Lưu thay đổi</button>
+            <button type="button" class="btn-tertiary" id="btn-edit-dates-cancel">Hủy</button>
+        </div>
+    </div>
+</div>
 <script src="/js/user-menu.js"></script>
 <script src="/js/station-search.js"></script>
 <script src="/js/lichsuthue.js"></script>
