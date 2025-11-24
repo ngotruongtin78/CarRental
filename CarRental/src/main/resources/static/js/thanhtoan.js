@@ -23,6 +23,7 @@ let vehicleData = null;
 let stationData = null;
 let rentalDays = 1;
 let lastDepositAmount = 0;
+let depositPrompted = false;
 
 function formatDate(dateStr) {
     if (!dateStr) return "-";
@@ -108,9 +109,38 @@ async function loadRentalInfo() {
             lastDepositAmount = depositRequired - depositPaid;
         }
 
+        maybePromptDeposit();
+
         refreshUploadStatus();
     } catch (err) {
         console.error("Lỗi loadRentalInfo:", err);
+    }
+}
+
+async function maybePromptDeposit() {
+    if (depositPrompted || !rentalData) return;
+
+    const method = rentalData.paymentMethod || document.getElementById("payment-method").value;
+    const depositRequired = rentalData.depositRequiredAmount || Math.round((totalAmount || 0) * 0.3);
+    const depositPaid = rentalData.depositPaidAmount || 0;
+    const needDeposit = method === "cash" && depositRequired > 0 && depositPaid < depositRequired;
+
+    if (!needDeposit) return;
+
+    try {
+        const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}`, { method: "POST" });
+        if (!qrRes.ok) {
+            console.error("Không tạo được QR cho đặt cọc", await qrRes.text());
+            return;
+        }
+
+        const qr = await qrRes.json();
+        lastDepositAmount = qr.depositRemaining || lastDepositAmount || qr.amount;
+        depositPrompted = true;
+        openQrModal(qr, { isDeposit: true, depositAmount: lastDepositAmount });
+        alert("Vui lòng đặt cọc 30% để giữ xe. Sau khi thanh toán thành công hệ thống sẽ xác nhận.");
+    } catch (err) {
+        console.error("Lỗi tự động hiển thị QR đặt cọc", err);
     }
 }
 

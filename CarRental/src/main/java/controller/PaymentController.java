@@ -127,6 +127,7 @@ public class PaymentController {
                 : 0.0;
 
         double amountToCollect;
+        double depositRemaining = 0.0;
         if (cashFlow && (record.getPaymentStatus() == null || record.getPaymentStatus().equalsIgnoreCase("DEPOSIT_PENDING"))
                 && depositPaid < depositRequired) {
             record.setPaymentStatus("DEPOSIT_PENDING");
@@ -134,6 +135,7 @@ public class PaymentController {
             record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(15));
             amountToCollect = depositRequired - depositPaid;
             record.setDepositRequiredAmount(depositRequired);
+            depositRemaining = amountToCollect;
         } else {
             amountToCollect = Math.max(0, amount - depositPaid);
             record.setPaymentStatus("PENDING");
@@ -163,6 +165,12 @@ public class PaymentController {
         payload.put("accountNumber", accountNumber);
         payload.put("rentalId", rentalId);
         payload.put("status", "OK");
+        payload.put("depositPending", cashFlow && amountToCollect > 0);
+        payload.put("depositRequired", depositRequired);
+        payload.put("depositPaid", depositPaid);
+        payload.put("depositRemaining", depositRemaining > 0 ? depositRemaining : amountToCollect);
+        payload.put("paymentMethod", record.getPaymentMethod());
+        payload.put("paymentStatus", record.getPaymentStatus());
 
         return ResponseEntity.ok(payload);
     }
