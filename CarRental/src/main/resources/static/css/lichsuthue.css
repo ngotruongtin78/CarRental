@@ -466,6 +466,138 @@ body {
     color: #888;
 }
 
+.rental-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.rental-modal.show { display: flex; }
+
+.rental-modal .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+}
+
+.rental-modal .modal-content {
+    position: relative;
+    background: #fff;
+    border-radius: 16px;
+    max-width: 900px;
+    width: 90%;
+    padding: 26px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    animation: slideUp 0.25s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    border: none;
+    background: #f3f3f3;
+    color: #333;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.modal-close:hover { background: #e0e0e0; }
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 24px;
+    color: #2f6b2f;
+}
+
+.modal-subtitle {
+    margin: 0;
+    color: #666;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+}
+
+.modal-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.modal-badge {
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: #eef3ee;
+    color: #2e7d32;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.modal-badge.warning {
+    background: #fff2e0;
+    color: #b36b00;
+}
+
+.modal-section {
+    margin-bottom: 16px;
+}
+
+.modal-section h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px 16px;
+}
+
+.detail-row {
+    padding: 10px 12px;
+    background: #f8f9f8;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-row span { color: #666; font-size: 13px; }
+.detail-row strong { color: #1f3e1f; font-size: 15px; }
+
+.note-block {
+    padding: 10px 12px;
+    background: #fff7e6;
+    border-radius: 10px;
+    border: 1px dashed #ffd699;
+    color: #8a5a00;
+}
+
+.note-block + .note-block { margin-top: 8px; }
+
 .history-actions {
     display: flex;
     flex-wrap: wrap;
