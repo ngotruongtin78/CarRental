@@ -296,6 +296,71 @@ body {
     margin-right: 8px;
 }
 
+.document-preview-section {
+    margin-top: 20px;
+}
+
+.document-preview-section h3 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    color: #2f6b2f;
+}
+
+.doc-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.doc-preview {
+    background: #f8f8f8;
+    border: 1px dashed #c5d6c5;
+    border-radius: 12px;
+    padding: 10px;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.doc-preview-image {
+    width: 100%;
+    height: 160px;
+    overflow: hidden;
+    border-radius: 10px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+    background: #fff;
+}
+
+.doc-preview-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.doc-preview-label {
+    margin-top: 8px;
+    font-weight: 600;
+    color: #2f6b2f;
+}
+
+.doc-preview-empty {
+    text-align: center;
+    color: #777;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.doc-preview-empty i {
+    font-size: 32px;
+    color: #9ab89a;
+}
+
 .verification-box {
     margin-top: 15px;
     padding: 12px;

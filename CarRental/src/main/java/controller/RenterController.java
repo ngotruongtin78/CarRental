@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.Base64;
 
 @RestController
 @RequestMapping("/api/renter")
@@ -40,6 +41,12 @@ public class RenterController {
         }
 
         return ResponseEntity.ok(user);
+    }
+
+    private String toDataUri(Binary binaryData) {
+        if (binaryData == null) return null;
+        String base64 = Base64.getEncoder().encodeToString(binaryData.getData());
+        return "data:image/png;base64," + base64;
     }
 
     private ResponseEntity<?> storeDocument(MultipartFile file, Consumer<User> setter) {
@@ -123,6 +130,21 @@ public class RenterController {
                 "idCardUploaded", user.getIdCardData() != null,
                 "verificationRequested", user.isVerificationRequested(),
                 "verified", user.isVerified()
+        ));
+    }
+
+    @GetMapping("/documents")
+    public ResponseEntity<?> getUploadedDocuments() {
+        ResponseEntity<User> resolved = resolveCurrentUser();
+        if (!resolved.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(resolved.getStatusCode()).body("Unauthorized");
+        }
+
+        User user = resolved.getBody();
+
+        return ResponseEntity.ok(Map.of(
+                "licenseData", toDataUri(user.getLicenseData()),
+                "idCardData", toDataUri(user.getIdCardData())
         ));
     }
 
