@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.Base64;
 
 @RestController
 @RequestMapping("/api/renter")
@@ -42,6 +43,21 @@ public class RenterController {
         return ResponseEntity.ok(user);
     }
 
+    private String toDataUri(Binary binaryData) {
+        if (binaryData == null || binaryData.getData() == null) return null;
+        String base64 = Base64.getEncoder().encodeToString(binaryData.getData());
+        return "data:image/png;base64," + base64;
+    }
+
+    private Map<String, Object> buildDocumentPayload(User user) {
+        return Map.of(
+                "licenseData", toDataUri(user.getLicenseData()),
+                "idCardData", toDataUri(user.getIdCardData()),
+                "licenseUploaded", user.getLicenseData() != null,
+                "idCardUploaded", user.getIdCardData() != null
+        );
+    }
+
     private ResponseEntity<?> storeDocument(MultipartFile file, Consumer<User> setter) {
         try {
             if (file == null || file.isEmpty()) {
@@ -67,6 +83,22 @@ public class RenterController {
         }
     }
 
+    private ResponseEntity<?> removeDocument(Consumer<User> clearer) {
+        ResponseEntity<User> resolved = resolveCurrentUser();
+        if (!resolved.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(resolved.getStatusCode()).body("Unauthorized");
+        }
+
+        User user = resolved.getBody();
+        if (user == null) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+        clearer.accept(user);
+        repo.save(user);
+
+        return ResponseEntity.ok(buildDocumentPayload(user));
+    }
+
     @PostMapping("/upload-license")
     public ResponseEntity<?> uploadLicense(@RequestParam("file") MultipartFile file) {
         Binary licenseBinary;
@@ -89,6 +121,17 @@ public class RenterController {
         }
 
         return storeDocument(file, user -> user.setIdCardData(idBinary));
+    }
+
+    @DeleteMapping("/documents/{type}")
+    public ResponseEntity<?> deleteDocument(@PathVariable("type") String type) {
+        if ("license".equalsIgnoreCase(type)) {
+            return removeDocument(user -> user.setLicenseData(null));
+        } else if ("idcard".equalsIgnoreCase(type)) {
+            return removeDocument(user -> user.setIdCardData(null));
+        }
+
+        return ResponseEntity.badRequest().body("Loại giấy tờ không hợp lệ");
     }
 
     @PostMapping("/request-verification")
@@ -124,6 +167,22 @@ public class RenterController {
                 "verificationRequested", user.isVerificationRequested(),
                 "verified", user.isVerified()
         ));
+    }
+
+    @GetMapping("/documents")
+    public ResponseEntity<?> getUploadedDocuments() {
+        ResponseEntity<User> resolved = resolveCurrentUser();
+        if (!resolved.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(resolved.getStatusCode()).body("Unauthorized");
+        }
+
+        User user = resolved.getBody();
+
+        if (user == null) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        return ResponseEntity.ok(buildDocumentPayload(user));
     }
 
     @GetMapping("/profile")
