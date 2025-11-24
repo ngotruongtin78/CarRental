@@ -64,12 +64,40 @@
                 <div class="doc-status" id="doc-status-text">Chưa tải giấy tờ</div>
                 <div class="doc-actions">
                     <button class="doc-button" id="btn-license">
-                        <i class="fas fa-upload"></i> Giấy phép lái xe
+                        <i class="fas fa-upload"></i> Tải/Thay ảnh GPLX
+                    </button>
+                    <button class="doc-button danger" id="btn-license-delete">
+                        <i class="fas fa-trash"></i> Xóa ảnh GPLX
                     </button>
 
                     <button class="doc-button" id="btn-idcard">
-                        <i class="fas fa-upload"></i> CMND/CCCD
+                        <i class="fas fa-upload"></i> Tải/Thay ảnh CCCD
                     </button>
+                    <button class="doc-button danger" id="btn-idcard-delete">
+                        <i class="fas fa-trash"></i> Xóa ảnh CCCD
+                    </button>
+                </div>
+            </div>
+
+            <div class="doc-preview">
+                <div class="doc-preview-item">
+                    <div class="preview-header">
+                        <i class="fas fa-id-card"></i> Ảnh GPLX
+                    </div>
+                    <div class="preview-frame">
+                        <img id="img-license" alt="GPLX" class="preview-img" />
+                        <div id="placeholder-license" class="preview-placeholder">Chưa có ảnh</div>
+                    </div>
+                </div>
+
+                <div class="doc-preview-item">
+                    <div class="preview-header">
+                        <i class="fas fa-passport"></i> Ảnh CCCD/CMND
+                    </div>
+                    <div class="preview-frame">
+                        <img id="img-idcard" alt="CCCD" class="preview-img" />
+                        <div id="placeholder-idcard" class="preview-placeholder">Chưa có ảnh</div>
+                    </div>
                 </div>
             </div>
 
@@ -207,23 +235,26 @@
         const statusEl = document.getElementById("doc-status-text");
         const btnLicense = document.getElementById("btn-license");
         const btnId = document.getElementById("btn-idcard");
+        const btnLicenseDelete = document.getElementById("btn-license-delete");
+        const btnIdDelete = document.getElementById("btn-idcard-delete");
         const verifyStatusEl = document.getElementById("verification-status");
         const requestBtn = document.getElementById("btn-request-verification");
 
         if (state.licenseUploaded && state.idCardUploaded) {
             statusEl.innerText = "Đã tải đủ CCCD & GPLX";
             statusEl.style.color = "#2e7d32";
-            btnLicense.style.display = "none";
-            btnId.style.display = "none";
         } else {
             statusEl.innerText = "Thiếu giấy tờ: " +
                 [!state.licenseUploaded ? "GPLX" : null, !state.idCardUploaded ? "CCCD" : null]
                     .filter(Boolean)
                     .join(", ");
             statusEl.style.color = "#c0392b";
-            btnLicense.style.display = state.licenseUploaded ? "none" : "inline-flex";
-            btnId.style.display = state.idCardUploaded ? "none" : "inline-flex";
         }
+
+        btnLicenseDelete.style.display = state.licenseUploaded ? "inline-flex" : "none";
+        btnIdDelete.style.display = state.idCardUploaded ? "inline-flex" : "none";
+        btnLicense.innerHTML = state.licenseUploaded ? "<i class='fas fa-rotate'></i> Tải lại GPLX" : "<i class='fas fa-upload'></i> Tải ảnh GPLX";
+        btnId.innerHTML = state.idCardUploaded ? "<i class='fas fa-rotate'></i> Tải lại CCCD" : "<i class='fas fa-upload'></i> Tải ảnh CCCD";
 
         if (state.verified) {
             verifyStatusEl.innerText = "Tài khoản đã được xác thực. Bạn có thể thuê và thanh toán nhanh.";
@@ -296,8 +327,26 @@
         input.click();
     }
 
+    async function deleteDocument(type) {
+        if (!confirm("Xóa ảnh đã tải lên?")) return;
+        try {
+            const res = await fetch(`/api/renter/delete-${type}`, { method: "DELETE" });
+            if (res.ok) {
+                alert("Đã xóa ảnh");
+                refreshDocs();
+            } else {
+                const msg = await res.text();
+                alert(msg || "Không xóa được ảnh, thử lại sau.");
+            }
+        } catch (e) {
+            alert("Không xóa được ảnh, thử lại sau.");
+        }
+    }
+
     document.getElementById("btn-license").onclick = () => upload("license");
     document.getElementById("btn-idcard").onclick = () => upload("idcard");
+    document.getElementById("btn-license-delete").onclick = () => deleteDocument("license");
+    document.getElementById("btn-idcard-delete").onclick = () => deleteDocument("idcard");
     document.getElementById("btn-request-verification").onclick = requestVerification;
 
     const workflowItems = [

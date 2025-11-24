@@ -282,6 +282,12 @@ body {
     transition: background-color 0.2s;
 }
 
+.doc-button.danger {
+    background-color: #ffecec;
+    color: #c0392b;
+    border-color: #f5b7b1;
+}
+
 .doc-button.secondary {
     background-color: #ffffff;
     color: #388e3c;
@@ -521,6 +527,21 @@ body {
     color: #606f67;
 }
 
+.workflow-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #d0d7d0;
+    background: #fff;
+    font-size: 13px;
+    color: #2f6b2f;
+}
+
 .workflow-status {
     padding: 6px 12px;
     border-radius: 16px;
@@ -532,6 +553,18 @@ body {
     background: #fff4e5;
     color: #c47a0b;
     border: 1px solid #f3d19c;
+}
+
+.badge-progress {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #bbdefb;
+}
+
+.badge-done {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
 }
 
 @media (max-width: 992px) {

@@ -14,7 +14,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayInputStream;
 import java.net.URLConnection;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/renter")
@@ -94,6 +96,46 @@ public class RenterController {
         return storeDocument(file, user -> user.setIdCardData(idBinary));
     }
 
+    @DeleteMapping("/delete-license")
+    public ResponseEntity<?> deleteLicense() {
+        ResponseEntity<User> resolved = resolveCurrentUser();
+        if (!resolved.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(resolved.getStatusCode()).build();
+        }
+
+        User user = resolved.getBody();
+        if (user != null) {
+            user.setLicenseData(null);
+            repo.save(user);
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "status", "REMOVED",
+                "licenseUploaded", false,
+                "idCardUploaded", user != null && user.getIdCardData() != null
+        ));
+    }
+
+    @DeleteMapping("/delete-idcard")
+    public ResponseEntity<?> deleteIdCard() {
+        ResponseEntity<User> resolved = resolveCurrentUser();
+        if (!resolved.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(resolved.getStatusCode()).build();
+        }
+
+        User user = resolved.getBody();
+        if (user != null) {
+            user.setIdCardData(null);
+            repo.save(user);
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "status", "REMOVED",
+                "licenseUploaded", user != null && user.getLicenseData() != null,
+                "idCardUploaded", false
+        ));
+    }
+
     @PostMapping("/request-verification")
     public ResponseEntity<?> requestVerification() {
         ResponseEntity<User> resolved = resolveCurrentUser();
@@ -127,6 +169,68 @@ public class RenterController {
                 "verificationRequested", user.isVerificationRequested(),
                 "verified", user.isVerified()
         ));
+    }
+
+    private static final Pattern STATUS_PATTERN = Pattern.compile("Pending|InProgress|Done");
+
+    private ResponseEntity<User> updateWorkflowStatus(BiConsumer<User, String> setter,
+                                                      String status) {
+        if (status == null || !STATUS_PATTERN.matcher(status).matches()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        ResponseEntity<User> resolved = resolveCurrentUser();
+        if (!resolved.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(resolved.getStatusCode()).build();
+        }
+
+        User user = resolved.getBody();
+        setter.accept(user, status);
+        repo.save(user);
+        return ResponseEntity.ok(user);
+    }
+
+    @GetMapping("/workflow")
+    public ResponseEntity<?> workflow() {
+        ResponseEntity<User> resolved = resolveCurrentUser();
+        if (!resolved.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(resolved.getStatusCode()).body("Unauthorized");
+        }
+
+        User user = resolved.getBody();
+
+        return ResponseEntity.ok(Map.of(
+                "checkin", user.getCheckinStatus(),
+                "contract", user.getContractStatus(),
+                "handover", user.getHandoverStatus(),
+                "returning", user.getReturnStatus(),
+                "payment", user.getPaymentStatus()
+        ));
+    }
+
+    @PostMapping("/workflow/checkin")
+    public ResponseEntity<User> updateCheckin(@RequestParam String status) {
+        return updateWorkflowStatus(User::setCheckinStatus, status);
+    }
+
+    @PostMapping("/workflow/contract")
+    public ResponseEntity<User> updateContract(@RequestParam String status) {
+        return updateWorkflowStatus(User::setContractStatus, status);
+    }
+
+    @PostMapping("/workflow/handover")
+    public ResponseEntity<User> updateHandover(@RequestParam String status) {
+        return updateWorkflowStatus(User::setHandoverStatus, status);
+    }
+
+    @PostMapping("/workflow/returning")
+    public ResponseEntity<User> updateReturn(@RequestParam String status) {
+        return updateWorkflowStatus(User::setReturnStatus, status);
+    }
+
+    @PostMapping("/workflow/payment")
+    public ResponseEntity<User> updatePayment(@RequestParam String status) {
+        return updateWorkflowStatus(User::setPaymentStatus, status);
     }
 
     private ResponseEntity<byte[]> buildDocumentResponse(Binary binary) {
