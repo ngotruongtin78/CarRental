@@ -352,13 +352,16 @@ public class RentalController {
         return Map.of("status", "SIGNED", "contractSigned", true);
     }
 
-    @PostMapping(value = "/{rentalId}/check-in", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/{rentalId}/check-in", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_OCTET_STREAM_VALUE})
     public ResponseEntity<?> checkIn(
             @PathVariable("rentalId") String rentalId,
             @RequestPart(value = "photo", required = false) MultipartFile photo,
             @RequestPart(value = "notes", required = false) String notes,
             @RequestPart(value = "latitude", required = false) Double latitude,
-            @RequestPart(value = "longitude", required = false) Double longitude) {
+            @RequestPart(value = "longitude", required = false) Double longitude,
+            @RequestParam(value = "latitude", required = false) Double latitudeParam,
+            @RequestParam(value = "longitude", required = false) Double longitudeParam,
+            @RequestBody(required = false) byte[] rawBody) {
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
@@ -388,10 +391,8 @@ public class RentalController {
                     .body("Vui lòng đọc và chấp thuận hợp đồng trước khi check-in.");
         }
 
-        if (photo == null || photo.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Vui lòng chụp hoặc tải ảnh tình trạng xe để check-in.");
-        }
+        if (latitude == null) latitude = latitudeParam;
+        if (longitude == null) longitude = longitudeParam;
 
         if (latitude == null || longitude == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -411,12 +412,21 @@ public class RentalController {
                     .body("Bạn cần có mặt trong bán kính 50m của trạm thuê để check-in. Khoảng cách hiện tại: " + rounded + "m.");
         }
 
-        byte[] photoData;
+        byte[] photoData = null;
         try {
-            photoData = photo.getBytes();
+            if (photo != null && !photo.isEmpty()) {
+                photoData = photo.getBytes();
+            } else if (rawBody != null && rawBody.length > 0) {
+                photoData = rawBody;
+            }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Không đọc được ảnh check-in. Vui lòng thử lại.");
+        }
+
+        if (photoData == null || photoData.length == 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Vui lòng chụp hoặc tải ảnh tình trạng xe để check-in.");
         }
 
         RentalRecord updated = rentalRecordService.checkIn(
@@ -437,12 +447,15 @@ public class RentalController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping(value = "/{rentalId}/return", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/{rentalId}/return", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_OCTET_STREAM_VALUE})
     public ResponseEntity<?> requestReturn(@PathVariable("rentalId") String rentalId,
                                            @RequestPart(value = "photo", required = false) MultipartFile photo,
                                            @RequestPart(value = "notes", required = false) String notes,
                                            @RequestPart(value = "latitude", required = false) Double latitude,
-                                           @RequestPart(value = "longitude", required = false) Double longitude) {
+                                           @RequestPart(value = "longitude", required = false) Double longitude,
+                                           @RequestParam(value = "latitude", required = false) Double latitudeParam,
+                                           @RequestParam(value = "longitude", required = false) Double longitudeParam,
+                                           @RequestBody(required = false) byte[] rawBody) {
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
@@ -456,10 +469,8 @@ public class RentalController {
                     .body("Chỉ trả xe khi chuyến đang được thuê.");
         }
 
-        if (photo == null || photo.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Vui lòng chụp hoặc tải ảnh tình trạng xe khi trả.");
-        }
+        if (latitude == null) latitude = latitudeParam;
+        if (longitude == null) longitude = longitudeParam;
 
         if (latitude == null || longitude == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -479,12 +490,21 @@ public class RentalController {
                     .body("Vị trí nằm ngoài khu vực trạm hoặc sai trạm (cách khoảng " + rounded + "m).");
         }
 
-        byte[] photoData;
+        byte[] photoData = null;
         try {
-            photoData = photo.getBytes();
+            if (photo != null && !photo.isEmpty()) {
+                photoData = photo.getBytes();
+            } else if (rawBody != null && rawBody.length > 0) {
+                photoData = rawBody;
+            }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Không đọc được ảnh trả xe. Vui lòng thử lại.");
+        }
+
+        if (photoData == null || photoData.length == 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Vui lòng chụp hoặc tải ảnh tình trạng xe khi trả.");
         }
 
         RentalRecord updated = rentalRecordService.requestReturn(
