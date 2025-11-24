@@ -1,4 +1,5 @@
 let historyData = [];
+let latestGeoPosition = null;
 
 const rentalModal = {
     el: null,
@@ -57,6 +58,27 @@ function formatMoney(value) {
     return `${Number(value).toLocaleString("vi-VN")} VNĐ`;
 }
 
+function haversineDistanceMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // m
+    const toRad = deg => (deg * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function getCurrentPosition() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error("Thiết bị không hỗ trợ định vị."));
+        navigator.geolocation.getCurrentPosition(
+            (pos) => resolve(pos.coords),
+            (err) => reject(err),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    });
+}
+
 function isCancelled(record) {
     const status = (record.status || "").toUpperCase();
     const paymentStatus = (record.paymentStatus || "").toUpperCase();
@@ -102,13 +124,34 @@ async function acceptContract() {
     }
 }
 
-function startCheckinFlow(record) {
+async function startCheckinFlow(record, station) {
     if (!record) return;
     if (!record.contractSigned) {
-        openContractModal(record.id, () => openCheckinModal(record));
+        alert("Vui lòng ký hợp đồng trước khi thực hiện check-in.");
         return;
     }
-    openCheckinModal(record);
+    if (!station || typeof station.latitude !== "number" || typeof station.longitude !== "number") {
+        alert("Không lấy được vị trí trạm thuê. Vui lòng thử lại sau.");
+        return;
+    }
+
+    try {
+        const coords = await getCurrentPosition();
+        const distance = haversineDistanceMeters(coords.latitude, coords.longitude, station.latitude, station.longitude);
+        if (Number.isNaN(distance)) {
+            alert("Không xác định được khoảng cách tới trạm.");
+            return;
+        }
+        if (distance > 50) {
+            alert(`Bạn cần đứng gần trạm (<= 50m) để check-in. Khoảng cách hiện tại: ${Math.round(distance)}m.`);
+            return;
+        }
+        latestGeoPosition = { latitude: coords.latitude, longitude: coords.longitude };
+        openCheckinModal(record);
+    } catch (err) {
+        console.error("Geo error", err);
+        alert("Không lấy được vị trí hiện tại. Vui lòng bật GPS và thử lại.");
+    }
 }
 
 function openCheckinModal(record) {
@@ -123,6 +166,7 @@ function closeCheckinModal() {
 }
 
 function resetCheckinModal() {
+    latestGeoPosition = null;
     if (checkinModalState.notesInput) checkinModalState.notesInput.value = "";
     if (checkinModalState.photoInput) checkinModalState.photoInput.value = "";
     if (checkinModalState.preview) {
@@ -152,9 +196,16 @@ async function submitCheckin() {
         return;
     }
 
+    if (!latestGeoPosition) {
+        alert("Vui lòng xác nhận vị trí gần trạm trước khi check-in.");
+        return;
+    }
+
     const formData = new FormData();
     formData.append("photo", photoFile);
     formData.append("notes", checkinModalState.notesInput?.value || "");
+    formData.append("latitude", latestGeoPosition.latitude);
+    formData.append("longitude", latestGeoPosition.longitude);
 
     try {
         const res = await fetch(`/api/rental/${activeCheckinRecord.id}/check-in`, {
@@ -259,7 +310,11 @@ function renderHistoryItem(item) {
         const btnCheckin = document.createElement("button");
         btnCheckin.className = "action-button";
         btnCheckin.innerHTML = '<i class="fas fa-check"></i> Check-in nhận xe';
-        btnCheckin.onclick = () => startCheckinFlow(record);
+        btnCheckin.disabled = !record.contractSigned;
+        if (!record.contractSigned) {
+            btnCheckin.title = "Ký hợp đồng điện tử trước khi check-in";
+        }
+        btnCheckin.onclick = () => startCheckinFlow(record, station);
         actions.appendChild(btnCheckin);
     }
 

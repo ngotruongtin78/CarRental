@@ -59,6 +59,8 @@ public class RentalRecordService {
                 stationInfo.put("id", station.getId());
                 stationInfo.put("name", station.getName());
                 stationInfo.put("address", station.getAddress());
+                stationInfo.put("latitude", station.getLatitude());
+                stationInfo.put("longitude", station.getLongitude());
                 item.put("station", stationInfo);
             });
             response.add(item);

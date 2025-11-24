@@ -80,6 +80,20 @@ public class RentalController {
         }
     }
 
+    private double distanceInMeters(double lat1, double lon1, double lat2, double lon2) {
+        double radLat1 = Math.toRadians(lat1);
+        double radLat2 = Math.toRadians(lat2);
+        double deltaLat = Math.toRadians(lat2 - lat1);
+        double deltaLon = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+                + Math.cos(radLat1) * Math.cos(radLat2)
+                * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        double earthRadius = 6371000; // meters
+        return earthRadius * c;
+    }
+
     @PostMapping("/checkout")
     public Map<String, Object> checkout(@RequestBody Map<String, Object> req) {
 
@@ -158,7 +172,6 @@ public class RentalController {
         record.setEndDate(endDate);
         record.setRentalDays(rentalDays);
         record.setDistanceKm(distanceKm != null ? distanceKm : 0);
-        record.setStartTime(startDate.atStartOfDay());
         record.setEndTime(endDate.plusDays(1).atStartOfDay());
         record.setTotal(vehicle.getPrice() * rentalDays);
         record.setStatus("PENDING_PAYMENT");
@@ -343,7 +356,9 @@ public class RentalController {
     public ResponseEntity<?> checkIn(
             @PathVariable("rentalId") String rentalId,
             @RequestPart(value = "photo", required = false) MultipartFile photo,
-            @RequestPart(value = "notes", required = false) String notes) {
+            @RequestPart(value = "notes", required = false) String notes,
+            @RequestPart(value = "latitude", required = false) Double latitude,
+            @RequestPart(value = "longitude", required = false) Double longitude) {
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
@@ -352,7 +367,7 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
         }
 
-        if (record.getStartTime() != null || "IN_PROGRESS".equalsIgnoreCase(record.getStatus())
+        if ("IN_PROGRESS".equalsIgnoreCase(record.getStatus())
                 || "WAITING_INSPECTION".equalsIgnoreCase(record.getStatus())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("Bạn đã check-in hoặc đang trong quá trình thuê xe.");
@@ -366,6 +381,24 @@ public class RentalController {
         if (photo == null || photo.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Vui lòng chụp hoặc tải ảnh tình trạng xe để check-in.");
+        }
+
+        if (latitude == null || longitude == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Vui lòng bật định vị để xác nhận bạn đang ở trạm thuê.");
+        }
+
+        var station = record.getStationId() != null ? stationRepository.findById(record.getStationId()).orElse(null) : null;
+        if (station == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Không tìm thấy thông tin trạm thuê cho chuyến này.");
+        }
+
+        double distanceMeters = distanceInMeters(latitude, longitude, station.getLatitude(), station.getLongitude());
+        if (Double.isNaN(distanceMeters) || distanceMeters > 50) {
+            long rounded = Math.round(distanceMeters);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Bạn cần có mặt trong bán kính 50m của trạm thuê để check-in. Khoảng cách hiện tại: " + rounded + "m.");
         }
 
         byte[] photoData;

@@ -657,6 +657,11 @@ body {
     transition: background-color 0.2s ease;
 }
 
+.action-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .action-button.secondary {
     border-color: #b36b00;
     color: #b36b00;
