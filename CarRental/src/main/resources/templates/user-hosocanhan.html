@@ -73,10 +73,40 @@
                 </div>
             </div>
 
+            <div class="doc-preview">
+                <div class="doc-preview-item">
+                    <div class="preview-header">
+                        <i class="fas fa-id-card"></i> Ảnh GPLX
+                    </div>
+                    <div class="preview-frame">
+                        <img id="img-license" alt="GPLX" class="preview-img" />
+                        <div id="placeholder-license" class="preview-placeholder">Chưa có ảnh</div>
+                    </div>
+                </div>
+
+                <div class="doc-preview-item">
+                    <div class="preview-header">
+                        <i class="fas fa-passport"></i> Ảnh CCCD/CMND
+                    </div>
+                    <div class="preview-frame">
+                        <img id="img-idcard" alt="CCCD" class="preview-img" />
+                        <div id="placeholder-idcard" class="preview-placeholder">Chưa có ảnh</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="verification-box">
                 <p id="verification-status" class="verification-text">Đang kiểm tra trạng thái xác thực...</p>
                 <button id="btn-request-verification" class="doc-button secondary">Yêu cầu xác thực nhanh tại quầy</button>
             </div>
+        </div>
+
+        <div class="card workflow-card">
+            <div class="workflow-header">
+                <h2>Tiến trình thuê xe EV</h2>
+                <p>Kiểm tra nhanh các bước nhận và trả xe.</p>
+            </div>
+            <div id="workflow-list" class="workflow-list"></div>
         </div>
 
         <div class="card activity-summary-card">
@@ -131,6 +161,48 @@
         document.getElementById("stat-spent").innerText = spent + " đ";
     }
 
+    function setPreviewState(imgEl, placeholderEl, hasData) {
+        if (hasData) {
+            placeholderEl.style.display = "none";
+            imgEl.style.display = "block";
+        } else {
+            imgEl.style.display = "none";
+            placeholderEl.style.display = "flex";
+            imgEl.removeAttribute("src");
+        }
+    }
+
+    async function loadDocumentImages(state) {
+        const licenseImg = document.getElementById("img-license");
+        const idImg = document.getElementById("img-idcard");
+        const licensePlaceholder = document.getElementById("placeholder-license");
+        const idPlaceholder = document.getElementById("placeholder-idcard");
+
+        const updateImage = async (url, img, placeholder, hasData) => {
+            setPreviewState(img, placeholder, hasData);
+            if (!hasData) return;
+
+            try {
+                const res = await fetch(url);
+                if (!res.ok) {
+                    throw new Error("Không tải được ảnh");
+                }
+                const blob = await res.blob();
+                const objectUrl = URL.createObjectURL(blob);
+                img.src = objectUrl;
+            } catch (e) {
+                console.error(e);
+                placeholder.innerText = "Lỗi tải ảnh";
+                setPreviewState(img, placeholder, false);
+            }
+        };
+
+        await Promise.all([
+            updateImage("/api/renter/license-image", licenseImg, licensePlaceholder, state.licenseUploaded),
+            updateImage("/api/renter/idcard-image", idImg, idPlaceholder, state.idCardUploaded)
+        ]);
+    }
+
     function applyDocState(state) {
         const statusEl = document.getElementById("doc-status-text");
         const btnLicense = document.getElementById("btn-license");
@@ -169,6 +241,8 @@
             requestBtn.style.display = "inline-flex";
             requestBtn.innerText = "Yêu cầu xác thực nhanh tại quầy";
         }
+
+        loadDocumentImages(state);
     }
 
     async function refreshDocs() {
@@ -226,8 +300,62 @@
     document.getElementById("btn-idcard").onclick = () => upload("idcard");
     document.getElementById("btn-request-verification").onclick = requestVerification;
 
+    const workflowItems = [
+        {
+            section: "1c. Nhận xe",
+            title: "Check-in nhận xe",
+            detail: "Quét mã QR tại xe/trạm hoặc check-in qua app.",
+            status: "Pending"
+        },
+        {
+            section: "1c. Nhận xe",
+            title: "Ký hợp đồng điện tử",
+            detail: "Xem và nhấn nút \"Ký/Đồng ý\" các điều khoản thuê xe.",
+            status: "Pending"
+        },
+        {
+            section: "1c. Nhận xe",
+            title: "Xác nhận bàn giao",
+            detail: "Xác nhận tình trạng xe (vỏ, pin) khớp với thực tế nhân viên giao.",
+            status: "Pending"
+        },
+        {
+            section: "1d. Trả xe",
+            title: "Yêu cầu trả xe",
+            detail: "Định vị đúng điểm trả xe quy định mới cho phép bấm trả.",
+            status: "Pending"
+        },
+        {
+            section: "1d. Trả xe",
+            title: "Thanh toán",
+            detail: "Hiển thị tổng tiền, cổng thanh toán online hoặc xác nhận tiền mặt.",
+            status: "Pending"
+        }
+    ];
+
+    function renderWorkflow() {
+        const container = document.getElementById("workflow-list");
+        container.innerHTML = "";
+
+        workflowItems.forEach(item => {
+            const row = document.createElement("div");
+            row.className = "workflow-item";
+            row.innerHTML = `
+                <div class="workflow-icon"><i class="fas fa-flag"></i></div>
+                <div class="workflow-body">
+                    <div class="workflow-meta">${item.section}</div>
+                    <div class="workflow-title">${item.title}</div>
+                    <div class="workflow-detail">${item.detail}</div>
+                </div>
+                <div class="workflow-status badge-pending">${item.status}</div>
+            `;
+            container.appendChild(row);
+        });
+    }
+
     loadProfile();
     loadStats();
+    renderWorkflow();
     refreshDocs();
 </script>
 

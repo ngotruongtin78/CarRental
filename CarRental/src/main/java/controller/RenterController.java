@@ -4,12 +4,15 @@ import CarRental.example.document.User;
 import CarRental.example.repository.UserRepository;
 import org.bson.BsonBinarySubType;
 import org.bson.types.Binary;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
+import java.net.URLConnection;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -124,6 +127,51 @@ public class RenterController {
                 "verificationRequested", user.isVerificationRequested(),
                 "verified", user.isVerified()
         ));
+    }
+
+    private ResponseEntity<byte[]> buildDocumentResponse(Binary binary) {
+        if (binary == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        byte[] bytes = binary.getData();
+        if (bytes == null || bytes.length == 0) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String detectedType = null;
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes)) {
+            detectedType = URLConnection.guessContentTypeFromStream(bais);
+        } catch (Exception ignored) {
+        }
+
+        return ResponseEntity
+                .ok()
+                .header(HttpHeaders.CONTENT_TYPE, detectedType != null ? detectedType : "application/octet-stream")
+                .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(bytes.length))
+                .body(bytes);
+    }
+
+    @GetMapping("/license-image")
+    public ResponseEntity<byte[]> licenseImage() {
+        ResponseEntity<User> resolved = resolveCurrentUser();
+        if (!resolved.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(resolved.getStatusCode()).build();
+        }
+
+        User user = resolved.getBody();
+        return buildDocumentResponse(user != null ? user.getLicenseData() : null);
+    }
+
+    @GetMapping("/idcard-image")
+    public ResponseEntity<byte[]> idCardImage() {
+        ResponseEntity<User> resolved = resolveCurrentUser();
+        if (!resolved.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(resolved.getStatusCode()).build();
+        }
+
+        User user = resolved.getBody();
+        return buildDocumentResponse(user != null ? user.getIdCardData() : null);
     }
 
     @GetMapping("/profile")
