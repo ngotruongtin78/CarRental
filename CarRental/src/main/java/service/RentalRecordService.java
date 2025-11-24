@@ -104,6 +104,11 @@ public class RentalRecordService {
         return repo.save(record);
     }
 
+    // Backward-compatible overload for any callers that still use the old signature.
+    public RentalRecord checkIn(String rentalId, String username, String notes) {
+        return checkIn(rentalId, username, notes, null, null, null);
+    }
+
     public RentalRecord checkIn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
@@ -114,6 +119,11 @@ public class RentalRecordService {
         record.setCheckinLongitude(longitude);
         record.setStatus("IN_PROGRESS");
         return repo.save(record);
+    }
+
+    // Backward-compatible overload for any callers that still use the old signature.
+    public RentalRecord requestReturn(String rentalId, String username, String notes) {
+        return requestReturn(rentalId, username, notes, null, null, null);
     }
 
     public RentalRecord requestReturn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
