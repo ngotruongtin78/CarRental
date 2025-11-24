@@ -207,6 +207,32 @@
         </div>
     </div>
 </div>
+<div id="edit-dates-modal" class="dialog-modal">
+    <div class="dialog-overlay"></div>
+    <div class="dialog-content">
+        <div class="dialog-header">
+            <h3>Chỉnh sửa ngày thuê</h3>
+            <button class="dialog-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="dialog-body">
+            <p class="dialog-hint">Chỉ thay đổi được khi chuyến chưa bắt đầu và chưa check-in.</p>
+            <div class="edit-dates-grid">
+                <div class="form-field">
+                    <label for="edit-start-date">Ngày bắt đầu</label>
+                    <input type="date" id="edit-start-date">
+                </div>
+                <div class="form-field">
+                    <label for="edit-end-date">Ngày kết thúc</label>
+                    <input type="date" id="edit-end-date">
+                </div>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn-primary" id="btn-edit-dates-confirm">Lưu thay đổi</button>
+            <button type="button" class="btn-tertiary" id="btn-edit-dates-cancel">Hủy</button>
+        </div>
+    </div>
+</div>
 <script src="/js/user-menu.js"></script>
 <script src="/js/station-search.js"></script>
 <script src="/js/lichsuthue.js"></script>

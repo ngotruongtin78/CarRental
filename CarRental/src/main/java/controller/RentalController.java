@@ -336,12 +336,92 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
         }
 
+        String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
+        if (List.of("IN_PROGRESS", "WAITING_INSPECTION", "RETURNED", "COMPLETED").contains(status)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("Không thể hủy vì chuyến thuê đã bắt đầu hoặc đang chờ kiểm tra.");
+        }
+
         record.setStatus("CANCELLED");
         record.setPaymentStatus("CANCELLED");
         record.setHoldExpiresAt(null);
         rentalRepo.save(record);
         vehicleService.releaseHold(record.getVehicleId(), rentalId);
         return ResponseEntity.ok(Map.of("status", "CANCELLED"));
+    }
+
+    @PostMapping("/{rentalId}/dates")
+    public ResponseEntity<?> updateRentalDates(@PathVariable("rentalId") String rentalId,
+                                               @RequestBody Map<String, String> body) {
+        String username = getCurrentUsername();
+        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+
+        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        if (record == null || !Objects.equals(record.getUsername(), username)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
+        }
+
+        if (expireIfNeeded(record)) {
+            return ResponseEntity.status(HttpStatus.GONE)
+                    .body("Đơn đặt đã hết hạn thanh toán. Vui lòng đặt lại.");
+        }
+
+        String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
+        if (List.of("IN_PROGRESS", "WAITING_INSPECTION", "RETURNED", "COMPLETED").contains(status)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("Không thể chỉnh sửa chuyến thuê đã bắt đầu hoặc đang chờ kiểm tra.");
+        }
+
+        final LocalDate startDate;
+        final LocalDate endDate;
+        try {
+            startDate = Optional.ofNullable(body.get("startDate")).map(LocalDate::parse).orElse(record.getStartDate());
+            endDate = Optional.ofNullable(body.get("endDate")).map(LocalDate::parse).orElse(startDate);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Định dạng ngày không hợp lệ");
+        }
+
+        if (startDate == null || endDate == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Thiếu ngày bắt đầu hoặc kết thúc");
+        }
+
+        if (startDate.isBefore(LocalDate.now())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày bắt đầu phải từ hôm nay trở đi");
+        }
+        if (endDate.isBefore(startDate)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
+        }
+
+        Vehicle vehicle = vehicleRepo.findById(record.getVehicleId()).orElse(null);
+        if (vehicle == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Vehicle missing for rental");
+        }
+
+        long daySpan = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        int rentalDays = (int) Math.max(1, daySpan);
+
+        record.setStartDate(startDate);
+        record.setEndDate(endDate);
+        record.setRentalDays(rentalDays);
+        record.setEndTime(endDate.plusDays(1).atStartOfDay());
+        record.setTotal(vehicle.getPrice() * rentalDays);
+
+        if ("cash".equalsIgnoreCase(record.getPaymentMethod())) {
+            LocalDateTime holdUntil = startDate.atStartOfDay().plusDays(1);
+            if (record.getHoldExpiresAt() == null || record.getHoldExpiresAt().isBefore(holdUntil)) {
+                record.setHoldExpiresAt(holdUntil);
+            }
+        }
+
+        rentalRepo.save(record);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("startDate", record.getStartDate());
+        response.put("endDate", record.getEndDate());
+        response.put("rentalDays", record.getRentalDays());
+        response.put("total", record.getTotal());
+        response.put("holdExpiresAt", record.getHoldExpiresAt());
+        response.put("status", record.getStatus());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{rentalId}/sign-contract")

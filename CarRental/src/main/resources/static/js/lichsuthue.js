@@ -29,6 +29,13 @@ const returnModalState = {
     preview: null,
 };
 
+const editModalState = {
+    el: null,
+    startInput: null,
+    endInput: null,
+    rentalId: null,
+};
+
 let pendingContractRentalId = null;
 let contractAcceptedCallback = null;
 let activeCheckinRecord = null;
@@ -62,6 +69,15 @@ function formatDateTime(dateStr) {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return "";
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function formatInputDate(dateStr) {
+    const parsed = parseDate(dateStr);
+    if (!parsed) return "";
+    const year = parsed.getFullYear();
+    const month = `${parsed.getMonth() + 1}`.padStart(2, "0");
+    const day = `${parsed.getDate()}`.padStart(2, "0");
+    return `${year}-${month}-${day}`;
 }
 
 function formatMoney(value) {
@@ -134,6 +150,19 @@ function isCancelled(record) {
 function isCompleted(record) {
     const status = (record.status || "").toUpperCase();
     return ["COMPLETED", "RETURNED"].includes(status);
+}
+
+function canModifyReservation(record) {
+    if (!record || isCancelled(record) || isCompleted(record)) return false;
+    const status = (record.status || "").toUpperCase();
+    if (["IN_PROGRESS", "WAITING_INSPECTION"].includes(status)) return false;
+    const startDate = parseDate(record.startDate || record.startTime);
+    if (startDate) {
+        const startEndOfDay = new Date(startDate);
+        startEndOfDay.setHours(23, 59, 59, 999);
+        if (new Date() > startEndOfDay && hasCheckedIn(record)) return false;
+    }
+    return true;
 }
 
 function hasCheckedIn(record) {
@@ -359,6 +388,101 @@ async function submitReturn() {
     }
 }
 
+function openEditModal(record) {
+    if (!record || !editModalState.el) return;
+    editModalState.rentalId = record.id;
+    const minDate = formatInputDate(new Date());
+    if (editModalState.startInput) {
+        editModalState.startInput.min = minDate;
+        editModalState.startInput.value = formatInputDate(record.startDate || record.startTime);
+    }
+    if (editModalState.endInput) {
+        editModalState.endInput.min = minDate;
+        editModalState.endInput.value = formatInputDate(record.endDate || record.endTime || record.startDate);
+    }
+    editModalState.el.classList.add("show");
+}
+
+function closeEditModal() {
+    editModalState.rentalId = null;
+    if (editModalState.startInput) editModalState.startInput.value = "";
+    if (editModalState.endInput) editModalState.endInput.value = "";
+    editModalState.el?.classList.remove("show");
+}
+
+function updateHistoryRecord(rentalId, updates) {
+    if (!rentalId) return;
+    historyData = historyData.map(item => {
+        if (item.record?.id === rentalId) {
+            return { ...item, record: { ...item.record, ...updates } };
+        }
+        return item;
+    });
+    renderHistoryList(historyData);
+}
+
+function removeHistoryRecord(rentalId) {
+    if (!rentalId) return;
+    historyData = historyData.filter(item => item.record?.id !== rentalId);
+    renderHistoryList(historyData);
+}
+
+async function submitEditDates() {
+    if (!editModalState.rentalId) return;
+    const startDate = editModalState.startInput?.value;
+    const endDate = editModalState.endInput?.value;
+
+    if (!startDate || !endDate) {
+        alert("Vui lòng chọn đủ ngày bắt đầu và kết thúc.");
+        return;
+    }
+
+    if (new Date(startDate) < new Date(new Date().toISOString().split("T")[0])) {
+        alert("Ngày bắt đầu phải từ hôm nay trở đi.");
+        return;
+    }
+    if (new Date(endDate) < new Date(startDate)) {
+        alert("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.");
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/rental/${editModalState.rentalId}/dates`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ startDate, endDate })
+        });
+        const data = await res.text();
+        if (!res.ok) {
+            alert(data || "Không chỉnh sửa được ngày thuê.");
+            return;
+        }
+        const parsed = data ? JSON.parse(data) : {};
+        updateHistoryRecord(editModalState.rentalId, parsed);
+        closeEditModal();
+        alert("Đã cập nhật ngày thuê.");
+    } catch (err) {
+        alert(err.message || "Không chỉnh sửa được ngày thuê. Vui lòng thử lại.");
+    }
+}
+
+async function cancelRental(record) {
+    if (!record?.id) return;
+    if (!confirm("Bạn có chắc muốn hủy chuyến thuê này?")) return;
+    try {
+        const res = await fetch(`/api/rental/${record.id}/cancel`, { method: "POST" });
+        const data = await res.text();
+        if (!res.ok) {
+            alert(data || "Không hủy được chuyến thuê.");
+            return;
+        }
+        removeHistoryRecord(record.id);
+        alert("Đã hủy đơn thuê và giải phóng xe.");
+    } catch (err) {
+        alert(err.message || "Không hủy được chuyến thuê. Thử lại sau.");
+    }
+}
+
 function canContinuePayment(record) {
     if (!record) return false;
     if (isCancelled(record) || isCompleted(record)) return false;
@@ -435,6 +559,7 @@ function renderHistoryItem(item) {
     const disabled = isCancelled(record) || isCompleted(record);
     const checkedIn = hasCheckedIn(record);
     const withinWindow = isWithinRentalWindow(record);
+    const modifiable = canModifyReservation(record);
 
     if (!disabled && !record.contractSigned) {
         const btn = document.createElement("button");
@@ -469,6 +594,20 @@ function renderHistoryItem(item) {
         note.className = "status-badge warning";
         note.innerText = "Đã gửi yêu cầu trả xe";
         actions.appendChild(note);
+    }
+
+    if (modifiable) {
+        const btnEdit = document.createElement("button");
+        btnEdit.className = "action-button secondary";
+        btnEdit.innerHTML = '<i class="fas fa-calendar-day"></i> Chỉnh sửa ngày thuê';
+        btnEdit.onclick = () => openEditModal(record);
+        actions.appendChild(btnEdit);
+
+        const btnCancel = document.createElement("button");
+        btnCancel.className = "action-button secondary";
+        btnCancel.innerHTML = '<i class="fas fa-times"></i> Hủy đơn';
+        btnCancel.onclick = () => cancelRental(record);
+        actions.appendChild(btnCancel);
     }
 
     container.appendChild(actions);
@@ -795,6 +934,21 @@ function initReturnModal() {
     returnModalState.el?.querySelector(".dialog-close")?.addEventListener("click", closeReturnModal);
 }
 
+function initEditModal() {
+    editModalState.el = document.getElementById("edit-dates-modal");
+    editModalState.startInput = document.getElementById("edit-start-date");
+    editModalState.endInput = document.getElementById("edit-end-date");
+
+    const minDate = formatInputDate(new Date());
+    if (editModalState.startInput) editModalState.startInput.min = minDate;
+    if (editModalState.endInput) editModalState.endInput.min = minDate;
+
+    document.getElementById("btn-edit-dates-confirm")?.addEventListener("click", submitEditDates);
+    document.getElementById("btn-edit-dates-cancel")?.addEventListener("click", closeEditModal);
+    editModalState.el?.querySelector(".dialog-overlay")?.addEventListener("click", closeEditModal);
+    editModalState.el?.querySelector(".dialog-close")?.addEventListener("click", closeEditModal);
+}
+
 function initRentalModal() {
     rentalModal.el = document.getElementById("rental-modal");
     rentalModal.body = document.getElementById("modal-body");
@@ -817,6 +971,7 @@ window.addEventListener("DOMContentLoaded", () => {
     initContractModal();
     initCheckinModal();
     initReturnModal();
+    initEditModal();
 
     document.querySelector(".btn-filter")?.addEventListener("click", filterHistory);
     document.getElementById("period-filter")?.addEventListener("change", filterHistory);
