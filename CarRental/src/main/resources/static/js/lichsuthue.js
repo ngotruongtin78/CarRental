@@ -1,9 +1,28 @@
 let historyData = [];
 
+const rentalModal = {
+    el: null,
+    body: null,
+    badges: null,
+    title: null,
+};
+
 function formatDate(dateStr) {
     if (!dateStr) return "";
     const date = new Date(dateStr);
     return `${date.toLocaleDateString()}`;
+}
+
+function formatDateTime(dateStr) {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "";
+    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function formatMoney(value) {
+    if (value === undefined || value === null || isNaN(value)) return "---";
+    return `${Number(value).toLocaleString("vi-VN")} VNĐ`;
 }
 
 function isCancelled(record) {
@@ -116,6 +135,15 @@ function renderHistoryItem(item) {
         p.innerText = `Ghi chú trả xe: ${record.returnNotes}`;
         container.appendChild(p);
     }
+
+    const btnDetails = document.createElement("button");
+    btnDetails.className = "btn-view-details";
+    btnDetails.innerHTML = '<i class="fas fa-circle-info"></i> Xem chi tiết chuyến';
+    btnDetails.onclick = (e) => {
+        e.stopPropagation();
+        openRentalModal(item);
+    };
+    container.appendChild(btnDetails);
 
     return container;
 }
@@ -322,9 +350,102 @@ async function loadStats() {
     }
 }
 
+function closeRentalModal() {
+    if (rentalModal.el) rentalModal.el.classList.remove("show");
+}
+
+function renderBadges(item) {
+    if (!rentalModal.badges) return;
+    rentalModal.badges.innerHTML = "";
+    const record = item.record || {};
+    const badges = [];
+
+    const statusText = item.displayStatus || record.displayStatus || record.status;
+    if (statusText) badges.push({ text: statusText, className: "" });
+
+    if (record.paymentStatus) badges.push({ text: `Thanh toán: ${record.paymentStatus}`, className: record.paymentStatus.toUpperCase().includes("PENDING") ? "warning" : "" });
+    if (record.paymentMethod) badges.push({ text: `PTTT: ${record.paymentMethod}`, className: "" });
+
+    badges.forEach(b => {
+        const el = document.createElement("span");
+        el.className = `modal-badge${b.className ? " " + b.className : ""}`;
+        el.innerText = b.text;
+        rentalModal.badges.appendChild(el);
+    });
+}
+
+function buildDetailSection(title, rows) {
+    if (!rows || !rows.length) return "";
+    const content = rows.map(r => `<div class="detail-row"><span>${r.label}</span><strong>${r.value || "---"}</strong></div>`).join("");
+    return `<div class="modal-section"><h4>${title}</h4><div class="detail-grid">${content}</div></div>`;
+}
+
+function openRentalModal(item) {
+    if (!rentalModal.el || !rentalModal.body || !rentalModal.title) return;
+    const record = item.record || {};
+    const vehicle = item.vehicle || {};
+    const station = item.station || {};
+
+    rentalModal.title.textContent = vehicle.brand ? `${vehicle.brand} (${vehicle.plate || ""})` : `Chuyến #${record.id}`;
+    renderBadges(item);
+
+    const rentalRows = [
+        { label: "Mã chuyến", value: `#${record.id || ""}` },
+        { label: "Thời gian thuê", value: `${formatDate(record.startDate || record.startTime)} - ${formatDate(record.endDate || record.endTime) || "Chưa trả"}` },
+        { label: "Số ngày", value: record.rentalDays ? `${record.rentalDays} ngày` : "---" },
+        { label: "Tổng phí", value: formatMoney(record.total) },
+        { label: "Trạng thái", value: item.displayStatus || record.status || "" },
+        { label: "Thanh toán", value: record.paymentStatus || "Chưa cập nhật" },
+        { label: "PT thanh toán", value: record.paymentMethod || "---" },
+        { label: "Giữ chỗ tới", value: record.holdExpiresAt ? formatDateTime(record.holdExpiresAt) : "---" },
+    ];
+
+    const vehicleRows = [
+        { label: "Loại xe", value: vehicle.type || "---" },
+        { label: "Biển số", value: vehicle.plate || "---" },
+        { label: "Thương hiệu", value: vehicle.brand || "---" },
+        { label: "Giá / ngày", value: vehicle.price ? formatMoney(vehicle.price) : "---" },
+        { label: "Khoảng cách đến trạm", value: record.distanceKm ? `${record.distanceKm.toFixed(1)} km` : "---" },
+    ];
+
+    const stationRows = [
+        { label: "Điểm thuê", value: station.name || record.stationId || "---" },
+        { label: "Địa chỉ", value: station.address || "---" },
+    ];
+
+    const notes = [];
+    if (record.checkinNotes) notes.push(`<div class="note-block"><strong>Ghi chú nhận xe:</strong><br>${record.checkinNotes}</div>`);
+    if (record.returnNotes) notes.push(`<div class="note-block"><strong>Ghi chú trả xe:</strong><br>${record.returnNotes}</div>`);
+
+    rentalModal.body.innerHTML = [
+        buildDetailSection("Thông tin chuyến", rentalRows),
+        buildDetailSection("Xe & chi phí", vehicleRows),
+        buildDetailSection("Trạm thuê", stationRows),
+        notes.length ? `<div class="modal-section">${notes.join("")}</div>` : "",
+    ].join("");
+
+    rentalModal.el.classList.add("show");
+}
+
+function initRentalModal() {
+    rentalModal.el = document.getElementById("rental-modal");
+    rentalModal.body = document.getElementById("modal-body");
+    rentalModal.badges = document.getElementById("modal-badges");
+    rentalModal.title = document.getElementById("modal-title");
+
+    const overlay = rentalModal.el?.querySelector(".modal-overlay");
+    const closeBtn = rentalModal.el?.querySelector(".modal-close");
+    overlay?.addEventListener("click", closeRentalModal);
+    closeBtn?.addEventListener("click", closeRentalModal);
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && rentalModal.el?.classList.contains("show")) closeRentalModal();
+    });
+}
+
 window.addEventListener("DOMContentLoaded", () => {
     loadHistory();
     loadStats();
+    initRentalModal();
 
     document.querySelector(".btn-filter")?.addEventListener("click", filterHistory);
     document.getElementById("period-filter")?.addEventListener("change", filterHistory);
