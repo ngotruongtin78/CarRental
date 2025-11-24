@@ -135,6 +135,13 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid date format");
         }
 
+        if (startDate.isBefore(LocalDate.now())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày bắt đầu không được ở quá khứ");
+        }
+        if (endDate.isBefore(startDate)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
+        }
+
         final long daySpan = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         int rentalDays = (int) Math.max(1, daySpan);
 
