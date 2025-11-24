@@ -352,15 +352,13 @@ public class RentalController {
         return Map.of("status", "SIGNED", "contractSigned", true);
     }
 
-    @PostMapping(value = "/{rentalId}/check-in", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_OCTET_STREAM_VALUE})
+    @PostMapping(value = "/{rentalId}/check-in", consumes = {MediaType.ALL_VALUE})
     public ResponseEntity<?> checkIn(
             @PathVariable("rentalId") String rentalId,
-            @RequestPart(value = "photo", required = false) MultipartFile photo,
-            @RequestPart(value = "notes", required = false) String notes,
-            @RequestPart(value = "latitude", required = false) Double latitude,
-            @RequestPart(value = "longitude", required = false) Double longitude,
-            @RequestParam(value = "latitude", required = false) Double latitudeParam,
-            @RequestParam(value = "longitude", required = false) Double longitudeParam,
+            @RequestParam(value = "photo", required = false) MultipartFile photo,
+            @RequestParam(value = "notes", required = false) String notes,
+            @RequestParam(value = "latitude", required = false) Double latitude,
+            @RequestParam(value = "longitude", required = false) Double longitude,
             @RequestBody(required = false) byte[] rawBody) {
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
@@ -390,9 +388,6 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Vui lòng đọc và chấp thuận hợp đồng trước khi check-in.");
         }
-
-        if (latitude == null) latitude = latitudeParam;
-        if (longitude == null) longitude = longitudeParam;
 
         if (latitude == null || longitude == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -447,14 +442,12 @@ public class RentalController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping(value = "/{rentalId}/return", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_OCTET_STREAM_VALUE})
+    @PostMapping(value = "/{rentalId}/return", consumes = {MediaType.ALL_VALUE})
     public ResponseEntity<?> requestReturn(@PathVariable("rentalId") String rentalId,
-                                           @RequestPart(value = "photo", required = false) MultipartFile photo,
-                                           @RequestPart(value = "notes", required = false) String notes,
-                                           @RequestPart(value = "latitude", required = false) Double latitude,
-                                           @RequestPart(value = "longitude", required = false) Double longitude,
-                                           @RequestParam(value = "latitude", required = false) Double latitudeParam,
-                                           @RequestParam(value = "longitude", required = false) Double longitudeParam,
+                                           @RequestParam(value = "photo", required = false) MultipartFile photo,
+                                           @RequestParam(value = "notes", required = false) String notes,
+                                           @RequestParam(value = "latitude", required = false) Double latitude,
+                                           @RequestParam(value = "longitude", required = false) Double longitude,
                                            @RequestBody(required = false) byte[] rawBody) {
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
@@ -468,9 +461,6 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("Chỉ trả xe khi chuyến đang được thuê.");
         }
-
-        if (latitude == null) latitude = latitudeParam;
-        if (longitude == null) longitude = longitudeParam;
 
         if (latitude == null || longitude == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
