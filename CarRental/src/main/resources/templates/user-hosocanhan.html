@@ -101,28 +101,6 @@
                 </div>
             </div>
 
-            <div class="doc-preview">
-                <div class="doc-preview-item">
-                    <div class="preview-header">
-                        <i class="fas fa-id-card"></i> Ảnh GPLX
-                    </div>
-                    <div class="preview-frame">
-                        <img id="img-license" alt="GPLX" class="preview-img" />
-                        <div id="placeholder-license" class="preview-placeholder">Chưa có ảnh</div>
-                    </div>
-                </div>
-
-                <div class="doc-preview-item">
-                    <div class="preview-header">
-                        <i class="fas fa-passport"></i> Ảnh CCCD/CMND
-                    </div>
-                    <div class="preview-frame">
-                        <img id="img-idcard" alt="CCCD" class="preview-img" />
-                        <div id="placeholder-idcard" class="preview-placeholder">Chưa có ảnh</div>
-                    </div>
-                </div>
-            </div>
-
             <div class="verification-box">
                 <p id="verification-status" class="verification-text">Đang kiểm tra trạng thái xác thực...</p>
                 <button id="btn-request-verification" class="doc-button secondary">Yêu cầu xác thực nhanh tại quầy</button>
@@ -158,6 +136,14 @@
                     <p class="activity-value" id="stat-spent">0 đ</p>
                 </div>
             </div>
+        </div>
+
+        <div class="card workflow-card">
+            <div class="workflow-header">
+                <h2>Tiến trình thuê xe EV</h2>
+                <p>Kiểm tra và cập nhật trạng thái từng bước.</p>
+            </div>
+            <div id="workflow-list" class="workflow-list"></div>
         </div>
 
         <div class="profile-actions">
@@ -274,6 +260,79 @@
         }
 
         loadDocumentImages(state);
+    }
+
+    const workflowSteps = [
+        { key: 'checkin', section: '1c. Nhận xe', title: 'Check-in nhận xe', detail: 'Quét mã QR tại xe/trạm hoặc check-in qua app.' },
+        { key: 'contract', section: '1c. Nhận xe', title: 'Ký hợp đồng điện tử', detail: 'Xem và nhấn nút "Ký/Đồng ý" các điều khoản thuê xe.' },
+        { key: 'handover', section: '1c. Nhận xe', title: 'Xác nhận bàn giao', detail: 'Xác nhận tình trạng xe (vỏ, pin) khớp với thực tế nhân viên giao.' },
+        { key: 'returning', section: '1d. Trả xe', title: 'Yêu cầu trả xe', detail: 'Định vị đúng điểm trả xe quy định mới cho phép bấm trả.' },
+        { key: 'payment', section: '1d. Trả xe', title: 'Thanh toán', detail: 'Hiển thị tổng tiền, cổng thanh toán online hoặc xác nhận tiền mặt.' }
+    ];
+
+    const workflowOptions = [
+        { value: 'Pending', label: 'Chưa làm', badge: 'badge-pending' },
+        { value: 'InProgress', label: 'Đang thực hiện', badge: 'badge-progress' },
+        { value: 'Done', label: 'Hoàn thành', badge: 'badge-done' }
+    ];
+
+    function renderWorkflow(data) {
+        const list = document.getElementById('workflow-list');
+        list.innerHTML = '';
+
+        workflowSteps.forEach(step => {
+            const current = data?.[step.key] || 'Pending';
+            const badge = workflowOptions.find(o => o.value === current)?.badge || 'badge-pending';
+            const label = workflowOptions.find(o => o.value === current)?.label || 'Chưa làm';
+
+            const row = document.createElement('div');
+            row.className = 'workflow-item';
+            row.innerHTML = `
+                <div class="workflow-icon"><i class="fas fa-flag"></i></div>
+                <div class="workflow-body">
+                    <div class="workflow-meta">${step.section}</div>
+                    <div class="workflow-title">${step.title}</div>
+                    <div class="workflow-detail">${step.detail}</div>
+                </div>
+                <div class="workflow-actions">
+                    <select class="status-select" data-key="${step.key}">
+                        ${workflowOptions.map(o => `<option value="${o.value}" ${o.value === current ? 'selected' : ''}>${o.label}</option>`).join('')}
+                    </select>
+                    <span class="workflow-status ${badge}">${label}</span>
+                </div>
+            `;
+            list.appendChild(row);
+        });
+
+        list.querySelectorAll('.status-select').forEach(sel => {
+            sel.addEventListener('change', async (e) => {
+                const key = e.target.getAttribute('data-key');
+                const status = e.target.value;
+                try {
+                    const res = await fetch(`/api/renter/workflow/${key}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `status=${encodeURIComponent(status)}`
+                    });
+                    if (!res.ok) throw new Error();
+                    await loadWorkflow();
+                } catch (err) {
+                    alert('Không cập nhật được trạng thái, thử lại sau.');
+                    await loadWorkflow();
+                }
+            });
+        });
+    }
+
+    async function loadWorkflow() {
+        try {
+            const res = await fetch('/api/renter/workflow');
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            renderWorkflow(data);
+        } catch (e) {
+            document.getElementById('workflow-list').innerHTML = '<div class="workflow-item">Không tải được tiến trình.</div>';
+        }
     }
 
     async function refreshDocs() {
@@ -406,6 +465,7 @@
     loadStats();
     renderWorkflow();
     refreshDocs();
+    loadWorkflow();
 </script>
 
 <script src="/js/station-search.js"></script>
