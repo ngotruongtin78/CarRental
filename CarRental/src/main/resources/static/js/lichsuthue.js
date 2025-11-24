@@ -36,6 +36,25 @@ function isCompleted(record) {
     return ["COMPLETED", "RETURNED"].includes(status);
 }
 
+function canContinuePayment(record) {
+    if (!record) return false;
+    if (isCancelled(record) || isCompleted(record)) return false;
+
+    const statusUpper = (record.status || "").toUpperCase();
+    const paymentStatus = (record.paymentStatus || "").toUpperCase();
+
+    const hasPendingPayment =
+        statusUpper === "PENDING_PAYMENT" ||
+        paymentStatus === "PENDING" ||
+        !record.paymentMethod;
+
+    if (!hasPendingPayment) return false;
+
+    if (!record.holdExpiresAt) return true;
+    const holdExpiry = new Date(record.holdExpiresAt);
+    return !isNaN(holdExpiry.getTime()) && holdExpiry > new Date();
+}
+
 function renderHistoryItem(item) {
     const record = item.record || {};
     const vehicle = item.vehicle;
@@ -423,6 +442,30 @@ function openRentalModal(item) {
         buildDetailSection("Trạm thuê", stationRows),
         notes.length ? `<div class="modal-section">${notes.join("")}</div>` : "",
     ].join("");
+
+    if (canContinuePayment(record)) {
+        const paymentSection = document.createElement("div");
+        paymentSection.className = "modal-section payment-action";
+        paymentSection.innerHTML = `
+            <div class="payment-callout">
+                <div class="payment-text">
+                    <h4>Chưa hoàn tất thanh toán</h4>
+                    <p>${record.holdExpiresAt
+                        ? `Giữ chỗ tới: ${formatDateTime(record.holdExpiresAt)}`
+                        : "Bạn có thể chọn phương thức thanh toán để tiếp tục giữ xe."}</p>
+                </div>
+                <button type="button" class="btn-continue-payment">
+                    <i class="fas fa-credit-card"></i> Thanh toán ngay
+                </button>
+            </div>
+        `;
+
+        paymentSection.querySelector(".btn-continue-payment")?.addEventListener("click", () => {
+            window.location.href = `/thanhtoan?rentalId=${encodeURIComponent(record.id)}`;
+        });
+
+        rentalModal.body.appendChild(paymentSection);
+    }
 
     rentalModal.el.classList.add("show");
 }
