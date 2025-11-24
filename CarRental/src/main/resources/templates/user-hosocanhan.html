@@ -73,6 +73,24 @@
                 </div>
             </div>
 
+            <div class="document-preview-section">
+                <h3>Giấy tờ đã tải lên</h3>
+                <div class="doc-preview-grid">
+                    <div class="doc-preview" id="preview-license">
+                        <div class="doc-preview-empty">
+                            <i class="fas fa-id-card"></i>
+                            <p>Chưa có GPLX</p>
+                        </div>
+                    </div>
+                    <div class="doc-preview" id="preview-idcard">
+                        <div class="doc-preview-empty">
+                            <i class="fas fa-address-card"></i>
+                            <p>Chưa có CCCD</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="verification-box">
                 <p id="verification-status" class="verification-text">Đang kiểm tra trạng thái xác thực...</p>
                 <button id="btn-request-verification" class="doc-button secondary">Yêu cầu xác thực nhanh tại quầy</button>
@@ -177,6 +195,7 @@
             if (!res.ok) return;
             const data = await res.json();
             applyDocState(data);
+            loadUploadedDocs();
         } catch (e) {
             console.error("Không tải được trạng thái giấy tờ", e);
         }
@@ -214,12 +233,45 @@
             if (res.ok) {
                 alert("Tải lên thành công!");
                 refreshDocs();
+                loadUploadedDocs();
             } else {
                 const msg = await res.text();
                 alert(msg || "Tải lên thất bại, vui lòng thử lại.");
             }
         };
         input.click();
+    }
+
+    function setDocPreview(targetId, dataUri, label) {
+        const container = document.getElementById(targetId);
+        if (!container) return;
+
+        if (dataUri) {
+            container.innerHTML = `
+                <div class="doc-preview-image">
+                    <img src="${dataUri}" alt="${label} đã tải lên" />
+                </div>
+                <div class="doc-preview-label">${label}</div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="doc-preview-empty">
+                    <i class="fas fa-image"></i>
+                    <p>Chưa có ${label}</p>
+                </div>`;
+        }
+    }
+
+    async function loadUploadedDocs() {
+        try {
+            const res = await fetch("/api/renter/documents");
+            if (!res.ok) return;
+            const data = await res.json();
+            setDocPreview("preview-license", data.licenseData, "GPLX");
+            setDocPreview("preview-idcard", data.idCardData, "CCCD");
+        } catch (e) {
+            console.error("Không thể tải hình ảnh giấy tờ", e);
+        }
     }
 
     document.getElementById("btn-license").onclick = () => upload("license");
@@ -229,6 +281,7 @@
     loadProfile();
     loadStats();
     refreshDocs();
+    loadUploadedDocs();
 </script>
 
 <script src="/js/station-search.js"></script>
