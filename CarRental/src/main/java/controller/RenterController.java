@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.Base64;
@@ -50,12 +51,12 @@ public class RenterController {
     }
 
     private Map<String, Object> buildDocumentPayload(User user) {
-        return Map.of(
-                "licenseData", toDataUri(user.getLicenseData()),
-                "idCardData", toDataUri(user.getIdCardData()),
-                "licenseUploaded", user.getLicenseData() != null,
-                "idCardUploaded", user.getIdCardData() != null
-        );
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("licenseData", toDataUri(user.getLicenseData()));
+        payload.put("idCardData", toDataUri(user.getIdCardData()));
+        payload.put("licenseUploaded", user.getLicenseData() != null);
+        payload.put("idCardUploaded", user.getIdCardData() != null);
+        return payload;
     }
 
     private ResponseEntity<?> storeDocument(MultipartFile file, Consumer<User> setter) {
