@@ -244,6 +244,9 @@ public class RentalController {
             payload.put("paymentStatus", record.getPaymentStatus());
             payload.put("status", record.getStatus());
             payload.put("holdExpiresAt", record.getHoldExpiresAt());
+            payload.put("depositRequiredAmount", record.getDepositRequiredAmount());
+            payload.put("depositPaidAmount", record.getDepositPaidAmount());
+            payload.put("depositPaidAt", record.getDepositPaidAt());
 
             if (vehicle != null) {
                 payload.put("vehicle", vehicle);
@@ -300,29 +303,41 @@ public class RentalController {
 
         record.setTotal(calculatedTotal);
         record.setPaymentMethod(paymentMethod);
-        record.setPaymentStatus(paymentMethod.equals("cash") ? "PAY_AT_STATION" : "BANK_TRANSFER");
+        record.setStatus("PENDING_PAYMENT");
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("rentalDays", rentalDays);
 
         record.setStatus("PENDING_PAYMENT");
 
         if (paymentMethod.equals("cash")) {
-            LocalDate holdStart = Optional.ofNullable(record.getStartDate()).orElse(LocalDate.now());
-            LocalDateTime holdUntil = holdStart.atStartOfDay().plusDays(1);
-            if (holdUntil.isBefore(LocalDateTime.now())) {
-                holdUntil = LocalDateTime.now().plusDays(1);
-            }
+            double deposit = Math.round(calculatedTotal * 0.3 * 100.0) / 100.0;
+            record.setDepositRequiredAmount(deposit);
+            record.setDepositPaidAmount(Optional.ofNullable(record.getDepositPaidAmount()).orElse(0.0));
+            record.setPaymentStatus("DEPOSIT_PENDING");
+
+            LocalDateTime holdUntil = LocalDateTime.now().plusMinutes(15);
             record.setHoldExpiresAt(holdUntil);
             rentalRepo.save(record);
             vehicleService.markPendingPaymentHidden(record.getVehicleId(), rentalId);
-        } else {
-            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
-            rentalRepo.save(record);
-            vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
+
+            response.put("depositRequired", deposit);
+            response.put("depositPending", true);
+            response.put("paymentStatus", record.getPaymentStatus());
+            response.put("paymentMethod", paymentMethod);
+            response.put("total", calculatedTotal);
+            return ResponseEntity.ok(response);
         }
-        Map<String, Object> response = new LinkedHashMap<>();
+
+        record.setPaymentStatus("BANK_TRANSFER");
+        record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
+        rentalRepo.save(record);
+        vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
+
         response.put("paymentStatus", record.getPaymentStatus());
         response.put("total", calculatedTotal);
-        response.put("rentalDays", rentalDays);
         response.put("paymentMethod", paymentMethod);
+        response.put("depositPending", false);
         return ResponseEntity.ok(response);
     }
 

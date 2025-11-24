@@ -29,6 +29,10 @@ public class RentalRecord {
     private double total;
     private double damageFee;
 
+    private Double depositRequiredAmount;
+    private Double depositPaidAmount;
+    private LocalDateTime depositPaidAt;
+
     private String paymentMethod;
     private String status;
     private String paymentStatus;
@@ -108,6 +112,15 @@ public class RentalRecord {
 
     public double getDamageFee() { return damageFee; }
     public void setDamageFee(double damageFee) { this.damageFee = damageFee; }
+
+    public Double getDepositRequiredAmount() { return depositRequiredAmount; }
+    public void setDepositRequiredAmount(Double depositRequiredAmount) { this.depositRequiredAmount = depositRequiredAmount; }
+
+    public Double getDepositPaidAmount() { return depositPaidAmount; }
+    public void setDepositPaidAmount(Double depositPaidAmount) { this.depositPaidAmount = depositPaidAmount; }
+
+    public LocalDateTime getDepositPaidAt() { return depositPaidAt; }
+    public void setDepositPaidAt(LocalDateTime depositPaidAt) { this.depositPaidAt = depositPaidAt; }
 
     public String getPaymentMethod() { return paymentMethod; }
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
