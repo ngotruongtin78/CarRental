@@ -65,6 +65,56 @@ public class SepayWebhookHandler {
             return ResponseEntity.ok("RENTAL_NOT_FOUND");
         }
 
+        double incomingAmount = 0;
+        try {
+            incomingAmount = Double.parseDouble(data.getAmount());
+        } catch (Exception ignored) {}
+
+        if ("cash".equalsIgnoreCase(record.getPaymentMethod())) {
+            double depositPaid = record.getDepositPaidAmount() != null ? record.getDepositPaidAmount() : 0.0;
+            double newPaid = depositPaid + incomingAmount;
+            record.setDepositPaidAmount(newPaid);
+            record.setWalletReference(data.getTranId());
+
+            double depositRequired = record.getDepositRequiredAmount() != null
+                    ? record.getDepositRequiredAmount()
+                    : Math.round(record.getTotal() * 0.3 * 100.0) / 100.0;
+
+            if (newPaid >= record.getTotal()) {
+                record.setPaymentStatus("PAID");
+                record.setStatus("PAID");
+                record.setPaidAt(java.time.LocalDateTime.now());
+                record.setHoldExpiresAt(null);
+                rentalRepo.save(record);
+                try {
+                    vehicleService.markRented(record.getVehicleId(), rentalId);
+                } catch (Exception e) {
+                    log.error("Lỗi cập nhật xe: {}", e.getMessage());
+                }
+                log.info("Đơn {} đã thanh toán đủ qua chuyển khoản", rentalId);
+                return ResponseEntity.ok("OK");
+            }
+
+            if (newPaid >= depositRequired) {
+                record.setPaymentStatus("PAY_AT_STATION");
+                record.setStatus("ACTIVE");
+                java.time.LocalDate holdStart = record.getStartDate() != null
+                        ? record.getStartDate()
+                        : java.time.LocalDate.now();
+                java.time.LocalDateTime holdUntil = holdStart.atStartOfDay().plusDays(1);
+                if (holdUntil.isBefore(java.time.LocalDateTime.now())) {
+                    holdUntil = java.time.LocalDateTime.now().plusDays(1);
+                }
+                record.setHoldExpiresAt(holdUntil);
+            } else {
+                record.setPaymentStatus("DEPOSIT_PENDING");
+            }
+
+            rentalRepo.save(record);
+            log.info("Đơn {} đã ghi nhận đặt cọc {} qua chuyển khoản", rentalId, incomingAmount);
+            return ResponseEntity.ok("OK");
+        }
+
         if ("PAID".equalsIgnoreCase(record.getPaymentStatus())) {
             log.info("Đơn {} đã thanh toán trước đó -> bỏ qua webhook", rentalId);
             return ResponseEntity.ok("ALREADY_PAID");

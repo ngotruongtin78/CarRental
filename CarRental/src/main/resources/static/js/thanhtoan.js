@@ -209,7 +209,7 @@ async function confirmPayment() {
     // ==============================
     // SEPAY
     // ==============================
-    if (method === "bank_transfer") {
+    if (method === "bank_transfer" || data?.depositPending === true) {
         const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}`, {
             method: "POST"
         });
@@ -230,6 +230,9 @@ async function confirmPayment() {
         document.getElementById("qrOrder").innerText = rentalId;
 
         document.getElementById("qrModal").style.display = "flex";
+        if (method === "cash") {
+            alert("Vui lòng chuyển khoản 30% đặt cọc để giữ xe. Phần còn lại sẽ thanh toán tại trạm.");
+        }
         return;
     }
 

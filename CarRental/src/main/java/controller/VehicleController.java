@@ -52,7 +52,10 @@ public class VehicleController {
     @GetMapping("/station/{stationId}")
     public List<Vehicle> getByStation(@PathVariable("stationId") String stationId) {
         releaseExpiredHolds(stationId);
-        return repo.findByStationIdAndBookingStatusNot(stationId, "RENTED");
+        return repo.findByStationIdAndAvailable(stationId, true)
+                .stream()
+                .filter(v -> !"RENTED".equalsIgnoreCase(v.getBookingStatus()))
+                .toList();
     }
 
     @GetMapping("/station/{stationId}/staff-station")

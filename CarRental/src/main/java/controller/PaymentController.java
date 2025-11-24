@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -99,10 +100,6 @@ public class PaymentController {
                     .body("Đơn đặt đã hết hạn thanh toán. Vui lòng đặt xe lại.");
         }
 
-        if ("PAID".equalsIgnoreCase(record.getPaymentStatus())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Chuyến thuê đã thanh toán");
-        }
-
         Vehicle vehicle = vehicleRepository.findById(record.getVehicleId()).orElse(null);
         if (vehicle == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Xe không tồn tại");
@@ -119,15 +116,40 @@ public class PaymentController {
 
         double amount = record.getTotal() > 0 ? record.getTotal() : rentalDays * vehicle.getPrice();
         record.setTotal(amount);
-        record.setPaymentMethod("bank_transfer");
-        record.setPaymentStatus("PENDING");
-        record.setStatus("PENDING_PAYMENT");
-        record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
+        if (!"cash".equalsIgnoreCase(record.getPaymentMethod())) {
+            record.setPaymentMethod("bank_transfer");
+        }
+
+        double depositPaid = Optional.ofNullable(record.getDepositPaidAmount()).orElse(0.0);
+        boolean cashFlow = "cash".equalsIgnoreCase(record.getPaymentMethod());
+        double depositRequired = cashFlow
+                ? Optional.ofNullable(record.getDepositRequiredAmount()).orElse(Math.round(amount * 0.3 * 100.0) / 100.0)
+                : 0.0;
+
+        double amountToCollect;
+        if (cashFlow && (record.getPaymentStatus() == null || record.getPaymentStatus().equalsIgnoreCase("DEPOSIT_PENDING"))
+                && depositPaid < depositRequired) {
+            record.setPaymentStatus("DEPOSIT_PENDING");
+            record.setStatus("PENDING_PAYMENT");
+            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(15));
+            amountToCollect = depositRequired - depositPaid;
+            record.setDepositRequiredAmount(depositRequired);
+        } else {
+            amountToCollect = Math.max(0, amount - depositPaid);
+            record.setPaymentStatus("PENDING");
+            record.setStatus("PENDING_PAYMENT");
+            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
+        }
+
+        if (amountToCollect <= 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Không còn khoản cần thanh toán");
+        }
+
         rentalRepo.save(record);
         vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
 
         // ==== TẠO QR ====
-        int amountInt = (int) Math.round(amount);
+        int amountInt = (int) Math.round(amountToCollect);
         String qrUrl = qrService.generateQrUrl(rentalId, amountInt);
 
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -182,17 +204,52 @@ public class PaymentController {
                 return redirectView;
             }
 
-            record.setPaymentStatus("PAID");
+            double paidAmount = 0;
             if (amount != null) {
                 try {
-                    record.setTotal(Double.parseDouble(amount));
+                    paidAmount = Double.parseDouble(amount);
                 } catch (NumberFormatException ignored) {}
             }
-            record.setPaidAt(LocalDateTime.now());
-            record.setStatus("PAID");
-            record.setHoldExpiresAt(null);
-            rentalRepo.save(record);
-            vehicleService.markRented(record.getVehicleId(), rentalId);
+
+            if ("cash".equalsIgnoreCase(record.getPaymentMethod())) {
+                double depositPaid = Optional.ofNullable(record.getDepositPaidAmount()).orElse(0.0);
+                double newPaid = depositPaid + paidAmount;
+                record.setDepositPaidAmount(newPaid);
+                double depositRequired = Optional.ofNullable(record.getDepositRequiredAmount())
+                        .orElse(Math.round(record.getTotal() * 0.3 * 100.0) / 100.0);
+
+                if (newPaid >= record.getTotal()) {
+                    record.setPaymentStatus("PAID");
+                    record.setStatus("PAID");
+                    record.setHoldExpiresAt(null);
+                    record.setPaidAt(LocalDateTime.now());
+                    rentalRepo.save(record);
+                    vehicleService.markRented(record.getVehicleId(), rentalId);
+                } else if (newPaid >= depositRequired) {
+                    record.setPaymentStatus("PAY_AT_STATION");
+                    record.setStatus("ACTIVE");
+                    LocalDate holdStart = Optional.ofNullable(record.getStartDate()).orElse(LocalDate.now());
+                    LocalDateTime holdUntil = holdStart.atStartOfDay().plusDays(1);
+                    if (holdUntil.isBefore(LocalDateTime.now())) {
+                        holdUntil = LocalDateTime.now().plusDays(1);
+                    }
+                    record.setHoldExpiresAt(holdUntil);
+                    rentalRepo.save(record);
+                } else {
+                    record.setPaymentStatus("DEPOSIT_PENDING");
+                    rentalRepo.save(record);
+                }
+            } else {
+                record.setPaymentStatus("PAID");
+                if (paidAmount > 0) {
+                    record.setTotal(paidAmount);
+                }
+                record.setPaidAt(LocalDateTime.now());
+                record.setStatus("PAID");
+                record.setHoldExpiresAt(null);
+                rentalRepo.save(record);
+                vehicleService.markRented(record.getVehicleId(), rentalId);
+            }
         }
 
         RedirectView redirectView = new RedirectView("/thanhtoan?rentalId=" + rentalId + "&success=1");
