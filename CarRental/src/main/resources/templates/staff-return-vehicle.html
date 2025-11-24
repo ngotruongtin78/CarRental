@@ -11,10 +11,15 @@
     <nav class="sidebar-staff">
         <div class="logo">⚡️ EV Station</div>
         <ul>
-            <li><a href="#">Bảng điều khiển</a></li>
+            <li><a href="/staff/station-grid">Bảng điều khiển</a></li>
             <li><a th:href="@{/staff/station-grid}">Quản lý xe</a></li>
+<<<<<<< HEAD
             <li><a th:href="@{/staff/receive}" class="active">Nhận xe</a></li>
+            <li><a th:href="@{/staff/handover}">Giao xe</a></li>
+=======
+            <li><a th:href="@{/staff/return}" class="active">Nhận xe</a></li>
             <li><a th:href="@{/staff/deliver}">Giao xe</a></li>
+>>>>>>> 65ce1cb606ecf916422b1e246f701b17f28dfa6e
             <li><a th:href="@{/staff/verify}">Xác thực</a></li>
             <li><a th:href="@{/staff/vehicle-reports}">Báo cáo sự cố</a></li>
             <li><a th:href="@{/logout}">Đăng xuất</a></li>
@@ -23,91 +28,131 @@
 
     <div class="main-content-staff">
         <header class="content-header-staff">
-            <div class="header-title">Nhận xe (Trả xe)</div>
-            <div class="header-vehicle-info" id="vehicle-plate">51A-123.45</div>
+            <div class="header-title">Nhận xe</div>
         </header>
 
         <main class="content-body-staff">
-            <form id="return-form">
-                <section class="process-section">
-                    <h2>1. Tình trạng xe (Lúc trả)</h2>
-                    <div class="customer-info">
-                        Khách hàng: <span id="customer-name">Lê Trọng Phúc</span> |
-                        Thời gian thuê: <span id="rental-time">3 giờ 15 phút</span>
+
+            <!-- Section Tìm kiếm -->
+            <div class="deliver-search-section">
+                <div class="search-row">
+                    <div class="search-group">
+                        <label for="searchPlate">Tìm kiếm theo biển số:</label>
+                        <input type="text" id="searchPlate" class="search-input" placeholder="Nhập biển số...">
                     </div>
-
-                    <div class="button-group">
-                        <button type="button" class="btn btn-secondary">Xem ảnh gốc (Lúc giao)</button>
-                        <button type="button" id="take-photo-btn" class="btn btn-primary">Chụp ảnh hiện tại</button>
+                    <div class="search-group">
+                        <label for="searchCustomer">Tìm kiếm theo tên:</label>
+                        <input type="text" id="searchCustomer" class="search-input" placeholder="Nhập tên khách hàng...">
                     </div>
+                </div>
+            </div>
 
-                    <input type="file" id="photo-input" multiple accept="image/*" style="display:none;">
-
-                    <div class="toggle-group">
-                        <span>Có hư hỏng / vệ sinh mới?</span>
-                        <label class="switch">
-                            <input type="checkbox" id="has-damage-toggle">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="photo-uploads" id="photo-preview-container">
-                    </div>
-                </section>
-
-                <section class="process-section">
-                    <h2>2. Thanh toán & Hoàn tất</h2>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Phí thuê (Tạm tính)</label>
-                            <input type="text" id="rental-fee" value="120.000đ" disabled>
-                        </div>
-                        <div class="form-group">
-                            <label for="damage-fee">Phí bồi thường (Nếu có)</label>
-                            <input type="number" id="damage-fee" name="damageFee" value="40000" placeholder="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Tổng cộng</label>
-                            <input type="text" id="total-fee" value="160.000đ" disabled>
-                        </div>
-                        <div class="form-group">
-                            <label for="incident-code">Mã sự cố/ Ghi chú</label>
-                            <input type="text" id="incident-code" name="notes" placeholder="Ghi chú (v.d: xước cửa...)">
-                        </div>
-                        <div class="form-group">
-                            <label>Đã đặt cọc</label>
-                            <input type="text" id="deposit-fee" value="0đ" disabled>
-                        </div>
-                        <div class="form-group">
-                            <div class="toggle-group" style="margin-top: 30px;">
-                                <span>Áp dụng ưu đãi?</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="discount-toggle">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="total-payment" id="final-payment">
-                        KHÁCH CẦN THANH TOÁN: 160.000đ
-                    </div>
-                </section>
-
-                <section class="process-section">
-                    <h2>3. Chữ ký xác nhận</h2>
-                    <p>Khách hàng và nhân viên vui lòng ký xác nhận đã đồng ý với các chi phí và tình trạng xe.</p>
-                    <canvas id="signature-pad"></canvas>
-                    <button type="button" id="clear-signature" class="btn btn-secondary" style="margin-top:10px;">Xóa chữ ký</button>
-                </section>
-
-                <button type="submit" class="btn btn-primary final-submit">HOÀN TẤT NHẬN XE</button>
-            </form>
+            <!-- Bảng danh sách trả xe -->
+            <div class="deliver-table-section">
+                <table class="deliver-table">
+                    <thead>
+                        <tr>
+                            <th>Biển số xe</th>
+                            <th>Loại xe</th>
+                            <th>Tên người thuê</th>
+                            <th>Ngày thuê</th>
+                            <th>Trạng thái thanh toán</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="returnTableBody">
+                        <!-- Dữ liệu sẽ được tải từ API -->
+                    </tbody>
+                </table>
+            </div>
         </main>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+<!-- Modal Trả xe -->
+<div id="returnModal" class="modal">
+    <div class="modal-content deliver-modal-content">
+        <div class="modal-header deliver-modal-header">
+            <h2>Chi tiết hợp đồng</h2>
+            <button type="button" class="close-btn" onclick="closeReturnModal()">&times;</button>
+        </div>
+        <div class="modal-body deliver-modal-body">
+            <!-- Phần 1: Thông tin xe và khách hàng -->
+            <div class="modal-section">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Biển số xe:</label>
+                        <input type="text" id="returnPlate" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Loại xe:</label>
+                        <input type="text" id="returnVehicleType" disabled>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tên người thuê:</label>
+                    <input type="text" id="returnCustomer" disabled>
+                </div>
+            </div>
+
+            <!-- Phần 2: Thông tin thuê xe -->
+            <div class="modal-section">
+                <h3 class="modal-section-title">📅 Thông tin thuê xe</h3>
+                <div class="form-grid-3">
+                    <div class="form-group">
+                        <label>Ngày bắt đầu:</label>
+                        <input type="text" id="returnStartDate" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Ngày kết thúc:</label>
+                        <input type="text" id="returnEndDate" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Số ngày:</label>
+                        <input type="text" id="returnRentalDays" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phần 3: Thông tin thanh toán -->
+            <div class="modal-section">
+                <h3 class="modal-section-title">💳 Thông tin thanh toán</h3>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Tổng tiền:</label>
+                        <input type="text" id="returnTotal" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Trạng thái TT:</label>
+                        <input type="text" id="returnPaymentStatus" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phần 4: Phí hư hỏng & ghi chú -->
+            <div class="modal-section">
+                <h3 class="modal-section-title">💸 Phí hư hỏng & ghi chú</h3>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Phí hư hỏng:</label>
+                        <input type="number" id="returnDamageFee" min="0" step="0.01" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Ghi chú:</label>
+                        <input type="text" id="returnNote" placeholder="Ghi chú (tùy chọn)">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeReturnModal()">Hủy</button>
+            <button type="button" class="btn btn-primary" onclick="confirmReturn()">Xác nhận trả</button>
+        </div>
+    </div>
+</div>
+
 <script th:src="@{/js/staff-return-vehicle.js}"></script>
 
 </body>
 </html>
+

@@ -40,6 +40,9 @@ public class RentalRecord {
     
     private String walletReference;
 
+    // Ảnh báo cáo sự cố (lưu base64 hoặc binary data)
+    private byte[] deliveryPhotoData;
+
     public RentalRecord() {
     }
 
@@ -127,5 +130,13 @@ public class RentalRecord {
 
     public void setWalletReference(String walletReference) {
         this.walletReference = walletReference;
+    }
+
+    public byte[] getDeliveryPhotoData() {
+        return deliveryPhotoData;
+    }
+
+    public void setDeliveryPhotoData(byte[] deliveryPhotoData) {
+        this.deliveryPhotoData = deliveryPhotoData;
     }
 }

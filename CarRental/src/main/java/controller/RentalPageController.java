@@ -2,6 +2,7 @@ package CarRental.example.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @Controller
 public class RentalPageController {
@@ -16,9 +17,5 @@ public class RentalPageController {
         return "thanhtoan";
     }
 
-    @GetMapping("/staff/vehicle-reports")
-    public String vehicleReportsPage() {
-        return "vehicle-reports";
-    }
 
 }

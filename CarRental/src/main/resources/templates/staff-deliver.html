@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Giao xe</title>
+    <link rel="stylesheet" th:href="@{/css/staff.css}">
+</head>
+<body>
+
+<div class="staff-container">
+    <nav class="sidebar-staff">
+        <div class="logo">⚡️ EV Station</div>
+        <ul>
+            <li><a href="#">Bảng điều khiển</a></li>
+            <li><a th:href="@{/staff/station-grid}">Quản lý xe</a></li>
+            <li><a th:href="@{/staff/return}">Nhận xe</a></li>
+            <li><a th:href="@{/staff/deliver}" class="active">Giao xe</a></li>
+            <li><a th:href="@{/staff/verify}">Xác thực</a></li>
+            <li><a th:href="@{/staff/vehicle-reports}">Báo cáo sự cố</a></li>
+            <li><a th:href="@{/logout}">Đăng xuất</a></li>
+        </ul>
+    </nav>
+
+    <div class="main-content-staff">
+        <header class="content-header-staff">
+            <div class="header-title">Giao xe</div>
+        </header>
+
+        <main class="content-body-staff">
+
+            <!-- Section Tìm kiếm -->
+            <div class="deliver-search-section">
+                <div class="search-row">
+                    <div class="search-group">
+                        <label for="searchPlate">Tìm kiếm theo biển số:</label>
+                        <input type="text" id="searchPlate" class="search-input" placeholder="Nhập biển số...">
+                    </div>
+                    <div class="search-group">
+                        <label for="searchCustomer">Tìm kiếm theo tên:</label>
+                        <input type="text" id="searchCustomer" class="search-input" placeholder="Nhập tên khách hàng...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bảng danh sách giao xe -->
+            <div class="deliver-table-section">
+                <table class="deliver-table">
+                    <thead>
+                        <tr>
+                            <th>Biển số xe</th>
+                            <th>Loại xe</th>
+                            <th>Tên người thuê</th>
+                            <th>Ngày thuê</th>
+                            <th>Trạng thái thanh toán</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deliveryTableBody">
+                        <!-- Dữ liệu sẽ được tải từ API -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Modal Giao xe -->
+<div id="deliverModal" class="modal">
+    <div class="modal-content deliver-modal-content">
+        <div class="modal-header deliver-modal-header">
+            <h2>Chi tiết hợp đồng</h2>
+            <button type="button" class="close-btn" onclick="closeDeliverModal()">&times;</button>
+        </div>
+        <div class="modal-body deliver-modal-body">
+            <!-- Phần 1: Thông tin xe và khách hàng -->
+            <div class="modal-section">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Biển số xe:</label>
+                        <input type="text" id="deliverPlate" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Loại xe:</label>
+                        <input type="text" id="deliverVehicleType" disabled>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tên người thuê:</label>
+                    <input type="text" id="deliverCustomer" disabled>
+                </div>
+            </div>
+
+            <!-- Phần 2: Thông tin thuê xe -->
+            <div class="modal-section">
+                <h3 class="modal-section-title">📅 Thông tin thuê xe</h3>
+                <div class="form-grid-3">
+                    <div class="form-group">
+                        <label>Ngày bắt đầu:</label>
+                        <input type="text" id="deliverStartDate" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Ngày kết thúc:</label>
+                        <input type="text" id="deliverEndDate" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Số ngày:</label>
+                        <input type="text" id="deliverRentalDays" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phần 3: Thông tin thanh toán -->
+            <div class="modal-section">
+                <h3 class="modal-section-title">💳 Thông tin thanh toán</h3>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Tổng tiền:</label>
+                        <input type="text" id="deliverTotal" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Trạng thái TT:</label>
+                        <input type="text" id="deliverPaymentStatus" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phần 4: Chụp hình giao xe -->
+            <div class="modal-section">
+                <h3 class="modal-section-title">📸 Chụp hình giao xe</h3>
+                <div style="border: 2px dashed #ccc; border-radius: 6px; padding: 15px; text-align: center; background-color: #f9f9f9;">
+                    <!-- Video từ camera -->
+                    <video id="deliveryVideoStream" autoplay playsinline style="width: 100%; max-height: 250px; border-radius: 6px; display: none; background-color: #000;"></video>
+
+                    <!-- Canvas để chụp ảnh -->
+                    <canvas id="deliveryPhotoCanvas" style="display: none;"></canvas>
+
+                    <!-- Preview ảnh sau khi chụp -->
+                    <div id="deliveryPhotoPreview" style="display: none;">
+                        <img id="deliveryPreviewImg" src="" style="max-width: 100%; max-height: 200px; border-radius: 4px;">
+                        <p id="deliveryPhotoFileName" style="font-size: 12px; color: #666; margin-top: 5px;"></p>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div id="deliveryCameraControls">
+                        <button type="button" class="btn btn-small btn-small-primary" onclick="startDeliveryCamera()" style="width: auto; padding: 10px 20px; border: none; border-radius: 6px; background-color: #3498db; color: white; cursor: pointer; font-weight: 600; margin: 5px;">
+                            📷 Mở Camera
+                        </button>
+                    </div>
+
+                    <!-- Capture & Retake buttons (hiển thị khi camera đang bật) -->
+                    <div id="deliveryCaptureControls" style="display: none;">
+                        <button type="button" class="btn btn-small" onclick="captureDeliveryPhoto()" style="width: auto; padding: 10px 20px; border: none; border-radius: 6px; background-color: #2ecc71; color: white; cursor: pointer; font-weight: 600; margin: 5px;">
+                            📸 Chụp Ảnh
+                        </button>
+                        <button type="button" class="btn btn-small" onclick="closeDeliveryCamera()" style="width: auto; padding: 10px 20px; border: none; border-radius: 6px; background-color: #e74c3c; color: white; cursor: pointer; font-weight: 600; margin: 5px;">
+                            ✕ Đóng Camera
+                        </button>
+                    </div>
+
+                    <!-- Retake button (hiển thị khi đã chụp xong) -->
+                    <div id="deliveryRetakeControls" style="display: none;">
+                        <button type="button" class="btn btn-small" onclick="resetDeliveryPhoto()" style="width: auto; padding: 10px 20px; border: none; border-radius: 6px; background-color: #f39c12; color: white; cursor: pointer; font-weight: 600; margin: 5px;">
+                            🔄 Chụp Lại
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phần 5: Ghi chú -->
+            <div class="modal-section">
+                <h3 class="modal-section-title">📝 Ghi chú giao xe</h3>
+                <div class="form-group">
+                    <label>Ghi chú:</label>
+                    <textarea id="deliverNote" placeholder="Nhập ghi chú (tùy chọn)..." rows="3"></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeDeliverModal()">Hủy</button>
+            <button type="button" class="btn btn-primary" onclick="confirmDeliver()">Xác nhận giao</button>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/staff-deliver.js}"></script>
+
+</body>
+</html>
+

@@ -28,12 +28,6 @@ public class User {
 
     private boolean risk = false;
 
-    private String checkinStatus = "Pending";
-    private String contractStatus = "Pending";
-    private String handoverStatus = "Pending";
-    private String returnStatus = "Pending";
-    private String paymentStatus = "Pending";
-
     private Date updatedAt = new Date();
 
     public String getId() { return id; }
@@ -65,21 +59,6 @@ public class User {
 
     public boolean isRisk() { return risk; }
     public void setRisk(boolean risk) { this.risk = risk; }
-
-    public String getCheckinStatus() { return checkinStatus; }
-    public void setCheckinStatus(String checkinStatus) { this.checkinStatus = checkinStatus; }
-
-    public String getContractStatus() { return contractStatus; }
-    public void setContractStatus(String contractStatus) { this.contractStatus = contractStatus; }
-
-    public String getHandoverStatus() { return handoverStatus; }
-    public void setHandoverStatus(String handoverStatus) { this.handoverStatus = handoverStatus; }
-
-    public String getReturnStatus() { return returnStatus; }
-    public void setReturnStatus(String returnStatus) { this.returnStatus = returnStatus; }
-
-    public String getPaymentStatus() { return paymentStatus; }
-    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
 
     public Date getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Date updatedAt) { this.updatedAt = updatedAt; }

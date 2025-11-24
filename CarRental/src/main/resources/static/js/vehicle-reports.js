@@ -206,11 +206,54 @@ document.addEventListener("DOMContentLoaded", function() {
                 <label>Ghi chú / Kết quả sửa chữa:</label>
                 <textarea id="notesInput" rows="4" placeholder="Nhập ghi chú hoặc kết quả sửa chữa...">${report.notes || ''}</textarea>
             </div>
+            <div class="form-group">
+                <label>📸 Chụp hình báo cáo:</label>
+                <div style="border: 2px dashed #ccc; border-radius: 6px; padding: 15px; text-align: center; background-color: #f9f9f9;">
+                    <input type="file" id="photoInput" accept="image/*" style="display: none;">
+                    <button type="button" class="btn btn-small btn-small-primary" onclick="document.getElementById('photoInput').click()" style="width: auto; padding: 10px 20px;">
+                        📷 Chọn ảnh từ máy
+                    </button>
+                    <div id="photoPreview" style="margin-top: 10px; display: none;">
+                        <img id="previewImg" src="" style="max-width: 100%; max-height: 200px; border-radius: 4px;">
+                        <p id="photoFileName" style="font-size: 12px; color: #666; margin-top: 5px;"></p>
+                    </div>
+                </div>
+            </div>
         `;
 
         document.getElementById('reportDetailContent').innerHTML = detailContent;
+
+        // Setup photo input listener
+        setTimeout(() => {
+            const photoInput = document.getElementById('photoInput');
+            if (photoInput) {
+                photoInput.addEventListener('change', handlePhotoSelect);
+            }
+        }, 100);
+
         document.getElementById('reportDetailModal').classList.add('show');
     };
+
+    function handlePhotoSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('photoPreview');
+            const previewImg = document.getElementById('previewImg');
+            const photoFileName = document.getElementById('photoFileName');
+
+            previewImg.src = e.target.result;
+            photoFileName.textContent = file.name;
+            preview.style.display = 'block';
+
+            // Store base64 for later use
+            window.currentPhotoBase64 = e.target.result;
+            window.currentPhotoFileName = file.name;
+        };
+        reader.readAsDataURL(file);
+    }
 
     window.closeReportDetailModal = function() {
         document.getElementById('reportDetailModal').classList.remove('show');
@@ -224,6 +267,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         const notes = document.getElementById('notesInput').value;
+        const photoBase64 = window.currentPhotoBase64;
 
         try {
             // Cập nhật ghi chú
@@ -238,6 +282,30 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 if (!notesResponse.ok) {
                     throw new Error('Lỗi khi lưu ghi chú');
+                }
+            }
+
+            // Cập nhật ảnh báo cáo vào RentalRecord
+            if (photoBase64) {
+                // Convert base64 to binary
+                const binaryString = atob(photoBase64.split(',')[1]);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                // Gửi binary data lên server
+                const photoResponse = await fetch(`/api/vehicle-reports/${currentDetailReport.id}/photo`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/octet-stream',
+                        'X-Photo-Name': window.currentPhotoFileName || 'report-photo'
+                    },
+                    body: bytes.buffer
+                });
+
+                if (!photoResponse.ok) {
+                    throw new Error('Lỗi khi lưu ảnh');
                 }
             }
 

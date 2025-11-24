@@ -2,45 +2,66 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Đăng ký tài khoản</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký - EV Station</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" th:href="@{/css/register.css}">
 </head>
 <body>
 
-<div class="auth-container">
-
-    <div class="auth-header">
-        <h1>EV Station</h1>
+<div class="split-screen-container">
+    <div class="left-panel">
+        <div class="panel-content">
+            <div class="logo-display">⚡️ EV Station</div>
+            <h1>Tham gia cộng đồng<br>xe điện tiên phong</h1>
+            <p>Tạo tài khoản ngay để nhận ưu đãi thuê xe và trải nghiệm hệ sinh thái xanh.</p>
+        </div>
     </div>
 
-    <div class="card auth-form-card">
-        <h2>Tạo tài khoản</h2>
-
-        <form th:action="@{/register}" method="post">
-
-            <div class="form-group">
-                <label for="username">Tên đăng nhập</label>
-                <input type="text" id="username" name="username" class="form-input" required>
-                <div class="error-message" th:if="${errorUsername}" th:text="${errorUsername}"></div>
+    <div class="right-panel">
+        <div class="auth-form-wrapper">
+            <div class="auth-header">
+                <h2>Tạo tài khoản mới</h2>
+                <p>Nhập thông tin chi tiết để bắt đầu.</p>
             </div>
 
-            <div class="form-group">
-                <label for="password">Mật khẩu</label>
-                <input type="password" id="password" name="password" class="form-input" required>
-            </div>
+            <form th:action="@{/register}" method="post" class="register-form">
+                <div class="input-group">
+                    <label for="username">Tên đăng nhập</label>
+                    <div class="input-field">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="username" name="username" placeholder="Chọn tên đăng nhập" required>
+                    </div>
+                    <div class="error-text" th:if="${errorUsername}" th:text="${errorUsername}"></div>
+                </div>
 
-            <div class="form-group">
-                <label for="confirmPassword">Xác nhận mật khẩu</label>
-                <input type="password" id="confirmPassword" name="confirmPassword" class="form-input" required>
-                <div class="error-message" th:if="${errorConfirmPassword}" th:text="${errorConfirmPassword}"></div>
-            </div>
+                <div class="input-group">
+                    <label for="password">Mật khẩu</label>
+                    <div class="input-field">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" name="password" placeholder="Tạo mật khẩu" required>
+                    </div>
+                </div>
 
-            <button type="submit" class="btn-submit">Đăng ký</button>
+                <div class="input-group">
+                    <label for="confirmPassword">Xác nhận mật khẩu</label>
+                    <div class="input-field">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Nhập lại mật khẩu" required>
+                    </div>
+                    <div class="error-text" th:if="${errorConfirmPassword}" th:text="${errorConfirmPassword}"></div>
+                </div>
 
-            <div class="auth-links">
-                <a th:href="@{/login}">Đã có tài khoản? Đăng nhập</a>
-            </div>
-        </form>
+                <button type="submit" class="btn-submit">
+                    Đăng ký <i class="fas fa-user-plus"></i>
+                </button>
+
+                <div class="auth-footer">
+                    Đã có tài khoản? <a th:href="@{/login}">Đăng nhập ngay</a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 

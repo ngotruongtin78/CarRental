@@ -10,9 +10,4 @@ public class ProfileController {
     public String showProfilePage() {
         return "user-hosocanhan";
     }
-
-    @GetMapping("/quy-trinh-ev")
-    public String showWorkflowPage() {
-        return "renter-workflow";
-    }
 }

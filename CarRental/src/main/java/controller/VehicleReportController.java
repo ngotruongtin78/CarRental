@@ -1,7 +1,9 @@
 package CarRental.example.controller;
 
 import CarRental.example.document.VehicleReport;
+import CarRental.example.document.RentalRecord;
 import CarRental.example.repository.VehicleReportRepository;
+import CarRental.example.repository.RentalRecordRepository;
 import CarRental.example.service.VehicleReportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,9 @@ public class VehicleReportController {
 
     @Autowired
     private VehicleReportRepository vehicleReportRepository;
+
+    @Autowired
+    private RentalRecordRepository rentalRecordRepository;
 
     @GetMapping("/all")
     public ResponseEntity<?> getAllReports() {
@@ -155,6 +160,56 @@ public class VehicleReportController {
             } else {
                 return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy báo cáo"));
             }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Lỗi: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Lưu ảnh báo cáo vào RentalRecord
+     * Nhận binary data từ request body
+     */
+    @PutMapping("/{reportId}/photo")
+    public ResponseEntity<?> saveReportPhoto(
+            @PathVariable("reportId") String reportId,
+            @RequestHeader(value = "X-Photo-Name", required = false) String photoName,
+            @RequestBody byte[] photoData) {
+        try {
+            // Tìm báo cáo theo ID
+            Optional<VehicleReport> reportOpt = vehicleReportRepository.findById(reportId);
+            if (!reportOpt.isPresent()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy báo cáo"));
+            }
+
+            VehicleReport report = reportOpt.get();
+
+            // Tìm RentalRecord dựa trên vehicleId
+            // Lấy RentalRecord mới nhất của xe này với status = "DELIVERED" hoặc "COMPLETED"
+            List<RentalRecord> records = rentalRecordRepository.findAll();
+            RentalRecord targetRecord = records.stream()
+                    .filter(r -> r.getVehicleId().equals(report.getVehicleId()) &&
+                               ("DELIVERED".equals(r.getStatus()) || "COMPLETED".equals(r.getStatus())))
+                    .max((r1, r2) -> {
+                        long t1 = r1.getEndTime() != null ? r1.getEndTime().hashCode() : 0;
+                        long t2 = r2.getEndTime() != null ? r2.getEndTime().hashCode() : 0;
+                        return Long.compare(t1, t2);
+                    })
+                    .orElse(null);
+
+            if (targetRecord == null) {
+                return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy hợp đồng thuê xe"));
+            }
+
+            // Lưu ảnh (binary data) vào RentalRecord
+            targetRecord.setDeliveryPhotoData(photoData);
+            rentalRecordRepository.save(targetRecord);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Lưu ảnh báo cáo thành công",
+                    "rentalId", targetRecord.getId(),
+                    "photoSize", photoData.length + " bytes"
+            ));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", "Lỗi: " + e.getMessage()));
         }

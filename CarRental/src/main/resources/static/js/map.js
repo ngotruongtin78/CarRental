@@ -46,51 +46,68 @@ function loadStations() {
         })
         .catch(() => showToast("Lỗi tải danh sách trạm!"));
 }
-function renderStations() {
 
+// Hàm renderStations đã được sửa đổi để hiển thị bố cục dọc
+function renderStations() {
     const list = document.getElementById("stationList");
     list.innerHTML = "";
 
     stations.forEach(st => {
         const stationId = st.id;
+
+        // Tính toán khoảng cách và thời gian
         st.distance = haversine(userLat, userLng, st.latitude, st.longitude);
-        st.eta = Math.round((st.distance / 30) * 60);
+        st.eta = Math.round((st.distance / 30) * 60); // Giả sử tốc độ 30km/h
+
+        // Random offset tọa độ marker để tránh đè nhau (nếu cần)
         const offset = 0.00015;
         const lat = st.latitude + (Math.random() - 0.5) * offset;
         const lng = st.longitude + (Math.random() - 0.5) * offset;
 
+        // --- GIAO DIỆN DANH SÁCH MỚI ---
         list.innerHTML += `
             <div class="location-item"
                  onclick="openStation(${lat}, ${lng}, '${stationId}', \`${st.name}\`, ${st.distance.toFixed(2)}, ${st.availableCars}, ${st.eta})">
 
-                <div class="location-item-header">
-                    <span class="station-title">${st.name}</span>
+                <h4>${st.name}</h4>
+
+                <div class="stat-row">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>${st.distance.toFixed(2)} km</span>
                 </div>
-                <div class="location-details">
-                    <span><i class="fa-solid fa-location-dot"></i> ${st.distance.toFixed(2)} km</span>
-                    <span><i class="fa-solid fa-car"></i> ${st.availableCars} xe có sẵn</span>
-                    <span><i class="fa-solid fa-clock"></i> ${st.eta} phút</span>
+
+                <div class="stat-row">
+                    <i class="fa-solid fa-car"></i>
+                    <span class="car-count">${st.availableCars} xe có sẵn</span>
+                </div>
+
+                <div class="stat-row" style="font-size: 13px; color: #888;">
+                    <i class="fa-solid fa-clock" style="color: #888;"></i>
+                    <span>~${st.eta} phút di chuyển</span>
                 </div>
             </div>
         `;
 
+        // --- MARKER TRÊN BẢN ĐỒ ---
         const marker = L.marker([lat, lng]).addTo(map);
 
         marker.bindPopup(`
-            <b style="font-size:14px">${st.name}</b><br>
-            📏 ${st.distance.toFixed(2)} km<br>
-            🚗 ${st.availableCars} xe<br>
-            ⏱ ${st.eta} phút<br><br>
+            <div style="text-align:center;">
+                <b style="font-size:14px">${st.name}</b><br>
+                <hr style="margin:5px 0; border:0; border-top:1px solid #eee;">
+                📏 ${st.distance.toFixed(2)} km &nbsp;|&nbsp; 🚗 ${st.availableCars} xe<br>
+                ⏱ ${st.eta} phút<br><br>
 
-            <button style="padding:5px 10px"
-                    onclick="routeTo(${lat}, ${lng}); event.stopPropagation();">
-                🔄 Chỉ đường
-            </button>
+                <button style="padding:5px 10px; background:#007bff; color:white; border:none; border-radius:4px; margin-right:5px; cursor:pointer;"
+                        onclick="routeTo(${lat}, ${lng}); event.stopPropagation();">
+                    🔄 Chỉ đường
+                </button>
 
-            <button style="padding:5px 10px; margin-left:8px"
-                    onclick="goToBooking('${stationId}'); event.stopPropagation();">
-                🚲 Đặt xe
-            </button>
+                <button style="padding:5px 10px; background:#388e3c; color:white; border:none; border-radius:4px; cursor:pointer;"
+                        onclick="goToBooking('${stationId}'); event.stopPropagation();">
+                    🚲 Đặt xe
+                </button>
+            </div>
         `);
     });
 }
@@ -101,26 +118,27 @@ function openStation(lat, lng, stationId, name, distance, availableCars, eta) {
     L.popup()
         .setLatLng([lat, lng])
         .setContent(`
-            <b style="font-size:14px">${name}</b><br>
-            📏 ${distance} km<br>
-            🚗 ${availableCars} xe<br>
-            ⏱ ${eta} phút<br><br>
+            <div style="text-align:center;">
+                <b style="font-size:14px">${name}</b><br>
+                <hr style="margin:5px 0; border:0; border-top:1px solid #eee;">
+                📏 ${distance} km &nbsp;|&nbsp; 🚗 ${availableCars} xe<br>
+                ⏱ ${eta} phút<br><br>
 
-            <button style="padding:5px 10px"
-                    onclick="routeTo(${lat}, ${lng}); event.stopPropagation();">
-                🔄 Chỉ đường
-            </button>
+                <button style="padding:5px 10px; background:#007bff; color:white; border:none; border-radius:4px; margin-right:5px; cursor:pointer;"
+                        onclick="routeTo(${lat}, ${lng}); event.stopPropagation();">
+                    🔄 Chỉ đường
+                </button>
 
-            <button style="padding:5px 10px; margin-left:8px"
-                    onclick="goToBooking('${stationId}'); event.stopPropagation();">
-                🚲 Đặt xe
-            </button>
+                <button style="padding:5px 10px; background:#388e3c; color:white; border:none; border-radius:4px; cursor:pointer;"
+                        onclick="goToBooking('${stationId}'); event.stopPropagation();">
+                    🚲 Đặt xe
+                </button>
+            </div>
         `)
         .openOn(map);
 }
 
 function routeTo(lat, lng) {
-
     if (router) map.removeControl(router);
 
     router = L.Routing.control({

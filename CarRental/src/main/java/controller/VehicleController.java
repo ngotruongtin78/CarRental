@@ -58,8 +58,8 @@ public class VehicleController {
     @GetMapping("/station/{stationId}/staff-station")
     public ResponseEntity<?> getByStationWithInfo(@PathVariable("stationId") String stationId) {
         try {
-            // Lấy danh sách xe tại trạm
-            List<Vehicle> vehicles = repo.findByStationIdAndBookingStatusNot(stationId, "RENTED");
+            // Lấy danh sách xe tại trạm (bao gồm cả xe đang thuê)
+            List<Vehicle> vehicles = repo.findByStationId(stationId);
 
             // Lấy thông tin trạm
             Station station = stationRepository.findById(stationId).orElse(null);

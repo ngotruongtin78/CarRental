@@ -13,6 +13,7 @@ public interface VehicleRepository
         extends MongoRepository<Vehicle, String>, VehicleRepositoryCustom {
 
     long countByStationIdAndAvailable(String stationId, boolean available);
+    List<Vehicle> findByStationId(String stationId);
     List<Vehicle> findByStationIdAndAvailable(String stationId, boolean available);
     List<Vehicle> findByStationIdAndBookingStatusNot(String stationId, String bookingStatus);
 

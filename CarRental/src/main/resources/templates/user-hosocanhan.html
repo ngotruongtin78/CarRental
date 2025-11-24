@@ -64,40 +64,12 @@
                 <div class="doc-status" id="doc-status-text">Chưa tải giấy tờ</div>
                 <div class="doc-actions">
                     <button class="doc-button" id="btn-license">
-                        <i class="fas fa-upload"></i> Tải/Thay ảnh GPLX
-                    </button>
-                    <button class="doc-button danger" id="btn-license-delete">
-                        <i class="fas fa-trash"></i> Xóa ảnh GPLX
+                        <i class="fas fa-upload"></i> Giấy phép lái xe
                     </button>
 
                     <button class="doc-button" id="btn-idcard">
-                        <i class="fas fa-upload"></i> Tải/Thay ảnh CCCD
+                        <i class="fas fa-upload"></i> CMND/CCCD
                     </button>
-                    <button class="doc-button danger" id="btn-idcard-delete">
-                        <i class="fas fa-trash"></i> Xóa ảnh CCCD
-                    </button>
-                </div>
-            </div>
-
-            <div class="doc-preview">
-                <div class="doc-preview-item">
-                    <div class="preview-header">
-                        <i class="fas fa-id-card"></i> Ảnh GPLX
-                    </div>
-                    <div class="preview-frame">
-                        <img id="img-license" alt="GPLX" class="preview-img" />
-                        <div id="placeholder-license" class="preview-placeholder">Chưa có ảnh</div>
-                    </div>
-                </div>
-
-                <div class="doc-preview-item">
-                    <div class="preview-header">
-                        <i class="fas fa-passport"></i> Ảnh CCCD/CMND
-                    </div>
-                    <div class="preview-frame">
-                        <img id="img-idcard" alt="CCCD" class="preview-img" />
-                        <div id="placeholder-idcard" class="preview-placeholder">Chưa có ảnh</div>
-                    </div>
                 </div>
             </div>
 
@@ -105,14 +77,6 @@
                 <p id="verification-status" class="verification-text">Đang kiểm tra trạng thái xác thực...</p>
                 <button id="btn-request-verification" class="doc-button secondary">Yêu cầu xác thực nhanh tại quầy</button>
             </div>
-        </div>
-
-        <div class="card workflow-card">
-            <div class="workflow-header">
-                <h2>Tiến trình thuê xe EV</h2>
-                <p>Kiểm tra nhanh các bước nhận và trả xe.</p>
-            </div>
-            <div id="workflow-list" class="workflow-list"></div>
         </div>
 
         <div class="card activity-summary-card">
@@ -136,14 +100,6 @@
                     <p class="activity-value" id="stat-spent">0 đ</p>
                 </div>
             </div>
-        </div>
-
-        <div class="card workflow-card">
-            <div class="workflow-header">
-                <h2>Tiến trình thuê xe EV</h2>
-                <p>Kiểm tra và cập nhật trạng thái từng bước.</p>
-            </div>
-            <div id="workflow-list" class="workflow-list"></div>
         </div>
 
         <div class="profile-actions">
@@ -175,72 +131,27 @@
         document.getElementById("stat-spent").innerText = spent + " đ";
     }
 
-    function setPreviewState(imgEl, placeholderEl, hasData) {
-        if (hasData) {
-            placeholderEl.style.display = "none";
-            imgEl.style.display = "block";
-        } else {
-            imgEl.style.display = "none";
-            placeholderEl.style.display = "flex";
-            imgEl.removeAttribute("src");
-        }
-    }
-
-    async function loadDocumentImages(state) {
-        const licenseImg = document.getElementById("img-license");
-        const idImg = document.getElementById("img-idcard");
-        const licensePlaceholder = document.getElementById("placeholder-license");
-        const idPlaceholder = document.getElementById("placeholder-idcard");
-
-        const updateImage = async (url, img, placeholder, hasData) => {
-            setPreviewState(img, placeholder, hasData);
-            if (!hasData) return;
-
-            try {
-                const res = await fetch(url);
-                if (!res.ok) {
-                    throw new Error("Không tải được ảnh");
-                }
-                const blob = await res.blob();
-                const objectUrl = URL.createObjectURL(blob);
-                img.src = objectUrl;
-            } catch (e) {
-                console.error(e);
-                placeholder.innerText = "Lỗi tải ảnh";
-                setPreviewState(img, placeholder, false);
-            }
-        };
-
-        await Promise.all([
-            updateImage("/api/renter/license-image", licenseImg, licensePlaceholder, state.licenseUploaded),
-            updateImage("/api/renter/idcard-image", idImg, idPlaceholder, state.idCardUploaded)
-        ]);
-    }
-
     function applyDocState(state) {
         const statusEl = document.getElementById("doc-status-text");
         const btnLicense = document.getElementById("btn-license");
         const btnId = document.getElementById("btn-idcard");
-        const btnLicenseDelete = document.getElementById("btn-license-delete");
-        const btnIdDelete = document.getElementById("btn-idcard-delete");
         const verifyStatusEl = document.getElementById("verification-status");
         const requestBtn = document.getElementById("btn-request-verification");
 
         if (state.licenseUploaded && state.idCardUploaded) {
             statusEl.innerText = "Đã tải đủ CCCD & GPLX";
             statusEl.style.color = "#2e7d32";
+            btnLicense.style.display = "none";
+            btnId.style.display = "none";
         } else {
             statusEl.innerText = "Thiếu giấy tờ: " +
                 [!state.licenseUploaded ? "GPLX" : null, !state.idCardUploaded ? "CCCD" : null]
                     .filter(Boolean)
                     .join(", ");
             statusEl.style.color = "#c0392b";
+            btnLicense.style.display = state.licenseUploaded ? "none" : "inline-flex";
+            btnId.style.display = state.idCardUploaded ? "none" : "inline-flex";
         }
-
-        btnLicenseDelete.style.display = state.licenseUploaded ? "inline-flex" : "none";
-        btnIdDelete.style.display = state.idCardUploaded ? "inline-flex" : "none";
-        btnLicense.innerHTML = state.licenseUploaded ? "<i class='fas fa-rotate'></i> Tải lại GPLX" : "<i class='fas fa-upload'></i> Tải ảnh GPLX";
-        btnId.innerHTML = state.idCardUploaded ? "<i class='fas fa-rotate'></i> Tải lại CCCD" : "<i class='fas fa-upload'></i> Tải ảnh CCCD";
 
         if (state.verified) {
             verifyStatusEl.innerText = "Tài khoản đã được xác thực. Bạn có thể thuê và thanh toán nhanh.";
@@ -257,81 +168,6 @@
             requestBtn.disabled = false;
             requestBtn.style.display = "inline-flex";
             requestBtn.innerText = "Yêu cầu xác thực nhanh tại quầy";
-        }
-
-        loadDocumentImages(state);
-    }
-
-    const workflowSteps = [
-        { key: 'checkin', section: '1c. Nhận xe', title: 'Check-in nhận xe', detail: 'Quét mã QR tại xe/trạm hoặc check-in qua app.' },
-        { key: 'contract', section: '1c. Nhận xe', title: 'Ký hợp đồng điện tử', detail: 'Xem và nhấn nút "Ký/Đồng ý" các điều khoản thuê xe.' },
-        { key: 'handover', section: '1c. Nhận xe', title: 'Xác nhận bàn giao', detail: 'Xác nhận tình trạng xe (vỏ, pin) khớp với thực tế nhân viên giao.' },
-        { key: 'returning', section: '1d. Trả xe', title: 'Yêu cầu trả xe', detail: 'Định vị đúng điểm trả xe quy định mới cho phép bấm trả.' },
-        { key: 'payment', section: '1d. Trả xe', title: 'Thanh toán', detail: 'Hiển thị tổng tiền, cổng thanh toán online hoặc xác nhận tiền mặt.' }
-    ];
-
-    const workflowOptions = [
-        { value: 'Pending', label: 'Chưa làm', badge: 'badge-pending' },
-        { value: 'InProgress', label: 'Đang thực hiện', badge: 'badge-progress' },
-        { value: 'Done', label: 'Hoàn thành', badge: 'badge-done' }
-    ];
-
-    function renderWorkflow(data) {
-        const list = document.getElementById('workflow-list');
-        list.innerHTML = '';
-
-        workflowSteps.forEach(step => {
-            const current = data?.[step.key] || 'Pending';
-            const badge = workflowOptions.find(o => o.value === current)?.badge || 'badge-pending';
-            const label = workflowOptions.find(o => o.value === current)?.label || 'Chưa làm';
-
-            const row = document.createElement('div');
-            row.className = 'workflow-item';
-            row.innerHTML = `
-                <div class="workflow-icon"><i class="fas fa-flag"></i></div>
-                <div class="workflow-body">
-                    <div class="workflow-meta">${step.section}</div>
-                    <div class="workflow-title">${step.title}</div>
-                    <div class="workflow-detail">${step.detail}</div>
-                </div>
-                <div class="workflow-actions">
-                    <select class="status-select" data-key="${step.key}">
-                        ${workflowOptions.map(o => `<option value="${o.value}" ${o.value === current ? 'selected' : ''}>${o.label}</option>`).join('')}
-                    </select>
-                    <span class="workflow-status ${badge}">${label}</span>
-                </div>
-            `;
-            list.appendChild(row);
-        });
-
-        list.querySelectorAll('.status-select').forEach(sel => {
-            sel.addEventListener('change', async (e) => {
-                const key = e.target.getAttribute('data-key');
-                const status = e.target.value;
-                try {
-                    const res = await fetch(`/api/renter/workflow/${key}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: `status=${encodeURIComponent(status)}`
-                    });
-                    if (!res.ok) throw new Error();
-                    await loadWorkflow();
-                } catch (err) {
-                    alert('Không cập nhật được trạng thái, thử lại sau.');
-                    await loadWorkflow();
-                }
-            });
-        });
-    }
-
-    async function loadWorkflow() {
-        try {
-            const res = await fetch('/api/renter/workflow');
-            if (!res.ok) throw new Error();
-            const data = await res.json();
-            renderWorkflow(data);
-        } catch (e) {
-            document.getElementById('workflow-list').innerHTML = '<div class="workflow-item">Không tải được tiến trình.</div>';
         }
     }
 
@@ -386,86 +222,13 @@
         input.click();
     }
 
-    async function deleteDocument(type) {
-        if (!confirm("Xóa ảnh đã tải lên?")) return;
-        try {
-            const res = await fetch(`/api/renter/delete-${type}`, { method: "DELETE" });
-            if (res.ok) {
-                alert("Đã xóa ảnh");
-                refreshDocs();
-            } else {
-                const msg = await res.text();
-                alert(msg || "Không xóa được ảnh, thử lại sau.");
-            }
-        } catch (e) {
-            alert("Không xóa được ảnh, thử lại sau.");
-        }
-    }
-
     document.getElementById("btn-license").onclick = () => upload("license");
     document.getElementById("btn-idcard").onclick = () => upload("idcard");
-    document.getElementById("btn-license-delete").onclick = () => deleteDocument("license");
-    document.getElementById("btn-idcard-delete").onclick = () => deleteDocument("idcard");
     document.getElementById("btn-request-verification").onclick = requestVerification;
-
-    const workflowItems = [
-        {
-            section: "1c. Nhận xe",
-            title: "Check-in nhận xe",
-            detail: "Quét mã QR tại xe/trạm hoặc check-in qua app.",
-            status: "Pending"
-        },
-        {
-            section: "1c. Nhận xe",
-            title: "Ký hợp đồng điện tử",
-            detail: "Xem và nhấn nút \"Ký/Đồng ý\" các điều khoản thuê xe.",
-            status: "Pending"
-        },
-        {
-            section: "1c. Nhận xe",
-            title: "Xác nhận bàn giao",
-            detail: "Xác nhận tình trạng xe (vỏ, pin) khớp với thực tế nhân viên giao.",
-            status: "Pending"
-        },
-        {
-            section: "1d. Trả xe",
-            title: "Yêu cầu trả xe",
-            detail: "Định vị đúng điểm trả xe quy định mới cho phép bấm trả.",
-            status: "Pending"
-        },
-        {
-            section: "1d. Trả xe",
-            title: "Thanh toán",
-            detail: "Hiển thị tổng tiền, cổng thanh toán online hoặc xác nhận tiền mặt.",
-            status: "Pending"
-        }
-    ];
-
-    function renderWorkflow() {
-        const container = document.getElementById("workflow-list");
-        container.innerHTML = "";
-
-        workflowItems.forEach(item => {
-            const row = document.createElement("div");
-            row.className = "workflow-item";
-            row.innerHTML = `
-                <div class="workflow-icon"><i class="fas fa-flag"></i></div>
-                <div class="workflow-body">
-                    <div class="workflow-meta">${item.section}</div>
-                    <div class="workflow-title">${item.title}</div>
-                    <div class="workflow-detail">${item.detail}</div>
-                </div>
-                <div class="workflow-status badge-pending">${item.status}</div>
-            `;
-            container.appendChild(row);
-        });
-    }
 
     loadProfile();
     loadStats();
-    renderWorkflow();
     refreshDocs();
-    loadWorkflow();
 </script>
 
 <script src="/js/station-search.js"></script>

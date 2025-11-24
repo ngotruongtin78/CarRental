@@ -17,9 +17,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/staff/return")
+@RequestMapping("/api/staff/deliver")
 @CrossOrigin(origins = "*")
-public class StaffReturnController {
+public class StaffDeliverController {
 
     @Autowired
     private RentalRecordRepository rentalRecordRepository;
@@ -31,13 +31,13 @@ public class StaffReturnController {
     private StaffRepository staffRepository;
 
     /**
-     * Lấy danh sách các xe sẵn sàng trả từ khách hàng
+     * Lấy danh sách các xe sẵn sàng giao cho khách hàng
      * Điều kiện:
-     * - RentalRecord có status = "DELIVERED"
+     * - RentalRecord có paymentStatus = "PAID" hoặc "PAY_AT_STATION"
      * - RentalRecord.stationId = Staff.stationId (của staff hiện tại)
      */
     @GetMapping("/vehicles-ready")
-    public ResponseEntity<?> getVehiclesReadyForReturn() {
+    public ResponseEntity<?> getVehiclesReadyForDelivery() {
         try {
             // Lấy thông tin staff hiện tại
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -71,10 +71,13 @@ public class StaffReturnController {
             String staffStationId = staff.getStationId();
 
             // Lọc RentalRecord:
-            // - status = "DELIVERED" (xe đã được giao cho khách, giờ sẵn sàng trả)
+            // - status = "ACTIVE" (chỉ hiển thị những xe sẵn sàng giao)
+            // - paymentStatus = "PAID" hoặc "PAY_AT_STATION"
             // - stationId của hợp đồng = stationId của staff
             List<RentalRecord> readyRecords = rentalRecordRepository.findAll().stream()
-                    .filter(record -> "DELIVERED".equals(record.getStatus()) &&
+                    .filter(record -> "ACTIVE".equals(record.getStatus()) &&
+                                     ("PAID".equals(record.getPaymentStatus()) ||
+                                     "PAY_AT_STATION".equals(record.getPaymentStatus())) &&
                                      staffStationId.equals(record.getStationId()))
                     .toList();
 
@@ -105,90 +108,105 @@ public class StaffReturnController {
     }
 
     /**
-     * Xác nhận trả xe từ khách hàng
+     * Xác nhận giao xe cho khách hàng
      * Điều kiện: stationId của hợp đồng phải = stationId của staff
      *
      * Cập nhật RentalRecord:
-     * - status = "COMPLETED"
-     * - damageFee (từ tham số)
-     * - returnNote (ghi chú trả xe)
-     * - total được cộng thêm damageFee
+     * - status = "DELIVERED"
+     * - paymentStatus = "PAID" (nếu hiện tại là "PAY_AT_STATION")
+     * - returnNotes từ ghi chú nhân viên
      *
      * Cập nhật Vehicle:
-     * - available = true (xe trở lại trạm)
-     * - bookingStatus = "AVAILABLE" (xe có sẵn để thuê)
+     * - bookingStatus = "RENTED" (xe đã được giao cho khách)
+     * - available = false
      */
     @PostMapping("/{rentalId}/confirm")
-    public ResponseEntity<?> confirmReturn(
+    public ResponseEntity<?> confirmDelivery(
             @PathVariable("rentalId") String rentalId,
             HttpServletRequest request
     ) {
-        try {
-            // Lấy damageFee và returnNote từ query parameters
-            String damageFeeStr = request.getParameter("damageFee");
-            String returnNote = request.getParameter("returnNote");
+        System.out.println("\n=== START confirmDelivery ===");
+        System.out.println("rentalId: " + rentalId);
 
-            double damageFee = 0;
-            if (damageFeeStr != null && !damageFeeStr.isEmpty()) {
-                damageFee = Double.parseDouble(damageFeeStr);
-            }
+        try {
+            // Lấy returnNotes từ query parameter
+            String returnNotes = request.getParameter("returnNotes");
+            System.out.println("returnNotes: " + returnNotes);
 
             // Step 1: Get rental
+            System.out.println("Step 1: Looking for RentalRecord ID=" + rentalId);
             Optional<RentalRecord> opt = rentalRecordRepository.findById(rentalId);
 
-            if (opt.isEmpty()) {
+            if (!opt.isPresent()) {
+                System.out.println("ERROR: RentalRecord not found!");
                 return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy đơn thuê"));
             }
 
             RentalRecord record = opt.get();
+            System.out.println("Step 2: RentalRecord found. Current status=" + record.getStatus());
 
-            // Step 2: Update status to COMPLETED
-            record.setStatus("COMPLETED");
+            // Step 2: Update status
+            System.out.println("Step 3: Updating status to DELIVERED");
+            record.setStatus("DELIVERED");
 
-            // Step 3: Add damage fee
-            if (damageFee > 0) {
-                record.setDamageFee(damageFee);
-                record.setTotal(record.getTotal() + damageFee);
+            // Step 3: Update payment status if needed
+            if ("PAY_AT_STATION".equals(record.getPaymentStatus())) {
+                System.out.println("Step 4: Updating paymentStatus to PAID");
+                record.setPaymentStatus("PAID");
             }
 
             // Step 4: Add return notes if provided
-            if (returnNote != null && !returnNote.isEmpty()) {
-                record.setReturnNotes(returnNote);
+            if (returnNotes != null && !returnNotes.isEmpty()) {
+                System.out.println("Step 5: Adding returnNotes");
+                record.setReturnNotes(returnNotes);
             }
 
             // Step 5: Save
+            System.out.println("Step 6: Saving RentalRecord");
             rentalRecordRepository.save(record);
+            System.out.println("SUCCESS: RentalRecord saved!");
 
-            // Step 6: Update vehicle status - xe trả về trạm
+            // Step 6: Update vehicle status
+            System.out.println("Step 7: Updating Vehicle");
             Vehicle vehicle = vehicleRepository.findById(record.getVehicleId()).orElse(null);
             if (vehicle != null) {
-                vehicle.setAvailable(true);
-                vehicle.setBookingStatus("AVAILABLE");
+                vehicle.setBookingStatus("RENTED");
+                vehicle.setAvailable(false);
                 vehicle.setPendingRentalId(null);
                 vehicleRepository.save(vehicle);
+                System.out.println("Vehicle saved successfully");
+            } else {
+                System.out.println("WARNING: Vehicle not found ID=" + record.getVehicleId());
             }
 
+            System.out.println("=== END confirmDelivery - SUCCESS ===\n");
             return ResponseEntity.ok(Map.of(
-                "message", "Trả xe thành công",
+                "message", "Giao xe thành công",
                 "rentalId", rentalId,
-                "rentalStatus", "COMPLETED",
+                "rentalStatus", "DELIVERED",
                 "paymentStatus", record.getPaymentStatus(),
-                "vehicleStatus", "AVAILABLE"
+                "vehicleStatus", "RENTED"
             ));
 
-        } catch (NumberFormatException e) {
-            return ResponseEntity.status(400).body(Map.of("error", "Phí hư hỏng không hợp lệ: " + e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", "Lỗi: " + e.getMessage()));
+            System.err.println("\n=== ERROR confirmDelivery ===");
+            System.err.println("Exception: " + e.getClass().getSimpleName());
+            System.err.println("Message: " + e.getMessage());
+            e.printStackTrace();
+            System.err.println("=== END ERROR ===\n");
+
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Lỗi: " + e.getMessage()
+            ));
         }
     }
 
     /**
-     * Lấy thông tin chi tiết một đơn thuê để trả xe
+     * Lấy thông tin chi tiết một đơn thuê để giao xe
      * Điều kiện: stationId của hợp đồng phải = stationId của staff
      */
     @GetMapping("/{rentalId}")
-    public ResponseEntity<?> getReturnDetails(@PathVariable("rentalId") String rentalId) {
+    public ResponseEntity<?> getDeliveryDetails(@PathVariable("rentalId") String rentalId) {
         try {
             // Lấy thông tin staff hiện tại
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -219,7 +237,7 @@ public class StaffReturnController {
             }
 
             Optional<RentalRecord> optionalRecord = rentalRecordRepository.findById(rentalId);
-            if (optionalRecord.isEmpty()) {
+            if (!optionalRecord.isPresent()) {
                 return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy đơn thuê"));
             }
 
@@ -247,8 +265,41 @@ public class StaffReturnController {
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            System.err.println("ERROR in getDeliveryDetails: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", "Lỗi: " + e.getClass().getSimpleName() + " - " + e.getMessage()));
         }
     }
-}
 
+    /**
+     * Lưu ảnh giao xe vào RentalRecord
+     * Nhận binary data từ request body
+     */
+    @PutMapping("/{rentalId}/photo")
+    public ResponseEntity<?> saveDeliveryPhoto(
+            @PathVariable("rentalId") String rentalId,
+            @RequestHeader(value = "X-Photo-Name", required = false) String photoName,
+            @RequestBody byte[] photoData) {
+        try {
+            Optional<RentalRecord> recordOpt = rentalRecordRepository.findById(rentalId);
+            if (!recordOpt.isPresent()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy đơn thuê"));
+            }
+
+            RentalRecord record = recordOpt.get();
+
+            // Lưu ảnh (binary data) vào RentalRecord
+            record.setDeliveryPhotoData(photoData);
+            rentalRecordRepository.save(record);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Lưu ảnh giao xe thành công",
+                    "rentalId", rentalId,
+                    "photoSize", photoData.length + " bytes"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Lỗi: " + e.getMessage()));
+        }
+    }
+}

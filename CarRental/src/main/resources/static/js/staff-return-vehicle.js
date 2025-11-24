@@ -1,138 +1,296 @@
-document.addEventListener("DOMContentLoaded", function() {
+// ========== STAFF RETURN VEHICLE PAGE SCRIPT ==========
 
-    const canvas = document.getElementById('signature-pad');
-    let signaturePad;
-    try {
-        signaturePad = new SignaturePad(canvas, {
-            backgroundColor: 'rgb(249, 249, 249)',
-            penColor: 'rgb(0, 0, 0)'
-        });
-    } catch (e) {
-        console.error("Không thể khởi tạo SignaturePad", e);
-        document.querySelector('section:nth-of-type(3)').style.display = 'none';
-    }
+// Lưu thông tin rental hiện tại
+let currentRentalId = null;
 
-    const clearButton = document.getElementById('clear-signature');
-    if (clearButton) {
-        clearButton.addEventListener('click', function () {
-            if(signaturePad) signaturePad.clear();
-        });
-    }
-    const takePhotoButton = document.getElementById('take-photo-btn');
-    const photoInput = document.getElementById('photo-input');
-    const photoPreviewContainer = document.getElementById('photo-preview-container');
-
-    if (takePhotoButton && photoInput) {
-        takePhotoButton.addEventListener('click', () => {
-            photoInput.click();
-        });
-
-        photoInput.addEventListener('change', (event) => {
-            photoPreviewContainer.innerHTML = '';
-            if (event.target.files) {
-                Array.from(event.target.files).forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.style.width = '120px';
-                        img.style.height = '90px';
-                        img.style.objectFit = 'cover';
-                        img.style.borderRadius = '6px';
-                        photoPreviewContainer.appendChild(img);
-                    };
-                    reader.readAsDataURL(file);
-                });
-            }
-        });
-    }
-    const rentalFeeEl = document.getElementById('rental-fee');
-    const damageFeeEl = document.getElementById('damage-fee');
-    const totalFeeEl = document.getElementById('total-fee');
-    const finalPaymentEl = document.getElementById('final-payment');
-    function parseCurrency(text) {
-        return parseFloat(text.replace(/[.đ]/g, '')) || 0;
-    }
-    function formatCurrency(number) {
-        return number.toLocaleString('vi-VN') + 'đ';
-    }
-
-    function calculateTotal() {
-        const rentalFee = parseCurrency(rentalFeeEl.value);
-        const damageFee = parseFloat(damageFeeEl.value) || 0;
-
-        const total = rentalFee + damageFee;
-
-        totalFeeEl.value = formatCurrency(total);
-        finalPaymentEl.textContent = `KHÁCH CẦN THANH TOÁN: ${formatCurrency(total)}`;
-    }
-
-    if(damageFeeEl) damageFeeEl.addEventListener('input', calculateTotal);
-    const returnForm = document.getElementById('return-form');
-    if (returnForm) {
-        returnForm.addEventListener('submit', async function(event) {
-            event.preventDefault(); // Ngăn gửi form
-
-            if (signaturePad && signaturePad.isEmpty()) {
-                alert('Vui lòng yêu cầu khách hàng và nhân viên ký xác nhận.');
-                return;
-            }
-            const formData = new FormData();
-            const rentalId = "RENTAL_ID_EXAMPLE"; // Backend cần truyền ID này
-
-            formData.append('rentalId', rentalId);
-            formData.append('damageFee', parseFloat(damageFeeEl.value) || 0);
-            formData.append('notes', document.getElementById('incident-code').value);
-            formData.append('hasDamage', document.getElementById('has-damage-toggle').checked);
-            if (signaturePad) {
-                const signatureImage = signaturePad.toDataURL();
-                formData.append('signatureImage', signatureImage);
-            }
-            const files = photoInput.files;
-            if (files.length > 0) {
-                for (let i = 0; i < files.length; i++) {
-                    formData.append('returnImages', files[i]);
-                }
-            }
-
-            // =================================================================
-            // BACKEND CALL: POST /api/staff/return/{rentalId} (Giả định)
-            // Mục đích: Hoàn tất quy trình trả xe.
-            // API này cần được tạo mới ở Backend (ví dụ: trong StaffController.java)
-            // Nó sẽ nhận:
-            // 1. Phí bồi thường, ghi chú, trạng thái hư hỏng.
-            // 2. Ảnh chữ ký (Base64) (Lưu vào checkoutPhoto).
-            // 3. Danh sách ảnh chụp (MultipartFile).
-            // 4. Cập nhật trạng thái xe (Vehicle) thành `available = true`.
-            // 5. Cập nhật trạng thái `Rental` thành `RETURNED`.
-            // =================================================================
-
-            console.log('Đang gửi dữ liệu...');
-            for (let [key, value] of formData.entries()) {
-                console.log(key, value);
-            }
-
-            alert('(Giả lập) Đã gửi dữ liệu trả xe lên server!');
-
-            /*
-            try {
-                const response = await fetch(`/api/staff/return/${rentalId}`, {
-                    method: 'POST',
-                    body: formData // Gửi FormData, không cần set Content-Type
-                });
-
-                if (response.ok) {
-                    alert('Hoàn tất nhận xe thành công!');
-                    window.location.href = '/staff/dashboard'; // Về trang chủ staff
-                } else {
-                    alert('Có lỗi xảy ra, không thể hoàn tất.');
-                }
-            } catch (error) {
-                console.error('Lỗi gửi form:', error);
-                alert('Lỗi kết nối.');
-            }
-            */
-        });
-    }
-
+// Tải danh sách xe sẵn sàng trả khi trang load
+document.addEventListener('DOMContentLoaded', function() {
+    loadReturnVehicles();
 });
+
+/**
+ * Lấy danh sách các xe sẵn sàng trả từ API
+ * Điều kiện: status = "DELIVERED" (xe đã được giao cho khách)
+ */
+function loadReturnVehicles() {
+    fetch('/api/staff/return/vehicles-ready')
+        .then(response => response.json())
+        .then(data => {
+            populateReturnTable(data);
+        })
+        .catch(error => {
+            console.error('Lỗi khi tải danh sách xe:', error);
+            alert('Lỗi khi tải danh sách xe sẵn sàng trả');
+        });
+}
+
+/**
+ * Điền dữ liệu vào bảng danh sách trả xe
+ * Hiển thị: Biển số xe, Loại xe, Tên người thuê, Ngày thuê, Trạng thái thanh toán
+ */
+function populateReturnTable(rentalRecords) {
+    const tableBody = document.getElementById('returnTableBody');
+    tableBody.innerHTML = '';
+
+    if (!rentalRecords || rentalRecords.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #999;">Không có đơn hàng sẵn sàng trả</td></tr>';
+        return;
+    }
+
+    rentalRecords.forEach((rental, index) => {
+        const row = document.createElement('tr');
+
+        // Xác định trạng thái thanh toán và màu badge
+        let paymentStatusBadge = '';
+        const paymentStatus = rental.paymentStatus || 'UNKNOWN';
+
+        if (paymentStatus === 'PAID') {
+            paymentStatusBadge = '<span class="status-badge status-paid">ĐÃ THANH TOÁN</span>';
+        } else if (paymentStatus === 'PAY_AT_STATION') {
+            paymentStatusBadge = '<span class="status-badge status-pending">THANH TOÁN TẠI TRẠM</span>';
+        } else {
+            paymentStatusBadge = '<span class="status-badge status-pending">CHƯA THANH TOÁN</span>';
+        }
+
+        // Format ngày từ startDate (LocalDate từ RentalRecord)
+        const rentalDate = rental.startDate ? formatDate(rental.startDate) : 'N/A';
+        const vehiclePlate = rental.vehiclePlate || 'N/A';
+        const vehicleType = rental.vehicleType || 'N/A';
+        const customerName = rental.username || 'N/A';
+
+        row.innerHTML = `
+            <td class="plate-cell">${vehiclePlate}</td>
+            <td>${vehicleType}</td>
+            <td>${customerName}</td>
+            <td>${rentalDate}</td>
+            <td>${paymentStatusBadge}</td>
+            <td class="action-cell">
+                <button class="btn-action btn-deliver-now" onclick="handleReturnVehicle('${rental.id}', '${vehiclePlate}', '${customerName}')">
+                    <span class="icon">↩️</span>
+                </button>
+            </td>
+        `;
+
+        tableBody.appendChild(row);
+    });
+}
+
+/**
+ * Format ngày từ định dạng ISO hoặc đối tượng Date
+ * Chuyển đổi "2025-11-22" thành "22/11/2025"
+ */
+function formatDate(dateStr) {
+    if (!dateStr) return 'N/A';
+
+    let date;
+    if (typeof dateStr === 'string') {
+        date = new Date(dateStr);
+    } else {
+        date = new Date(dateStr);
+    }
+
+    if (isNaN(date)) return 'N/A';
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+}
+
+/**
+ * Format tiền tệ thành định dạng VND
+ * Ví dụ: 450000 → "450,000 VND"
+ */
+function formatCurrency(value) {
+    if (!value) return 'N/A';
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND'
+    }).format(value);
+}
+
+/**
+ * Format trạng thái thanh toán
+ * "PAID" → "Đã thanh toán"
+ * "PAY_AT_STATION" → "Thanh toán tại trạm"
+ */
+function formatPaymentStatus(status) {
+    if (!status) return 'N/A';
+    const statusMap = {
+        'PAID': 'Đã thanh toán',
+        'PAY_AT_STATION': 'Thanh toán tại trạm',
+        'PENDING': 'Chờ thanh toán',
+        'UNPAID': 'Chưa thanh toán'
+    };
+    return statusMap[status] || status;
+}
+
+/**
+ * Mở modal trả xe với toàn bộ thông tin chi tiết
+ */
+function handleReturnVehicle(rentalId, plate, customerName) {
+    currentRentalId = rentalId;
+
+    // Gọi API để lấy chi tiết hợp đồng
+    fetch(`/api/staff/return/${rentalId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Điền thông tin xe
+            document.getElementById('returnPlate').value = data.vehiclePlate || plate;
+            document.getElementById('returnVehicleType').value = data.vehicleType || 'N/A';
+
+            // Điền thông tin khách hàng
+            document.getElementById('returnCustomer').value = data.username || customerName;
+
+            // Điền thông tin thuê xe
+            document.getElementById('returnStartDate').value = formatDate(data.startDate) || 'N/A';
+            document.getElementById('returnEndDate').value = formatDate(data.endDate) || 'N/A';
+            document.getElementById('returnRentalDays').value = (data.rentalDays || 0) + ' ngày';
+
+            // Điền thông tin thanh toán
+            document.getElementById('returnTotal').value = formatCurrency(data.total) || 'N/A';
+            document.getElementById('returnPaymentStatus').value = formatPaymentStatus(data.paymentStatus) || 'N/A';
+
+            // Làm trống phí hư hỏng và ghi chú
+            document.getElementById('returnDamageFee').value = '';
+            document.getElementById('returnNote').value = '';
+
+            // Mở modal
+            document.getElementById('returnModal').style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Lỗi khi lấy chi tiết hợp đồng:', error);
+            alert('Lỗi khi lấy thông tin chi tiết');
+        });
+}
+
+/**
+ * Đóng modal trả xe
+ */
+function closeReturnModal() {
+    document.getElementById('returnModal').style.display = 'none';
+    currentRentalId = null;
+}
+
+/**
+ * Xác nhận trả xe
+ * Gửi POST request với damageFee và returnNote
+ */
+function confirmReturn() {
+    if (!currentRentalId) {
+        alert('Lỗi: Không tìm thấy thông tin đơn thuê');
+        return;
+    }
+
+    const damageFee = document.getElementById('returnDamageFee').value || '0';
+    const note = document.getElementById('returnNote').value;
+
+    // Xây dựng URL với tham số damageFee và returnNote
+    let url = `/api/staff/return/${currentRentalId}/confirm?damageFee=${damageFee}`;
+    if (note && note.trim()) {
+        url += `&returnNote=${encodeURIComponent(note)}`;
+    }
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            alert('Lỗi: ' + data.error);
+        } else {
+            // ✅ Hiển thị chi tiết trả xe thành công
+            const successMsg = `✓ Xe đã được trả thành công!\n\n` +
+                `Trạng thái đơn: ${data.rentalStatus || 'COMPLETED'}\n` +
+                `Trạng thái thanh toán: ${formatPaymentStatus(data.paymentStatus) || 'N/A'}\n` +
+                `Trạng thái xe: ${data.vehicleStatus || 'AVAILABLE'}`;
+
+            alert(successMsg);
+            closeReturnModal();
+            // Tải lại danh sách
+            loadReturnVehicles();
+        }
+    })
+    .catch(error => {
+        alert('Lỗi khi trả xe: ' + error.message);
+    });
+}
+
+/**
+ * Đóng modal khi click bên ngoài
+ */
+window.onclick = function(event) {
+    const modal = document.getElementById('returnModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Tìm kiếm theo biển số xe (thời gian thực)
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    const searchPlateInput = document.getElementById('searchPlate');
+    if (searchPlateInput) {
+        searchPlateInput.addEventListener('keyup', function() {
+            filterTable();
+        });
+    }
+});
+
+/**
+ * Tìm kiếm theo tên khách hàng (thời gian thực)
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    const searchCustomerInput = document.getElementById('searchCustomer');
+    if (searchCustomerInput) {
+        searchCustomerInput.addEventListener('keyup', function() {
+            filterTable();
+        });
+    }
+});
+
+/**
+ * Hàm lọc bảng theo cả hai tiêu chí: biển số và tên khách hàng
+ * Sử dụng logic AND - cả hai điều kiện phải match
+ */
+function filterTable() {
+    const searchPlate = document.getElementById('searchPlate').value.toLowerCase();
+    const searchCustomer = document.getElementById('searchCustomer').value.toLowerCase();
+    const tableBody = document.getElementById('returnTableBody');
+    const rows = tableBody.getElementsByTagName('tr');
+
+    for (let row of rows) {
+        const cells = row.querySelectorAll('td');
+
+        if (cells.length >= 3) {
+            // Cột 0: Biển số xe
+            const plate = cells[0].textContent.toLowerCase();
+            // Cột 2: Tên khách hàng (username từ RentalRecord)
+            const customerName = cells[2].textContent.toLowerCase();
+
+            const matchPlate = plate.includes(searchPlate);
+            const matchCustomer = customerName.includes(searchCustomer);
+
+            // Hiển thị dòng nếu cả hai điều kiện đều match (AND logic)
+            // Hoặc chỉ một nếu chỉ có một field được nhập
+            if ((searchPlate === '' || matchPlate) && (searchCustomer === '' || matchCustomer)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    }
+}
+
