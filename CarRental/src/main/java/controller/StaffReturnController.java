@@ -71,10 +71,10 @@ public class StaffReturnController {
             String staffStationId = staff.getStationId();
 
             // Lọc RentalRecord:
-            // - status = "DELIVERED" (xe đã được giao cho khách, giờ sẵn sàng trả)
+            // - status = "WAITING_INSPECTION" (khách đã yêu cầu trả)
             // - stationId của hợp đồng = stationId của staff
             List<RentalRecord> readyRecords = rentalRecordRepository.findAll().stream()
-                    .filter(record -> "DELIVERED".equals(record.getStatus()) &&
+                    .filter(record -> "WAITING_INSPECTION".equalsIgnoreCase(record.getStatus()) &&
                                      staffStationId.equals(record.getStationId()))
                     .toList();
 
@@ -94,6 +94,10 @@ public class StaffReturnController {
                     item.put("total", record.getTotal());
                     item.put("paymentStatus", record.getPaymentStatus());
                     item.put("status", record.getStatus());
+                    item.put("returnNotes", record.getReturnNotes());
+                    item.put("returnLatitude", record.getReturnLatitude());
+                    item.put("returnLongitude", record.getReturnLongitude());
+                    item.put("returnTime", record.getEndTime());
                     result.add(item);
                 }
             }
@@ -244,6 +248,12 @@ public class StaffReturnController {
             result.put("paymentStatus", record.getPaymentStatus());
             result.put("status", record.getStatus());
             result.put("returnNotes", record.getReturnNotes());
+            result.put("returnLatitude", record.getReturnLatitude());
+            result.put("returnLongitude", record.getReturnLongitude());
+            result.put("returnTime", record.getEndTime());
+            result.put("checkinLatitude", record.getCheckinLatitude());
+            result.put("checkinLongitude", record.getCheckinLongitude());
+            result.put("checkinTime", record.getStartTime());
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
