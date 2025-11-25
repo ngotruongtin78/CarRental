@@ -72,7 +72,7 @@ public class PaymentController {
     @PostMapping("/create-order")
     public ResponseEntity<?> createOrder(@RequestBody(required = false) Map<String, Object> req,
                                          @RequestParam(value = "rentalId", required = false) String rentalIdParam,
-                                         @RequestParam(value = "deposit", required = false) Boolean depositQuery) {
+                                         @RequestParam(value = "deposit", required = false) String depositQuery) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth != null ? auth.getName() : null;
 
@@ -123,10 +123,26 @@ public class PaymentController {
 
         double depositPaid = Optional.ofNullable(record.getDepositPaidAmount()).orElse(0.0);
         boolean cashFlow = "cash".equalsIgnoreCase(record.getPaymentMethod());
-        boolean depositRequested = (depositQuery != null && depositQuery)
-                || (req != null && (Boolean.TRUE.equals(req.get("deposit"))
-                || "true".equalsIgnoreCase(String.valueOf(req.get("deposit")))))
-                || (cashFlow && "DEPOSIT_PENDING".equalsIgnoreCase(record.getPaymentStatus()));
+
+        boolean depositRequested = false;
+        if (depositQuery != null) {
+            depositRequested = "true".equalsIgnoreCase(depositQuery)
+                    || "1".equals(depositQuery)
+                    || "yes".equalsIgnoreCase(depositQuery);
+        }
+
+        if (!depositRequested && req != null) {
+            Object depositFlag = req.get("deposit");
+            depositRequested = Boolean.TRUE.equals(depositFlag)
+                    || "true".equalsIgnoreCase(String.valueOf(depositFlag))
+                    || "1".equals(String.valueOf(depositFlag))
+                    || "yes".equalsIgnoreCase(String.valueOf(depositFlag));
+        }
+
+        if (!depositRequested && cashFlow
+                && "DEPOSIT_PENDING".equalsIgnoreCase(record.getPaymentStatus())) {
+            depositRequested = true;
+        }
         double depositRequired = cashFlow
                 ? Optional.ofNullable(record.getDepositRequiredAmount()).orElse(Math.round(amount * 0.3 * 100.0) / 100.0)
                 : 0.0;

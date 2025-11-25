@@ -129,7 +129,7 @@ async function maybePromptDeposit() {
     if (!needDeposit || !cashConfirmed) return;
 
     try {
-        const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}&deposit=1`, { method: "POST" });
+        const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}&deposit=true`, { method: "POST" });
         if (!qrRes.ok) {
             console.error("Không tạo được QR cho đặt cọc", await qrRes.text());
             return;
@@ -275,7 +275,7 @@ async function confirmPayment() {
     // ==============================
     if (method === "bank_transfer" || data?.depositPending === true) {
         const depositFlag = method === "cash" || data?.depositPending === true;
-        const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}${depositFlag ? "&deposit=1" : ""}`, {
+        const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}${depositFlag ? "&deposit=true" : ""}`, {
             method: "POST"
         });
 
