@@ -265,15 +265,32 @@ async function confirmPayment() {
     document.querySelector(".detail-value.total-fee").innerText =
         latestTotal.toLocaleString("vi-VN") + " VNĐ";
 
+    const depositRequired = data.depositRequired
+        ?? data.depositRequiredAmount
+        ?? rentalData?.depositRequiredAmount
+        ?? Math.round((latestTotal || totalAmount) * 0.3);
+    const depositPaid = data.depositPaid
+        ?? data.depositPaidAmount
+        ?? rentalData?.depositPaidAmount
+        ?? 0;
+    const depositRemaining = Math.max(0, depositRequired - depositPaid);
+
     if (method === "cash") {
-        lastDepositAmount = data.depositRequired || lastDepositAmount || Math.round(latestTotal * 0.3);
+        rentalData = {
+            ...(rentalData || {}),
+            paymentMethod: "cash",
+            paymentStatus: data?.paymentStatus || "DEPOSIT_PENDING",
+            depositRequiredAmount: depositRequired,
+            depositPaidAmount: depositPaid
+        };
+        lastDepositAmount = depositRemaining || Math.round(latestTotal * 0.3);
     }
 
 
     // ==============================
     // SEPAY
     // ==============================
-    if (method === "bank_transfer" || data?.depositPending === true) {
+    if (method === "bank_transfer" || data?.depositPending === true || (method === "cash" && depositRemaining > 0)) {
         const depositFlag = method === "cash" || data?.depositPending === true;
         const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}${depositFlag ? "&deposit=true" : ""}`, {
             method: "POST"
@@ -290,15 +307,19 @@ async function confirmPayment() {
 
         openQrModal(qr, {
             isDeposit: method === "cash" || data?.depositPending,
-            depositAmount: lastDepositAmount || data?.depositRequired || qr.amount
+            depositAmount: lastDepositAmount || depositRemaining || data?.depositRequired || qr.amount
         });
+        depositPrompted = true;
         if (method === "cash") {
             alert("Vui lòng chuyển khoản 30% đặt cọc để giữ xe. Phần còn lại sẽ thanh toán tại trạm.");
         }
         return;
     }
 
-    alert("Đã lưu phương thức thanh toán. Vui lòng tới trạm để hoàn tất thanh toán tiền mặt!");
+    if (method === "cash" && depositRemaining <= 0) {
+        alert("Bạn đã đặt cọc đủ. Vui lòng tới trạm để thanh toán phần còn lại và nhận xe.");
+        return;
+    }
 }
 
 function cancelPayment() {
