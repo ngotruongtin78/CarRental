@@ -188,7 +188,10 @@ function hasCheckedIn(record) {
     if (!record) return false;
     const status = (record.status || "").toUpperCase();
     if (["IN_PROGRESS", "WAITING_INSPECTION", "RETURNED", "COMPLETED"].includes(status)) return true;
-    return Boolean(record.startTime);
+
+    if (record.checkinPhotoData || record.checkinLatitude || record.checkinLongitude) return true;
+    const actualStart = parseDate(record.checkinTime || record.actualStartTime);
+    return !!actualStart;
 }
 
 function openContractModal(rentalId, afterAccept) {
@@ -591,6 +594,10 @@ function renderHistoryItem(item) {
     const pendingPayment = hasOutstandingUpfrontPayment(record);
 
     if (pendingPayment) {
+        container.classList.add("pending-payment");
+    }
+
+    if (pendingPayment) {
         const note = document.createElement("span");
         note.className = "status-badge warning";
         note.innerText = "Vui lòng thanh toán cọc/chuyển khoản trước khi tiếp tục";
@@ -687,13 +694,18 @@ function renderHistoryItem(item) {
 }
 
 function getSortTimestamp(record) {
-    const start = parseDate(record?.startDate || record?.startTime);
-    const end = parseDate(record?.endDate || record?.endTime);
+    const timestamps = [
+        parseDate(record?.startDate || record?.startTime),
+        parseDate(record?.endDate || record?.endTime),
+        parseDate(record?.createdAt)
+    ]
+        .map(d => (d ? d.getTime() : null))
+        .filter(v => Number.isFinite(v));
 
-    if (start && end) return Math.max(start.getTime(), end.getTime());
-    if (start) return start.getTime();
-    if (end) return end.getTime();
-    return 0;
+    if (timestamps.length) return Math.max(...timestamps);
+
+    const numericId = Number(record?.id);
+    return Number.isFinite(numericId) ? numericId : 0;
 }
 
 function renderHistoryList(list) {
@@ -714,8 +726,22 @@ function renderHistoryList(list) {
 
 function parseDate(input) {
     if (!input) return null;
-    const dt = new Date(input);
-    return isNaN(dt.getTime()) ? null : dt;
+    if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
+
+    const raw = typeof input === "string" ? input.trim() : input;
+    const direct = new Date(raw);
+    if (!isNaN(direct.getTime())) return direct;
+
+    if (typeof raw === "string") {
+        const match = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[ T](\d{1,2})(?::(\d{1,2})(?::(\d{1,2}))?)?)?$/);
+        if (match) {
+            const [, d, m, y, hh = "0", mm = "0", ss = "0"] = match;
+            const parsed = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss));
+            return isNaN(parsed.getTime()) ? null : parsed;
+        }
+    }
+
+    return null;
 }
 
 function matchesVehicleType(vehicleType, filterValue) {
