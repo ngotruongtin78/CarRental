@@ -92,6 +92,28 @@ public class SepayWebhookHandler {
             return ResponseEntity.ok("RENTAL_NOT_FOUND");
         }
 
+        boolean cashFlow = "cash".equalsIgnoreCase(record.getPaymentMethod());
+        double depositRequired = record.getDepositRequiredAmount() != null
+                ? record.getDepositRequiredAmount()
+                : (cashFlow ? Math.round(record.getTotal() * 0.3 * 100.0) / 100.0 : 0.0);
+        Double depositPaid = record.getDepositPaidAmount();
+        double currentDeposit = depositPaid != null ? depositPaid : 0.0;
+
+        double depositRemaining = Math.max(0, depositRequired - currentDeposit);
+
+        // Nếu chưa đánh dấu giao dịch đặt cọc nhưng đây là đơn tiền mặt còn thiếu cọc -> coi như giao dịch cọc
+        if (!depositFlow && !incidentFlow && cashFlow && depositRemaining > 0) {
+            depositFlow = true;
+            log.info("Suy luận webhook là giao dịch đặt cọc cho {} vì đơn tiền mặt còn thiếu cọc", rentalId);
+        }
+
+        if (depositFlow) {
+            log.info("Nhận giao dịch đặt cọc cho {}", rentalId);
+        }
+        if (incidentFlow) {
+            log.info("Nhận giao dịch phí phát sinh cho {}", rentalId);
+        }
+
         double incomingAmount = 0;
         try {
             incomingAmount = Double.parseDouble(data.getAmount());
@@ -102,9 +124,6 @@ public class SepayWebhookHandler {
                 incomingAmount = Double.parseDouble(data.getSub_amount());
             } catch (Exception ignored) {}
         }
-
-        Double depositPaid = record.getDepositPaidAmount();
-        double currentDeposit = depositPaid != null ? depositPaid : 0.0;
 
         if (incidentFlow) {
             double recordedFee = record.getAdditionalFeeAmount() != null
@@ -134,15 +153,14 @@ public class SepayWebhookHandler {
         }
 
         if (incomingAmount <= 0 && depositFlow) {
-            double depositRequired = record.getDepositRequiredAmount() != null
-                    ? record.getDepositRequiredAmount()
-                    : Math.round(record.getTotal() * 0.3 * 100.0) / 100.0;
-            double remaining = Math.max(0, depositRequired - currentDeposit);
-
             // Nếu dữ liệu webhook không trả về số tiền, giả định khách đã chuyển đúng phần còn thiếu của tiền cọc
-            // để không bỏ sót giao dịch.
-            incomingAmount = remaining > 0 ? remaining : depositRequired;
+            incomingAmount = depositRemaining > 0 ? depositRemaining : depositRequired;
             record.setDepositRequiredAmount(depositRequired);
+        }
+
+        if (incomingAmount <= 0 && !depositFlow && !incidentFlow) {
+            double outstanding = Math.max(0, record.getTotal() - currentDeposit);
+            incomingAmount = outstanding;
         }
 
         if (incomingAmount <= 0) {
@@ -150,14 +168,11 @@ public class SepayWebhookHandler {
             return ResponseEntity.ok("INVALID_AMOUNT");
         }
 
-        if ("cash".equalsIgnoreCase(record.getPaymentMethod())) {
+        if (depositFlow && cashFlow) {
             double newPaid = currentDeposit + incomingAmount;
             record.setDepositPaidAmount(newPaid);
+            record.setDepositPaidAt(java.time.LocalDateTime.now());
             record.setWalletReference(data.getTranId());
-
-            double depositRequired = record.getDepositRequiredAmount() != null
-                    ? record.getDepositRequiredAmount()
-                    : Math.round(record.getTotal() * 0.3 * 100.0) / 100.0;
             record.setDepositRequiredAmount(depositRequired);
 
             if (newPaid >= record.getTotal()) {
@@ -186,10 +201,17 @@ public class SepayWebhookHandler {
                     holdUntil = java.time.LocalDateTime.now().plusDays(1);
                 }
                 record.setHoldExpiresAt(holdUntil);
-            } else {
-                record.setPaymentStatus("DEPOSIT_PENDING");
+                rentalRepo.save(record);
+                try {
+                    vehicleService.markDeposited(record.getVehicleId(), rentalId);
+                } catch (Exception e) {
+                    log.error("Lỗi cập nhật xe sau đặt cọc: {}", e.getMessage());
+                }
+                log.info("Đơn {} đã đặt cọc đủ, chuyển sang PAY_AT_STATION", rentalId);
+                return ResponseEntity.ok("OK");
             }
 
+            record.setPaymentStatus("DEPOSIT_PENDING");
             rentalRepo.save(record);
             log.info("Đơn {} đã ghi nhận đặt cọc {} qua chuyển khoản", rentalId, incomingAmount);
             return ResponseEntity.ok("OK");

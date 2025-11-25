@@ -247,6 +247,9 @@ public class PaymentController {
                 double depositPaid = Optional.ofNullable(record.getDepositPaidAmount()).orElse(0.0);
                 double newPaid = depositPaid + paidAmount;
                 record.setDepositPaidAmount(newPaid);
+                if (paidAmount > 0) {
+                    record.setDepositPaidAt(LocalDateTime.now());
+                }
                 double depositRequired = Optional.ofNullable(record.getDepositRequiredAmount())
                         .orElse(Math.round(record.getTotal() * 0.3 * 100.0) / 100.0);
 
@@ -267,6 +270,7 @@ public class PaymentController {
                     }
                     record.setHoldExpiresAt(holdUntil);
                     rentalRepo.save(record);
+                    vehicleService.markDeposited(record.getVehicleId(), rentalId);
                 } else {
                     record.setPaymentStatus("DEPOSIT_PENDING");
                     rentalRepo.save(record);
