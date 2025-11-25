@@ -598,6 +598,64 @@ body {
 
 .note-block + .note-block { margin-top: 8px; }
 
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.photo-card {
+    background: #f8f9f8;
+    border-radius: 12px;
+    border: 1px solid #e0e6e0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+.photo-card__header {
+    padding: 10px 12px;
+    background: linear-gradient(135deg, #2e7d32, #4caf50);
+    color: #ffffff;
+}
+
+.photo-card__body {
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    min-height: 160px;
+}
+
+.photo-card__body img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.photo-card__meta {
+    padding: 10px 12px 12px;
+    font-size: 13px;
+    color: #2f4f2f;
+    line-height: 1.4;
+}
+
+.photo-card__meta i { margin-right: 6px; color: #2e7d32; }
+
+.photo-placeholder {
+    width: 100%;
+    text-align: center;
+    color: #7a8a7a;
+    font-size: 14px;
+    padding: 20px 10px;
+    border: 1px dashed #c7d3c7;
+    border-radius: 8px;
+    background: #fbfdfb;
+}
+
 .payment-callout {
     display: flex;
     align-items: center;
