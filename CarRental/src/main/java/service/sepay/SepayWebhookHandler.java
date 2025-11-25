@@ -90,14 +90,28 @@ public class SepayWebhookHandler {
             } catch (Exception ignored) {}
         }
 
+        Double depositPaid = record.getDepositPaidAmount();
+        double currentDeposit = depositPaid != null ? depositPaid : 0.0;
+
+        if (incomingAmount <= 0 && depositFlow) {
+            double depositRequired = record.getDepositRequiredAmount() != null
+                    ? record.getDepositRequiredAmount()
+                    : Math.round(record.getTotal() * 0.3 * 100.0) / 100.0;
+            double remaining = Math.max(0, depositRequired - currentDeposit);
+
+            // Nếu dữ liệu webhook không trả về số tiền, giả định khách đã chuyển đúng phần còn thiếu của tiền cọc
+            // để không bỏ sót giao dịch.
+            incomingAmount = remaining > 0 ? remaining : depositRequired;
+            record.setDepositRequiredAmount(depositRequired);
+        }
+
         if (incomingAmount <= 0) {
             log.warn("Webhook {} không có số tiền hợp lệ (amount={}, sub_amount={})", rentalId, data.getAmount(), data.getSub_amount());
             return ResponseEntity.ok("INVALID_AMOUNT");
         }
 
         if ("cash".equalsIgnoreCase(record.getPaymentMethod())) {
-            double depositPaid = record.getDepositPaidAmount() != null ? record.getDepositPaidAmount() : 0.0;
-            double newPaid = depositPaid + incomingAmount;
+            double newPaid = currentDeposit + incomingAmount;
             record.setDepositPaidAmount(newPaid);
             record.setWalletReference(data.getTranId());
 
