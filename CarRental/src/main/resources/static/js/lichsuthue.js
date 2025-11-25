@@ -188,7 +188,10 @@ function hasCheckedIn(record) {
     if (!record) return false;
     const status = (record.status || "").toUpperCase();
     if (["IN_PROGRESS", "WAITING_INSPECTION", "RETURNED", "COMPLETED"].includes(status)) return true;
-    return Boolean(record.startTime);
+
+    if (record.checkinPhotoData || record.checkinLatitude || record.checkinLongitude) return true;
+    const actualStart = parseDate(record.checkinTime || record.actualStartTime);
+    return !!actualStart;
 }
 
 function openContractModal(rentalId, afterAccept) {
@@ -521,6 +524,15 @@ function canContinuePayment(record) {
     return !isNaN(holdExpiry.getTime()) && holdExpiry > new Date();
 }
 
+function hasOutstandingUpfrontPayment(record) {
+    if (!record) return false;
+    const depositRequired = Number(record.depositRequiredAmount || 0);
+    const depositPaid = Number(record.depositPaidAmount || 0);
+    const depositPending = depositRequired > 0 && depositPaid < depositRequired;
+
+    return depositPending || canContinuePayment(record);
+}
+
 function renderHistoryItem(item) {
     const record = item.record || {};
     const vehicle = item.vehicle;
@@ -579,12 +591,31 @@ function renderHistoryItem(item) {
     const checkedIn = hasCheckedIn(record);
     const withinWindow = isWithinRentalWindow(record);
     const modifiable = canModifyReservation(record);
+    const pendingPayment = hasOutstandingUpfrontPayment(record);
+
+    if (pendingPayment) {
+        container.classList.add("pending-payment");
+    }
+
+    if (pendingPayment) {
+        const note = document.createElement("span");
+        note.className = "status-badge warning";
+        note.innerText = "Vui lòng thanh toán cọc/chuyển khoản trước khi tiếp tục";
+        actions.appendChild(note);
+    }
 
     if (!disabled && !record.contractSigned) {
         const btn = document.createElement("button");
         btn.className = "action-button";
         btn.innerHTML = '<i class="fas fa-file-signature"></i> Ký hợp đồng điện tử';
-        btn.onclick = () => openContractModal(record.id);
+        btn.disabled = pendingPayment;
+        if (pendingPayment) {
+            btn.title = "Thanh toán cọc/chuyển khoản trước khi ký hợp đồng";
+        }
+        btn.onclick = () => {
+            if (pendingPayment) return;
+            openContractModal(record.id);
+        };
         actions.appendChild(btn);
     }
 
@@ -592,8 +623,10 @@ function renderHistoryItem(item) {
         const btnCheckin = document.createElement("button");
         btnCheckin.className = "action-button";
         btnCheckin.innerHTML = '<i class="fas fa-check"></i> Check-in nhận xe';
-        btnCheckin.disabled = !record.contractSigned || !withinWindow;
-        if (!record.contractSigned) {
+        btnCheckin.disabled = pendingPayment || !record.contractSigned || !withinWindow;
+        if (pendingPayment) {
+            btnCheckin.title = "Thanh toán cọc/chuyển khoản trước khi check-in";
+        } else if (!record.contractSigned) {
             btnCheckin.title = "Ký hợp đồng điện tử trước khi check-in";
         } else if (!withinWindow) {
             btnCheckin.title = "Chỉ check-in trong thời gian thuê đã đăng ký";
@@ -606,6 +639,10 @@ function renderHistoryItem(item) {
         const btnReturn = document.createElement("button");
         btnReturn.className = "action-button secondary";
         btnReturn.innerHTML = '<i class="fas fa-undo"></i> Yêu cầu trả xe';
+        btnReturn.disabled = pendingPayment;
+        if (pendingPayment) {
+            btnReturn.title = "Thanh toán cọc/chuyển khoản trước khi yêu cầu trả xe";
+        }
         btnReturn.onclick = () => startReturnFlow(record, station);
         actions.appendChild(btnReturn);
     } else if (statusUpper === "WAITING_INSPECTION") {
@@ -656,6 +693,27 @@ function renderHistoryItem(item) {
     return container;
 }
 
+function getSortTimestamp(record) {
+    const timestamps = [
+        record?.endTime,
+        record?.endDate,
+        record?.startTime,
+        record?.startDate,
+        record?.paidAt,
+        record?.depositPaidAt,
+        record?.holdExpiresAt,
+        record?.createdAt
+    ]
+        .map(parseDate)
+        .map(d => (d ? d.getTime() : null))
+        .filter(v => Number.isFinite(v));
+
+    if (timestamps.length) return Math.max(...timestamps);
+
+    const numericId = Number(record?.id);
+    return Number.isFinite(numericId) ? numericId : 0;
+}
+
 function renderHistoryList(list) {
     const listEl = document.getElementById("history-list");
     if (!list || !list.length) {
@@ -665,14 +723,60 @@ function renderHistoryList(list) {
     }
 
     listEl.innerHTML = "";
-    list.forEach(item => listEl.appendChild(renderHistoryItem(item)));
-    updateAnalyticsFromHistory(list);
+    const sortedList = [...list].sort(
+        (a, b) => getSortTimestamp(b.record) - getSortTimestamp(a.record)
+    );
+    sortedList.forEach(item => listEl.appendChild(renderHistoryItem(item)));
+    updateAnalyticsFromHistory(sortedList);
 }
 
 function parseDate(input) {
     if (!input) return null;
-    const dt = new Date(input);
-    return isNaN(dt.getTime()) ? null : dt;
+    if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
+
+    const raw = typeof input === "string" ? input.trim() : input;
+
+    // Native number timestamps
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+        const asDate = new Date(raw);
+        return isNaN(asDate.getTime()) ? null : asDate;
+    }
+
+    const direct = new Date(raw);
+    if (!isNaN(direct.getTime())) return direct;
+
+    // Arrays from Jackson for LocalDate/LocalDateTime: [yyyy, MM, dd, HH, mm, ss, nano]
+    if (Array.isArray(raw)) {
+        const [y, m = 1, d = 1, hh = 0, mm = 0, ss = 0, nano = 0] = raw;
+        const parsed = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss), Number(nano) / 1e6);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    // Objects like {year: 2024, month: 5, day: 12, hour: 10, minute: 30, second: 0}
+    if (typeof raw === "object") {
+        const year = raw.year ?? raw.y;
+        const month = (raw.monthValue ?? raw.month ?? raw.m) ?? 1;
+        const day = raw.dayOfMonth ?? raw.day ?? raw.d ?? 1;
+        const hour = raw.hour ?? raw.h ?? 0;
+        const minute = raw.minute ?? raw.min ?? raw.i ?? 0;
+        const second = raw.second ?? raw.s ?? 0;
+        const nano = raw.nano ?? raw.ms ?? 0;
+        if (year) {
+            const parsed = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second), Number(nano) / 1e6);
+            if (!isNaN(parsed.getTime())) return parsed;
+        }
+    }
+
+    if (typeof raw === "string") {
+        const match = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[ T](\d{1,2})(?::(\d{1,2})(?::(\d{1,2}))?)?)?$/);
+        if (match) {
+            const [, d, m, y, hh = "0", mm = "0", ss = "0"] = match;
+            const parsed = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss));
+            return isNaN(parsed.getTime()) ? null : parsed;
+        }
+    }
+
+    return null;
 }
 
 function matchesVehicleType(vehicleType, filterValue) {
