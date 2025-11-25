@@ -693,16 +693,17 @@ function renderHistoryItem(item) {
     return container;
 }
 
-function getSortTimestamp(record) {
+function getSortTimestamp(item) {
+    const record = item?.record || item || {};
     const timestamps = [
-        record?.endTime,
-        record?.endDate,
-        record?.startTime,
-        record?.startDate,
-        record?.paidAt,
-        record?.depositPaidAt,
-        record?.holdExpiresAt,
-        record?.createdAt
+        record.endTime ?? item?.endTime,
+        record.endDate ?? item?.endDate,
+        record.startTime ?? item?.startTime,
+        record.startDate ?? item?.startDate,
+        record.paidAt ?? item?.paidAt,
+        record.depositPaidAt ?? item?.depositPaidAt,
+        record.holdExpiresAt ?? item?.holdExpiresAt,
+        record.createdAt ?? item?.createdAt
     ]
         .map(parseDate)
         .map(d => (d ? d.getTime() : null))
@@ -710,7 +711,10 @@ function getSortTimestamp(record) {
 
     if (timestamps.length) return Math.max(...timestamps);
 
-    const numericId = Number(record?.id);
+    const numericId = [record.id, item?.id]
+        .map(val => Number(val))
+        .find(num => Number.isFinite(num));
+
     return Number.isFinite(numericId) ? numericId : 0;
 }
 
@@ -724,7 +728,7 @@ function renderHistoryList(list) {
 
     listEl.innerHTML = "";
     const sortedList = [...list].sort(
-        (a, b) => getSortTimestamp(b.record) - getSortTimestamp(a.record)
+        (a, b) => getSortTimestamp(b) - getSortTimestamp(a)
     );
     sortedList.forEach(item => listEl.appendChild(renderHistoryItem(item)));
     updateAnalyticsFromHistory(sortedList);
