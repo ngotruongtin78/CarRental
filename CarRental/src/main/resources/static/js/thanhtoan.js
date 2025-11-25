@@ -124,11 +124,12 @@ async function maybePromptDeposit() {
     const depositRequired = rentalData.depositRequiredAmount || Math.round((totalAmount || 0) * 0.3);
     const depositPaid = rentalData.depositPaidAmount || 0;
     const needDeposit = method === "cash" && depositRequired > 0 && depositPaid < depositRequired;
+    const cashConfirmed = rentalData.paymentMethod === "cash" || rentalData.paymentStatus === "DEPOSIT_PENDING";
 
-    if (!needDeposit) return;
+    if (!needDeposit || !cashConfirmed) return;
 
     try {
-        const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}`, { method: "POST" });
+        const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}&deposit=1`, { method: "POST" });
         if (!qrRes.ok) {
             console.error("Không tạo được QR cho đặt cọc", await qrRes.text());
             return;
@@ -149,7 +150,7 @@ function openQrModal(qrData, options = {}) {
     document.getElementById("qrAmount").innerText = qrData.amount.toLocaleString("vi-VN");
     document.getElementById("qrAccountName").innerText = qrData.accountName;
     document.getElementById("qrAccountNumber").innerText = qrData.accountNumber;
-    document.getElementById("qrOrder").innerText = qrData.rentalId || rentalId;
+    document.getElementById("qrOrder").innerText = qrData.description || qrData.rentalId || rentalId;
 
     const depositNote = document.getElementById("depositNote");
     if (depositNote) {
@@ -273,7 +274,8 @@ async function confirmPayment() {
     // SEPAY
     // ==============================
     if (method === "bank_transfer" || data?.depositPending === true) {
-        const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}`, {
+        const depositFlag = method === "cash" || data?.depositPending === true;
+        const qrRes = await fetch(`/payment/create-order?rentalId=${encodeURIComponent(rentalId)}${depositFlag ? "&deposit=1" : ""}`, {
             method: "POST"
         });
 

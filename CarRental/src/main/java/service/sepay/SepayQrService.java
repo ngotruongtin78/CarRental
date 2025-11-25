@@ -19,10 +19,16 @@ public class SepayQrService {
     private String accountName;
 
     public String generateQrUrl(String rentalId, int amount) {
+        return generateQrUrl(rentalId, amount, false);
+    }
+
+    public String generateQrUrl(String rentalId, int amount, boolean deposit) {
 
         String cleanedRentalId = rentalId.toLowerCase().replace("rental", "").trim();
 
-        String description = "rental" + cleanedRentalId;
+        String prefix = deposit ? "depositrental" : "rental";
+
+        String description = prefix + cleanedRentalId;
 
         String encodedDes = URLEncoder.encode(description, StandardCharsets.UTF_8);
 

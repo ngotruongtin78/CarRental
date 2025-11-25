@@ -36,12 +36,22 @@ public class SepayWebhookHandler {
 
         String lower = raw.toLowerCase();
         String rentalId = null;
+        boolean depositFlow = false;
+
+        java.util.regex.Matcher depositMatcher = java.util.regex.Pattern
+                .compile("depositrental(\\d+)")
+                .matcher(lower);
+
+        if (depositMatcher.find()) {
+            rentalId = "rental" + depositMatcher.group(1);
+            depositFlow = true;
+        }
 
         java.util.regex.Matcher matcher = java.util.regex.Pattern
                 .compile("rental(\\d+)")
                 .matcher(lower);
 
-        if (matcher.find()) {
+        if (rentalId == null && matcher.find()) {
             rentalId = matcher.group(0);
         }
 
@@ -57,6 +67,10 @@ public class SepayWebhookHandler {
         if (rentalId == null || rentalId.isEmpty()) {
             log.warn("Không tìm thấy rentalId trong nội dung: {}", raw);
             return ResponseEntity.ok("NO_RENTAL_ID");
+        }
+
+        if (depositFlow) {
+            log.info("Nhận giao dịch đặt cọc cho {}", rentalId);
         }
 
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);

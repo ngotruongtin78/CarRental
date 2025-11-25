@@ -71,7 +71,8 @@ public class PaymentController {
 
     @PostMapping("/create-order")
     public ResponseEntity<?> createOrder(@RequestBody(required = false) Map<String, Object> req,
-                                         @RequestParam(value = "rentalId", required = false) String rentalIdParam) {
+                                         @RequestParam(value = "rentalId", required = false) String rentalIdParam,
+                                         @RequestParam(value = "deposit", required = false) Boolean depositQuery) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth != null ? auth.getName() : null;
 
@@ -122,20 +123,25 @@ public class PaymentController {
 
         double depositPaid = Optional.ofNullable(record.getDepositPaidAmount()).orElse(0.0);
         boolean cashFlow = "cash".equalsIgnoreCase(record.getPaymentMethod());
+        boolean depositRequested = (depositQuery != null && depositQuery)
+                || (req != null && (Boolean.TRUE.equals(req.get("deposit"))
+                || "true".equalsIgnoreCase(String.valueOf(req.get("deposit")))))
+                || (cashFlow && "DEPOSIT_PENDING".equalsIgnoreCase(record.getPaymentStatus()));
         double depositRequired = cashFlow
                 ? Optional.ofNullable(record.getDepositRequiredAmount()).orElse(Math.round(amount * 0.3 * 100.0) / 100.0)
                 : 0.0;
 
         double amountToCollect;
         double depositRemaining = 0.0;
-        if (cashFlow && (record.getPaymentStatus() == null || record.getPaymentStatus().equalsIgnoreCase("DEPOSIT_PENDING"))
-                && depositPaid < depositRequired) {
+        boolean isDepositOrder = false;
+        if (cashFlow && depositRequested && depositPaid < depositRequired) {
             record.setPaymentStatus("DEPOSIT_PENDING");
             record.setStatus("PENDING_PAYMENT");
             record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(15));
             amountToCollect = depositRequired - depositPaid;
             record.setDepositRequiredAmount(depositRequired);
             depositRemaining = amountToCollect;
+            isDepositOrder = true;
         } else {
             amountToCollect = Math.max(0, amount - depositPaid);
             record.setPaymentStatus("PENDING");
@@ -152,11 +158,11 @@ public class PaymentController {
 
         // ==== TẠO QR ====
         int amountInt = (int) Math.round(amountToCollect);
-        String qrUrl = qrService.generateQrUrl(rentalId, amountInt);
+        String qrUrl = qrService.generateQrUrl(rentalId, amountInt, isDepositOrder);
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("amount", amountInt);
-        payload.put("description", rentalId);
+        payload.put("description", isDepositOrder ? "deposit" + rentalId : rentalId);
 
         payload.put("qrUrl", qrUrl);
         payload.put("qrBase64", null);
@@ -178,13 +184,15 @@ public class PaymentController {
     @GetMapping("/create-qr")
     public ResponseEntity<?> createQr(@RequestParam int amount,
                                       @RequestParam String description,
-                                      @RequestParam(required = false) String orderId) {
+                                      @RequestParam(required = false) String orderId,
+                                      @RequestParam(value = "deposit", required = false) Boolean deposit) {
         if (amount <= 0 || description.isBlank()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Thiếu số tiền hoặc mô tả thanh toán");
         }
 
-        String qrUrl = qrService.generateQrUrl(orderId != null ? orderId : "ORDER", amount);
+        String qrUrl = qrService.generateQrUrl(orderId != null ? orderId : "ORDER", amount,
+                deposit != null && deposit);
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("amount", amount);
