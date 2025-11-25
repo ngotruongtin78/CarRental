@@ -36,6 +36,14 @@ const editModalState = {
     rentalId: null,
 };
 
+const extraFeeModalState = {
+    el: null,
+    amountEl: null,
+    noteEl: null,
+    qrEl: null,
+    descEl: null,
+};
+
 let pendingContractRentalId = null;
 let contractAcceptedCallback = null;
 let activeCheckinRecord = null;
@@ -823,11 +831,38 @@ function buildDetailSection(title, rows) {
     return `<div class="modal-section"><h4>${title}</h4><div class="detail-grid">${content}</div></div>`;
 }
 
+async function startExtraFeePayment(record) {
+    if (!record || !record.id) return;
+    try {
+        const res = await fetch(`/api/payment/extra-fee/create-order`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rentalId: record.id })
+        });
+
+        if (!res.ok) {
+            const msg = await res.text();
+            alert(msg || "Không thể tạo QR cho phí phát sinh");
+            return;
+        }
+
+        const payload = await res.json();
+        openExtraFeeModal(payload);
+    } catch (err) {
+        console.error("Lỗi tạo QR phí phát sinh", err);
+        alert("Không thể tạo QR cho phí phát sinh, vui lòng thử lại.");
+    }
+}
+
 function openRentalModal(item) {
     if (!rentalModal.el || !rentalModal.body || !rentalModal.title) return;
     const record = item.record || {};
     const vehicle = item.vehicle || {};
     const station = item.station || {};
+
+    const extraAmount = Number(record.additionalFeeAmount ?? item.additionalFeeAmount ?? record.damageFee ?? 0);
+    const extraPaid = Number(record.additionalFeePaidAmount ?? item.additionalFeePaidAmount ?? 0);
+    const extraOutstanding = Math.max(0, extraAmount - extraPaid);
 
     rentalModal.title.textContent = vehicle.brand ? `${vehicle.brand} (${vehicle.plate || ""})` : `Chuyến #${record.id}`;
     renderBadges(item);
@@ -841,7 +876,12 @@ function openRentalModal(item) {
         { label: "Thanh toán", value: record.paymentStatus || "Chưa cập nhật" },
         { label: "PT thanh toán", value: record.paymentMethod || "---" },
         { label: "Giữ chỗ tới", value: record.holdExpiresAt ? formatDateTime(record.holdExpiresAt) : "---" },
+        extraAmount > 0
+            ? { label: "Chi phí phát sinh", value: `${formatMoney(extraAmount)}${extraOutstanding > 0 ? ` (còn ${formatMoney(extraOutstanding)})` : ""}` }
+            : null,
     ];
+
+    const sanitizedRentalRows = rentalRows.filter(Boolean);
 
     const vehicleRows = [
         { label: "Loại xe", value: vehicle.type || "---" },
@@ -859,9 +899,12 @@ function openRentalModal(item) {
     const notes = [];
     if (record.checkinNotes) notes.push(`<div class="note-block"><strong>Ghi chú nhận xe:</strong><br>${record.checkinNotes}</div>`);
     if (record.returnNotes) notes.push(`<div class="note-block"><strong>Ghi chú trả xe:</strong><br>${record.returnNotes}</div>`);
+    if (record.additionalFeeNote && record.additionalFeeNote !== record.returnNotes) {
+        notes.push(`<div class="note-block"><strong>Ghi chú phí phát sinh:</strong><br>${record.additionalFeeNote}</div>`);
+    }
 
     rentalModal.body.innerHTML = [
-        buildDetailSection("Thông tin chuyến", rentalRows),
+        buildDetailSection("Thông tin chuyến", sanitizedRentalRows),
         buildDetailSection("Xe & chi phí", vehicleRows),
         buildDetailSection("Trạm thuê", stationRows),
         notes.length ? `<div class="modal-section">${notes.join("")}</div>` : "",
@@ -889,6 +932,27 @@ function openRentalModal(item) {
         });
 
         rentalModal.body.appendChild(paymentSection);
+    }
+
+    if (extraOutstanding > 0) {
+        const feeSection = document.createElement("div");
+        feeSection.className = "modal-section payment-action";
+        const note = record.additionalFeeNote || record.returnNotes || "Phí phát sinh do nhân viên xác nhận.";
+        feeSection.innerHTML = `
+            <div class="payment-callout fee-callout">
+                <div class="payment-text">
+                    <h4>Chi phí phát sinh</h4>
+                    <p>${note}</p>
+                    <p><strong>Còn phải thanh toán:</strong> ${formatMoney(extraOutstanding)}</p>
+                </div>
+                <button type="button" class="btn-continue-payment btn-extra-fee">
+                    <i class="fas fa-qrcode"></i> Thanh toán phí phát sinh
+                </button>
+            </div>
+        `;
+
+        feeSection.querySelector(".btn-extra-fee")?.addEventListener("click", () => startExtraFeePayment(record));
+        rentalModal.body.appendChild(feeSection);
     }
 
     rentalModal.el.classList.add("show");
@@ -934,6 +998,18 @@ function initReturnModal() {
     returnModalState.el?.querySelector(".dialog-close")?.addEventListener("click", closeReturnModal);
 }
 
+function initExtraFeeModal() {
+    extraFeeModalState.el = document.getElementById("extra-fee-modal");
+    extraFeeModalState.amountEl = document.getElementById("extra-fee-amount");
+    extraFeeModalState.noteEl = document.getElementById("extra-fee-note");
+    extraFeeModalState.qrEl = document.getElementById("extra-fee-qr");
+    extraFeeModalState.descEl = document.getElementById("extra-fee-desc");
+
+    document.getElementById("btn-extra-fee-close")?.addEventListener("click", closeExtraFeeModal);
+    extraFeeModalState.el?.querySelector(".dialog-overlay")?.addEventListener("click", closeExtraFeeModal);
+    extraFeeModalState.el?.querySelector(".dialog-close")?.addEventListener("click", closeExtraFeeModal);
+}
+
 function initEditModal() {
     editModalState.el = document.getElementById("edit-dates-modal");
     editModalState.startInput = document.getElementById("edit-start-date");
@@ -947,6 +1023,20 @@ function initEditModal() {
     document.getElementById("btn-edit-dates-cancel")?.addEventListener("click", closeEditModal);
     editModalState.el?.querySelector(".dialog-overlay")?.addEventListener("click", closeEditModal);
     editModalState.el?.querySelector(".dialog-close")?.addEventListener("click", closeEditModal);
+}
+
+function openExtraFeeModal(payload) {
+    if (!extraFeeModalState.el) return;
+    const amount = payload?.amount ?? payload?.outstanding ?? 0;
+    if (extraFeeModalState.amountEl) extraFeeModalState.amountEl.textContent = formatMoney(amount);
+    if (extraFeeModalState.noteEl) extraFeeModalState.noteEl.textContent = payload?.note || "Phí phát sinh do nhân viên xác nhận.";
+    if (extraFeeModalState.qrEl) extraFeeModalState.qrEl.src = payload?.qrBase64 || payload?.qrUrl || "";
+    if (extraFeeModalState.descEl) extraFeeModalState.descEl.textContent = payload?.description || payload?.rentalId || "";
+    extraFeeModalState.el.classList.add("show");
+}
+
+function closeExtraFeeModal() {
+    extraFeeModalState.el?.classList.remove("show");
 }
 
 function initRentalModal() {
@@ -972,6 +1062,7 @@ window.addEventListener("DOMContentLoaded", () => {
     initCheckinModal();
     initReturnModal();
     initEditModal();
+    initExtraFeeModal();
 
     document.querySelector(".btn-filter")?.addEventListener("click", filterHistory);
     document.getElementById("period-filter")?.addEventListener("change", filterHistory);

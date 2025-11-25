@@ -349,4 +349,57 @@ public class PaymentController {
 
         return ResponseEntity.ok(resp);
     }
+
+    @PostMapping("/extra-fee/create-order")
+    public ResponseEntity<?> createExtraFeeOrder(@RequestBody(required = false) Map<String, Object> req,
+                                                 @RequestParam(value = "rentalId", required = false) String rentalIdParam) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth != null ? auth.getName() : null;
+
+        if (username == null || "anonymousUser".equalsIgnoreCase(username)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Bạn cần đăng nhập để thanh toán");
+        }
+
+        String rentalId = null;
+        if (req != null && req.get("rentalId") instanceof String) rentalId = (String) req.get("rentalId");
+        if (rentalId == null || rentalId.isBlank()) rentalId = rentalIdParam;
+        if (rentalId == null || rentalId.isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Thiếu mã chuyến thuê");
+        }
+
+        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        if (record == null || !username.equals(record.getUsername())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy chuyến thuê");
+        }
+
+        double extraAmount = record.getAdditionalFeeAmount() != null
+                ? record.getAdditionalFeeAmount()
+                : record.getDamageFee();
+        double extraPaid = Optional.ofNullable(record.getAdditionalFeePaidAmount()).orElse(0.0);
+        if (extraAmount <= 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Không có phí phát sinh cần thanh toán");
+        }
+
+        double outstanding = Math.max(0, extraAmount - extraPaid);
+        if (outstanding <= 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Bạn đã thanh toán đủ phí phát sinh");
+        }
+
+        int amountInt = (int) Math.round(outstanding);
+        String qrUrl = qrService.generateIncidentQrUrl(rentalId, amountInt);
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("amount", amountInt);
+        payload.put("description", "incident" + rentalId);
+        payload.put("qrUrl", qrUrl);
+        payload.put("qrBase64", null);
+        payload.put("bank", bankName);
+        payload.put("accountName", accountName);
+        payload.put("accountNumber", accountNumber);
+        payload.put("rentalId", rentalId);
+        payload.put("note", record.getAdditionalFeeNote() != null ? record.getAdditionalFeeNote() : record.getReturnNotes());
+        payload.put("outstanding", outstanding);
+
+        return ResponseEntity.ok(payload);
+    }
 }

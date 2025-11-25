@@ -23,13 +23,16 @@ public class SepayQrService {
     }
 
     public String generateQrUrl(String rentalId, int amount, boolean deposit) {
+        return generateQrUrlWithPrefix(rentalId, amount, deposit ? "depositrental" : "rental");
+    }
 
+    public String generateIncidentQrUrl(String rentalId, int amount) {
+        return generateQrUrlWithPrefix(rentalId, amount, "incidentrental");
+    }
+
+    private String generateQrUrlWithPrefix(String rentalId, int amount, String prefix) {
         String cleanedRentalId = rentalId.toLowerCase().replace("rental", "").trim();
-
-        String prefix = deposit ? "depositrental" : "rental";
-
         String description = prefix + cleanedRentalId;
-
         String encodedDes = URLEncoder.encode(description, StandardCharsets.UTF_8);
 
         return String.format(

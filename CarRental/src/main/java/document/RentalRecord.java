@@ -47,6 +47,11 @@ public class RentalRecord {
     private Double returnLongitude;
     private byte[] checkinPhotoData;
     private byte[] returnPhotoData;
+
+    private Double additionalFeeAmount;
+    private String additionalFeeNote;
+    private Double additionalFeePaidAmount;
+    private LocalDateTime additionalFeePaidAt;
     
     private String walletReference;
 
@@ -160,6 +165,38 @@ public class RentalRecord {
 
     public byte[] getReturnPhotoData() { return returnPhotoData; }
     public void setReturnPhotoData(byte[] returnPhotoData) { this.returnPhotoData = returnPhotoData; }
+
+    public Double getAdditionalFeeAmount() {
+        return additionalFeeAmount;
+    }
+
+    public void setAdditionalFeeAmount(Double additionalFeeAmount) {
+        this.additionalFeeAmount = additionalFeeAmount;
+    }
+
+    public String getAdditionalFeeNote() {
+        return additionalFeeNote;
+    }
+
+    public void setAdditionalFeeNote(String additionalFeeNote) {
+        this.additionalFeeNote = additionalFeeNote;
+    }
+
+    public Double getAdditionalFeePaidAmount() {
+        return additionalFeePaidAmount;
+    }
+
+    public void setAdditionalFeePaidAmount(Double additionalFeePaidAmount) {
+        this.additionalFeePaidAmount = additionalFeePaidAmount;
+    }
+
+    public LocalDateTime getAdditionalFeePaidAt() {
+        return additionalFeePaidAt;
+    }
+
+    public void setAdditionalFeePaidAt(LocalDateTime additionalFeePaidAt) {
+        this.additionalFeePaidAt = additionalFeePaidAt;
+    }
 
     public String getWalletReference() {
         return walletReference;

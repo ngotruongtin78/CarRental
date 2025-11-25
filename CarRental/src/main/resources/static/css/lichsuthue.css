@@ -949,3 +949,37 @@ body {
         margin-bottom: 30px;
     }
 }
+
+.fee-callout { background: #fff8e1; border-color: #f6c67a; }
+.fee-callout h4 { color: #8a5a00; }
+.fee-callout p { color: #8a5a00; }
+
+.qr-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.qr-wrapper img {
+    max-width: 260px;
+    width: 100%;
+    height: auto;
+}
+
+.qr-meta {
+    display: grid;
+    gap: 6px;
+    font-size: 14px;
+    color: #374151;
+}
+
+.extra-fee-note {
+    background: #fff7ed;
+    color: #8a5a00;
+    border-radius: 10px;
+    padding: 10px 12px;
+}

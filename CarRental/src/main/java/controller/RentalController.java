@@ -247,6 +247,10 @@ public class RentalController {
             payload.put("depositRequiredAmount", record.getDepositRequiredAmount());
             payload.put("depositPaidAmount", record.getDepositPaidAmount());
             payload.put("depositPaidAt", record.getDepositPaidAt());
+            payload.put("additionalFeeAmount", record.getAdditionalFeeAmount());
+            payload.put("additionalFeeNote", record.getAdditionalFeeNote());
+            payload.put("additionalFeePaidAmount", record.getAdditionalFeePaidAmount());
+            payload.put("additionalFeePaidAt", record.getAdditionalFeePaidAt());
 
             if (vehicle != null) {
                 payload.put("vehicle", vehicle);

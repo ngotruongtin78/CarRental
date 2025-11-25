@@ -207,6 +207,28 @@
         </div>
     </div>
 </div>
+<div id="extra-fee-modal" class="dialog-modal">
+    <div class="dialog-overlay"></div>
+    <div class="dialog-content">
+        <div class="dialog-header">
+            <h3>Thanh toán phí phát sinh</h3>
+            <button class="dialog-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="dialog-body">
+            <p class="dialog-hint extra-fee-note" id="extra-fee-note">Phí phát sinh do nhân viên xác nhận.</p>
+            <div class="qr-wrapper">
+                <img id="extra-fee-qr" alt="QR thanh toán" src="" />
+            </div>
+            <div class="qr-meta">
+                <p><strong>Số tiền:</strong> <span id="extra-fee-amount">-</span></p>
+                <p><strong>Nội dung chuyển khoản:</strong> <span id="extra-fee-desc">-</span></p>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn-primary" id="btn-extra-fee-close">Đóng</button>
+        </div>
+    </div>
+</div>
 <div id="edit-dates-modal" class="dialog-modal">
     <div class="dialog-overlay"></div>
     <div class="dialog-content">

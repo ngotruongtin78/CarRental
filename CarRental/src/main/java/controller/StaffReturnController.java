@@ -153,11 +153,20 @@ public class StaffReturnController {
             if (damageFee > 0) {
                 record.setDamageFee(damageFee);
                 record.setTotal(record.getTotal() + damageFee);
+                record.setAdditionalFeeAmount(damageFee);
+                record.setAdditionalFeePaidAmount(record.getAdditionalFeePaidAmount() != null
+                        ? record.getAdditionalFeePaidAmount()
+                        : 0.0);
+            } else {
+                record.setAdditionalFeeAmount(0.0);
+                record.setAdditionalFeePaidAmount(record.getAdditionalFeePaidAmount() != null
+                        ? record.getAdditionalFeePaidAmount()
+                        : 0.0);
             }
 
-            // Step 4: Add return notes if provided
             if (returnNote != null && !returnNote.isEmpty()) {
                 record.setReturnNotes(returnNote);
+                record.setAdditionalFeeNote(returnNote);
             }
 
             // Step 5: Save

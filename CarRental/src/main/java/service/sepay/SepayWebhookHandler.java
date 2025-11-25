@@ -37,6 +37,7 @@ public class SepayWebhookHandler {
         String lower = raw.toLowerCase();
         String rentalId = null;
         boolean depositFlow = false;
+        boolean incidentFlow = false;
 
         java.util.regex.Matcher depositMatcher = java.util.regex.Pattern
                 .compile("depositrental(\\d+)")
@@ -45,6 +46,15 @@ public class SepayWebhookHandler {
         if (depositMatcher.find()) {
             rentalId = "rental" + depositMatcher.group(1);
             depositFlow = true;
+        }
+
+        java.util.regex.Matcher incidentMatcher = java.util.regex.Pattern
+                .compile("incidentrental(\\d+)")
+                .matcher(lower);
+
+        if (incidentMatcher.find()) {
+            rentalId = "rental" + incidentMatcher.group(1);
+            incidentFlow = true;
         }
 
         java.util.regex.Matcher matcher = java.util.regex.Pattern
@@ -72,6 +82,9 @@ public class SepayWebhookHandler {
         if (depositFlow) {
             log.info("Nhận giao dịch đặt cọc cho {}", rentalId);
         }
+        if (incidentFlow) {
+            log.info("Nhận giao dịch phí phát sinh cho {}", rentalId);
+        }
 
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record == null) {
@@ -92,6 +105,33 @@ public class SepayWebhookHandler {
 
         Double depositPaid = record.getDepositPaidAmount();
         double currentDeposit = depositPaid != null ? depositPaid : 0.0;
+
+        if (incidentFlow) {
+            double recordedFee = record.getAdditionalFeeAmount() != null
+                    ? record.getAdditionalFeeAmount()
+                    : record.getDamageFee();
+            double paidFee = record.getAdditionalFeePaidAmount() != null
+                    ? record.getAdditionalFeePaidAmount()
+                    : 0.0;
+
+            if (incomingAmount <= 0) {
+                double remaining = Math.max(0, recordedFee - paidFee);
+                incomingAmount = remaining > 0 ? remaining : recordedFee;
+            }
+
+            if (incomingAmount <= 0) {
+                log.warn("Webhook {} không có số tiền hợp lệ (amount={}, sub_amount={})", rentalId, data.getAmount(), data.getSub_amount());
+                return ResponseEntity.ok("INVALID_AMOUNT");
+            }
+
+            double newPaid = paidFee + incomingAmount;
+            record.setAdditionalFeeAmount(recordedFee);
+            record.setAdditionalFeePaidAmount(newPaid);
+            record.setAdditionalFeePaidAt(java.time.LocalDateTime.now());
+            rentalRepo.save(record);
+            log.info("Đơn {} đã ghi nhận thanh toán phí phát sinh {}", rentalId, incomingAmount);
+            return ResponseEntity.ok("OK");
+        }
 
         if (incomingAmount <= 0 && depositFlow) {
             double depositRequired = record.getDepositRequiredAmount() != null
