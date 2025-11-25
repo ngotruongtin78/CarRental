@@ -656,6 +656,16 @@ function renderHistoryItem(item) {
     return container;
 }
 
+function getSortTimestamp(record) {
+    const start = parseDate(record?.startDate || record?.startTime);
+    const end = parseDate(record?.endDate || record?.endTime);
+
+    if (start && end) return Math.max(start.getTime(), end.getTime());
+    if (start) return start.getTime();
+    if (end) return end.getTime();
+    return 0;
+}
+
 function renderHistoryList(list) {
     const listEl = document.getElementById("history-list");
     if (!list || !list.length) {
@@ -665,8 +675,11 @@ function renderHistoryList(list) {
     }
 
     listEl.innerHTML = "";
-    list.forEach(item => listEl.appendChild(renderHistoryItem(item)));
-    updateAnalyticsFromHistory(list);
+    const sortedList = [...list].sort(
+        (a, b) => getSortTimestamp(b.record) - getSortTimestamp(a.record)
+    );
+    sortedList.forEach(item => listEl.appendChild(renderHistoryItem(item)));
+    updateAnalyticsFromHistory(sortedList);
 }
 
 function parseDate(input) {
