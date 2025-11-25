@@ -84,6 +84,17 @@ public class SepayWebhookHandler {
             incomingAmount = Double.parseDouble(data.getAmount());
         } catch (Exception ignored) {}
 
+        if (incomingAmount <= 0) {
+            try {
+                incomingAmount = Double.parseDouble(data.getSub_amount());
+            } catch (Exception ignored) {}
+        }
+
+        if (incomingAmount <= 0) {
+            log.warn("Webhook {} không có số tiền hợp lệ (amount={}, sub_amount={})", rentalId, data.getAmount(), data.getSub_amount());
+            return ResponseEntity.ok("INVALID_AMOUNT");
+        }
+
         if ("cash".equalsIgnoreCase(record.getPaymentMethod())) {
             double depositPaid = record.getDepositPaidAmount() != null ? record.getDepositPaidAmount() : 0.0;
             double newPaid = depositPaid + incomingAmount;
@@ -93,6 +104,7 @@ public class SepayWebhookHandler {
             double depositRequired = record.getDepositRequiredAmount() != null
                     ? record.getDepositRequiredAmount()
                     : Math.round(record.getTotal() * 0.3 * 100.0) / 100.0;
+            record.setDepositRequiredAmount(depositRequired);
 
             if (newPaid >= record.getTotal()) {
                 record.setPaymentStatus("PAID");

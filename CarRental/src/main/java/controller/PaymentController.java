@@ -326,7 +326,15 @@ public class PaymentController {
 
         boolean paid = "PAID".equalsIgnoreCase(record.getPaymentStatus());
         double depositPaidAmount = Optional.ofNullable(record.getDepositPaidAmount()).orElse(0.0);
-        double depositRequired = Optional.ofNullable(record.getDepositRequiredAmount()).orElse(0.0);
+        double depositRequired = Optional.ofNullable(record.getDepositRequiredAmount())
+                .orElseGet(() -> "cash".equalsIgnoreCase(record.getPaymentMethod())
+                        ? Math.round(record.getTotal() * 0.3 * 100.0) / 100.0
+                        : 0.0);
+
+        if ("cash".equalsIgnoreCase(record.getPaymentMethod()) && record.getDepositRequiredAmount() == null) {
+            record.setDepositRequiredAmount(depositRequired);
+            rentalRepo.save(record);
+        }
 
         boolean depositSatisfied = paid
                 || "PAY_AT_STATION".equalsIgnoreCase(record.getPaymentStatus())
