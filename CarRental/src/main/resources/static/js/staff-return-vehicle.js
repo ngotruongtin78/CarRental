@@ -126,6 +126,21 @@ function formatPaymentStatus(status) {
     return statusMap[status] || status;
 }
 
+function formatDateTime(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (isNaN(date)) return '';
+    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function formatLocation(lat, lng) {
+    if (lat === null || lng === null || lat === undefined || lng === undefined) return 'N/A';
+    const latNum = Number(lat);
+    const lngNum = Number(lng);
+    if (Number.isNaN(latNum) || Number.isNaN(lngNum)) return 'N/A';
+    return `${latNum.toFixed(5)}, ${lngNum.toFixed(5)}`;
+}
+
 /**
  * Mở modal trả xe với toàn bộ thông tin chi tiết
  */
@@ -151,6 +166,12 @@ function handleReturnVehicle(rentalId, plate, customerName) {
             // Điền thông tin thanh toán
             document.getElementById('returnTotal').value = formatCurrency(data.total) || 'N/A';
             document.getElementById('returnPaymentStatus').value = formatPaymentStatus(data.paymentStatus) || 'N/A';
+
+            document.getElementById('returnCheckinTime').value = formatDateTime(data.checkinTime) || 'N/A';
+            document.getElementById('returnCheckinLoc').value = formatLocation(data.checkinLatitude, data.checkinLongitude);
+            document.getElementById('returnRequestTime').value = formatDateTime(data.returnTime) || 'N/A';
+            document.getElementById('returnRequestLoc').value = formatLocation(data.returnLatitude, data.returnLongitude);
+            document.getElementById('returnCustomerNote').value = data.returnNotes || 'Không có';
 
             // Làm trống phí hư hỏng và ghi chú
             document.getElementById('returnDamageFee').value = '';

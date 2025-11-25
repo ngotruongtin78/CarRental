@@ -22,6 +22,14 @@ public class VehicleService {
     }
 
     public boolean markPendingPayment(String vehicleId, String rentalId) {
+        return markPendingPaymentInternal(vehicleId, rentalId, true);
+    }
+
+    public boolean markPendingPaymentHidden(String vehicleId, String rentalId) {
+        return markPendingPaymentInternal(vehicleId, rentalId, false);
+    }
+
+    private boolean markPendingPaymentInternal(String vehicleId, String rentalId, boolean showAsAvailable) {
         Vehicle v = vehicleRepo.findById(vehicleId).orElse(null);
         if (v == null) return false;
 
@@ -34,7 +42,7 @@ public class VehicleService {
 
         v.setBookingStatus("PENDING_PAYMENT");
         v.setPendingRentalId(rentalId);
-        v.setAvailable(true);
+        v.setAvailable(showAsAvailable);
         vehicleRepo.save(v);
         return true;
     }
@@ -49,7 +57,27 @@ public class VehicleService {
         }
 
         v.setBookingStatus("RENTED");
-        v.setPendingRentalId(null);
+        v.setPendingRentalId(rentalId);
+        v.setAvailable(false);
+        vehicleRepo.save(v);
+    }
+
+    /**
+     * Đánh dấu xe đã được đặt cọc (giữ chỗ) nhưng chưa hoàn tất thanh toán tại trạm.
+     * Trạng thái hiển thị như đang được thuê để ẩn khỏi danh sách công khai.
+     */
+    public void markDeposited(String vehicleId, String rentalId) {
+        Vehicle v = vehicleRepo.findById(vehicleId).orElse(null);
+        if (v == null) return;
+
+        // Nếu xe đang được giữ cho một đơn khác thì bỏ qua
+        if (v.getPendingRentalId() != null && !v.getPendingRentalId().equals(rentalId)
+                && "PENDING_PAYMENT".equalsIgnoreCase(v.getBookingStatus())) {
+            return;
+        }
+
+        v.setBookingStatus("RENTED");
+        v.setPendingRentalId(rentalId);
         v.setAvailable(false);
         vehicleRepo.save(v);
     }
