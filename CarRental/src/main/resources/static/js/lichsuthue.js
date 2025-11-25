@@ -521,6 +521,15 @@ function canContinuePayment(record) {
     return !isNaN(holdExpiry.getTime()) && holdExpiry > new Date();
 }
 
+function hasOutstandingUpfrontPayment(record) {
+    if (!record) return false;
+    const depositRequired = Number(record.depositRequiredAmount || 0);
+    const depositPaid = Number(record.depositPaidAmount || 0);
+    const depositPending = depositRequired > 0 && depositPaid < depositRequired;
+
+    return depositPending || canContinuePayment(record);
+}
+
 function renderHistoryItem(item) {
     const record = item.record || {};
     const vehicle = item.vehicle;
@@ -579,12 +588,27 @@ function renderHistoryItem(item) {
     const checkedIn = hasCheckedIn(record);
     const withinWindow = isWithinRentalWindow(record);
     const modifiable = canModifyReservation(record);
+    const pendingPayment = hasOutstandingUpfrontPayment(record);
+
+    if (pendingPayment) {
+        const note = document.createElement("span");
+        note.className = "status-badge warning";
+        note.innerText = "Vui lòng thanh toán cọc/chuyển khoản trước khi tiếp tục";
+        actions.appendChild(note);
+    }
 
     if (!disabled && !record.contractSigned) {
         const btn = document.createElement("button");
         btn.className = "action-button";
         btn.innerHTML = '<i class="fas fa-file-signature"></i> Ký hợp đồng điện tử';
-        btn.onclick = () => openContractModal(record.id);
+        btn.disabled = pendingPayment;
+        if (pendingPayment) {
+            btn.title = "Thanh toán cọc/chuyển khoản trước khi ký hợp đồng";
+        }
+        btn.onclick = () => {
+            if (pendingPayment) return;
+            openContractModal(record.id);
+        };
         actions.appendChild(btn);
     }
 
@@ -592,8 +616,10 @@ function renderHistoryItem(item) {
         const btnCheckin = document.createElement("button");
         btnCheckin.className = "action-button";
         btnCheckin.innerHTML = '<i class="fas fa-check"></i> Check-in nhận xe';
-        btnCheckin.disabled = !record.contractSigned || !withinWindow;
-        if (!record.contractSigned) {
+        btnCheckin.disabled = pendingPayment || !record.contractSigned || !withinWindow;
+        if (pendingPayment) {
+            btnCheckin.title = "Thanh toán cọc/chuyển khoản trước khi check-in";
+        } else if (!record.contractSigned) {
             btnCheckin.title = "Ký hợp đồng điện tử trước khi check-in";
         } else if (!withinWindow) {
             btnCheckin.title = "Chỉ check-in trong thời gian thuê đã đăng ký";
@@ -606,6 +632,10 @@ function renderHistoryItem(item) {
         const btnReturn = document.createElement("button");
         btnReturn.className = "action-button secondary";
         btnReturn.innerHTML = '<i class="fas fa-undo"></i> Yêu cầu trả xe';
+        btnReturn.disabled = pendingPayment;
+        if (pendingPayment) {
+            btnReturn.title = "Thanh toán cọc/chuyển khoản trước khi yêu cầu trả xe";
+        }
         btnReturn.onclick = () => startReturnFlow(record, station);
         actions.appendChild(btnReturn);
     } else if (statusUpper === "WAITING_INSPECTION") {
@@ -656,6 +686,16 @@ function renderHistoryItem(item) {
     return container;
 }
 
+function getSortTimestamp(record) {
+    const start = parseDate(record?.startDate || record?.startTime);
+    const end = parseDate(record?.endDate || record?.endTime);
+
+    if (start && end) return Math.max(start.getTime(), end.getTime());
+    if (start) return start.getTime();
+    if (end) return end.getTime();
+    return 0;
+}
+
 function renderHistoryList(list) {
     const listEl = document.getElementById("history-list");
     if (!list || !list.length) {
@@ -665,8 +705,11 @@ function renderHistoryList(list) {
     }
 
     listEl.innerHTML = "";
-    list.forEach(item => listEl.appendChild(renderHistoryItem(item)));
-    updateAnalyticsFromHistory(list);
+    const sortedList = [...list].sort(
+        (a, b) => getSortTimestamp(b.record) - getSortTimestamp(a.record)
+    );
+    sortedList.forEach(item => listEl.appendChild(renderHistoryItem(item)));
+    updateAnalyticsFromHistory(sortedList);
 }
 
 function parseDate(input) {
