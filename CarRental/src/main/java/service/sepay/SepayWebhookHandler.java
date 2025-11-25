@@ -79,6 +79,13 @@ public class SepayWebhookHandler {
             return ResponseEntity.ok("NO_RENTAL_ID");
         }
 
+        if (depositFlow) {
+            log.info("Nhận giao dịch đặt cọc cho {}", rentalId);
+        }
+        if (incidentFlow) {
+            log.info("Nhận giao dịch phí phát sinh cho {}", rentalId);
+        }
+
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record == null) {
             log.warn("Không tìm thấy đơn với id: {}", rentalId);
