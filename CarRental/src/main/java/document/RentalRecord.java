@@ -29,6 +29,10 @@ public class RentalRecord {
     private double total;
     private double damageFee;
 
+    private Double depositRequiredAmount;
+    private Double depositPaidAmount;
+    private LocalDateTime depositPaidAt;
+
     private String paymentMethod;
     private String status;
     private String paymentStatus;
@@ -36,7 +40,18 @@ public class RentalRecord {
 
     private boolean contractSigned;
     private String checkinNotes;
+    private Double checkinLatitude;
+    private Double checkinLongitude;
     private String returnNotes;
+    private Double returnLatitude;
+    private Double returnLongitude;
+    private byte[] checkinPhotoData;
+    private byte[] returnPhotoData;
+
+    private Double additionalFeeAmount;
+    private String additionalFeeNote;
+    private Double additionalFeePaidAmount;
+    private LocalDateTime additionalFeePaidAt;
     
     private String walletReference;
 
@@ -103,6 +118,15 @@ public class RentalRecord {
     public double getDamageFee() { return damageFee; }
     public void setDamageFee(double damageFee) { this.damageFee = damageFee; }
 
+    public Double getDepositRequiredAmount() { return depositRequiredAmount; }
+    public void setDepositRequiredAmount(Double depositRequiredAmount) { this.depositRequiredAmount = depositRequiredAmount; }
+
+    public Double getDepositPaidAmount() { return depositPaidAmount; }
+    public void setDepositPaidAmount(Double depositPaidAmount) { this.depositPaidAmount = depositPaidAmount; }
+
+    public LocalDateTime getDepositPaidAt() { return depositPaidAt; }
+    public void setDepositPaidAt(LocalDateTime depositPaidAt) { this.depositPaidAt = depositPaidAt; }
+
     public String getPaymentMethod() { return paymentMethod; }
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
 
@@ -121,8 +145,58 @@ public class RentalRecord {
     public String getCheckinNotes() { return checkinNotes; }
     public void setCheckinNotes(String checkinNotes) { this.checkinNotes = checkinNotes; }
 
+    public Double getCheckinLatitude() { return checkinLatitude; }
+    public void setCheckinLatitude(Double checkinLatitude) { this.checkinLatitude = checkinLatitude; }
+
+    public Double getCheckinLongitude() { return checkinLongitude; }
+    public void setCheckinLongitude(Double checkinLongitude) { this.checkinLongitude = checkinLongitude; }
+
     public String getReturnNotes() { return returnNotes; }
     public void setReturnNotes(String returnNotes) { this.returnNotes = returnNotes; }
+
+    public Double getReturnLatitude() { return returnLatitude; }
+    public void setReturnLatitude(Double returnLatitude) { this.returnLatitude = returnLatitude; }
+
+    public Double getReturnLongitude() { return returnLongitude; }
+    public void setReturnLongitude(Double returnLongitude) { this.returnLongitude = returnLongitude; }
+
+    public byte[] getCheckinPhotoData() { return checkinPhotoData; }
+    public void setCheckinPhotoData(byte[] checkinPhotoData) { this.checkinPhotoData = checkinPhotoData; }
+
+    public byte[] getReturnPhotoData() { return returnPhotoData; }
+    public void setReturnPhotoData(byte[] returnPhotoData) { this.returnPhotoData = returnPhotoData; }
+
+    public Double getAdditionalFeeAmount() {
+        return additionalFeeAmount;
+    }
+
+    public void setAdditionalFeeAmount(Double additionalFeeAmount) {
+        this.additionalFeeAmount = additionalFeeAmount;
+    }
+
+    public String getAdditionalFeeNote() {
+        return additionalFeeNote;
+    }
+
+    public void setAdditionalFeeNote(String additionalFeeNote) {
+        this.additionalFeeNote = additionalFeeNote;
+    }
+
+    public Double getAdditionalFeePaidAmount() {
+        return additionalFeePaidAmount;
+    }
+
+    public void setAdditionalFeePaidAmount(Double additionalFeePaidAmount) {
+        this.additionalFeePaidAmount = additionalFeePaidAmount;
+    }
+
+    public LocalDateTime getAdditionalFeePaidAt() {
+        return additionalFeePaidAt;
+    }
+
+    public void setAdditionalFeePaidAt(LocalDateTime additionalFeePaidAt) {
+        this.additionalFeePaidAt = additionalFeePaidAt;
+    }
 
     public String getWalletReference() {
         return walletReference;
