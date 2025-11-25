@@ -695,10 +695,16 @@ function renderHistoryItem(item) {
 
 function getSortTimestamp(record) {
     const timestamps = [
-        parseDate(record?.startDate || record?.startTime),
-        parseDate(record?.endDate || record?.endTime),
-        parseDate(record?.createdAt)
+        record?.endTime,
+        record?.endDate,
+        record?.startTime,
+        record?.startDate,
+        record?.paidAt,
+        record?.depositPaidAt,
+        record?.holdExpiresAt,
+        record?.createdAt
     ]
+        .map(parseDate)
         .map(d => (d ? d.getTime() : null))
         .filter(v => Number.isFinite(v));
 
@@ -729,8 +735,37 @@ function parseDate(input) {
     if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
 
     const raw = typeof input === "string" ? input.trim() : input;
+
+    // Native number timestamps
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+        const asDate = new Date(raw);
+        return isNaN(asDate.getTime()) ? null : asDate;
+    }
+
     const direct = new Date(raw);
     if (!isNaN(direct.getTime())) return direct;
+
+    // Arrays from Jackson for LocalDate/LocalDateTime: [yyyy, MM, dd, HH, mm, ss, nano]
+    if (Array.isArray(raw)) {
+        const [y, m = 1, d = 1, hh = 0, mm = 0, ss = 0, nano = 0] = raw;
+        const parsed = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss), Number(nano) / 1e6);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    // Objects like {year: 2024, month: 5, day: 12, hour: 10, minute: 30, second: 0}
+    if (typeof raw === "object") {
+        const year = raw.year ?? raw.y;
+        const month = (raw.monthValue ?? raw.month ?? raw.m) ?? 1;
+        const day = raw.dayOfMonth ?? raw.day ?? raw.d ?? 1;
+        const hour = raw.hour ?? raw.h ?? 0;
+        const minute = raw.minute ?? raw.min ?? raw.i ?? 0;
+        const second = raw.second ?? raw.s ?? 0;
+        const nano = raw.nano ?? raw.ms ?? 0;
+        if (year) {
+            const parsed = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second), Number(nano) / 1e6);
+            if (!isNaN(parsed.getTime())) return parsed;
+        }
+    }
 
     if (typeof raw === "string") {
         const match = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[ T](\d{1,2})(?::(\d{1,2})(?::(\d{1,2}))?)?)?$/);
