@@ -136,6 +136,23 @@ function displayContractDetail(data) {
     document.getElementById('modal-payment-status').textContent = statusText;
 
     document.getElementById('modal-notes').textContent = data.checkinNotes || 'Không có ghi chú';
+
+    document.getElementById('modal-checkin-time').textContent = formatDateTime(data.checkinTime) || '-';
+    document.getElementById('modal-return-time').textContent = formatDateTime(data.returnTime) || '-';
+    document.getElementById('modal-checkin-loc').textContent = formatLocation(data.checkinLatitude, data.checkinLongitude);
+    document.getElementById('modal-return-loc').textContent = formatLocation(data.returnLatitude, data.returnLongitude);
+}
+
+function formatDateTime(value) {
+    if (!value) return '';
+    const dt = new Date(value);
+    if (isNaN(dt)) return '';
+    return `${dt.toLocaleDateString()} ${dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function formatLocation(lat, lng) {
+    if (lat === undefined || lng === undefined || lat === null || lng === null) return '-';
+    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
 
 // Hàm đóng modal

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/staff/handover")
@@ -37,15 +38,21 @@ public class StaffHandoverController {
             System.out.println("Total records found: " + allRecords.size());
 
             for (RentalRecord record : allRecords) {
-                String paymentStatus = record.getPaymentStatus();
-                if (paymentStatus == null) {
-                    System.out.println("Skipping record " + record.getId() + " - null paymentStatus");
+                String paymentStatus = Optional.ofNullable(record.getPaymentStatus()).orElse("").trim().toUpperCase();
+                String status = Optional.ofNullable(record.getStatus()).orElse("").trim().toUpperCase();
+
+                boolean cancelled = status.equals("CANCELLED") || status.equals("EXPIRED")
+                        || paymentStatus.equals("CANCELLED") || paymentStatus.equals("EXPIRED");
+                if (cancelled) {
+                    System.out.println("Skipping record " + record.getId() + " - cancelled/expired");
                     continue;
                 }
 
-                String status = paymentStatus.trim().toUpperCase();
-                if (!status.equals("PAID") && !status.equals("PAY_AT_STATION")) {
-                    System.out.println("Skipping record " + record.getId() + " - status: " + status);
+                boolean readyForHandover = paymentStatus.equals("PAID") || paymentStatus.equals("PAY_AT_STATION")
+                        || status.equals("CONTRACT_SIGNED") || status.equals("IN_PROGRESS");
+
+                if (!readyForHandover) {
+                    System.out.println("Skipping record " + record.getId() + " - status: " + status + " payment: " + paymentStatus);
                     continue;
                 }
 
@@ -140,6 +147,13 @@ public class StaffHandoverController {
                 response.put("paymentStatus", record.getPaymentStatus() != null ? record.getPaymentStatus() : "N/A");
                 response.put("status", record.getStatus() != null ? record.getStatus() : "N/A");
                 response.put("checkinNotes", record.getCheckinNotes() != null ? record.getCheckinNotes() : "");
+                response.put("checkinLatitude", record.getCheckinLatitude());
+                response.put("checkinLongitude", record.getCheckinLongitude());
+                response.put("checkinTime", record.getStartTime());
+                response.put("returnNotes", record.getReturnNotes());
+                response.put("returnLatitude", record.getReturnLatitude());
+                response.put("returnLongitude", record.getReturnLongitude());
+                response.put("returnTime", record.getEndTime());
 
                 System.out.println("Handover detail prepared successfully");
             } catch (Exception innerE) {

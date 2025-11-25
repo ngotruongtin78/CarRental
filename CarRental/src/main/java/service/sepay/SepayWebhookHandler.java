@@ -36,12 +36,22 @@ public class SepayWebhookHandler {
 
         String lower = raw.toLowerCase();
         String rentalId = null;
+        boolean depositFlow = false;
+
+        java.util.regex.Matcher depositMatcher = java.util.regex.Pattern
+                .compile("depositrental(\\d+)")
+                .matcher(lower);
+
+        if (depositMatcher.find()) {
+            rentalId = "rental" + depositMatcher.group(1);
+            depositFlow = true;
+        }
 
         java.util.regex.Matcher matcher = java.util.regex.Pattern
                 .compile("rental(\\d+)")
                 .matcher(lower);
 
-        if (matcher.find()) {
+        if (rentalId == null && matcher.find()) {
             rentalId = matcher.group(0);
         }
 
@@ -59,10 +69,76 @@ public class SepayWebhookHandler {
             return ResponseEntity.ok("NO_RENTAL_ID");
         }
 
+        if (depositFlow) {
+            log.info("Nhận giao dịch đặt cọc cho {}", rentalId);
+        }
+
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record == null) {
             log.warn("Không tìm thấy đơn với id: {}", rentalId);
             return ResponseEntity.ok("RENTAL_NOT_FOUND");
+        }
+
+        double incomingAmount = 0;
+        try {
+            incomingAmount = Double.parseDouble(data.getAmount());
+        } catch (Exception ignored) {}
+
+        if (incomingAmount <= 0) {
+            try {
+                incomingAmount = Double.parseDouble(data.getSub_amount());
+            } catch (Exception ignored) {}
+        }
+
+        if (incomingAmount <= 0) {
+            log.warn("Webhook {} không có số tiền hợp lệ (amount={}, sub_amount={})", rentalId, data.getAmount(), data.getSub_amount());
+            return ResponseEntity.ok("INVALID_AMOUNT");
+        }
+
+        if ("cash".equalsIgnoreCase(record.getPaymentMethod())) {
+            double depositPaid = record.getDepositPaidAmount() != null ? record.getDepositPaidAmount() : 0.0;
+            double newPaid = depositPaid + incomingAmount;
+            record.setDepositPaidAmount(newPaid);
+            record.setWalletReference(data.getTranId());
+
+            double depositRequired = record.getDepositRequiredAmount() != null
+                    ? record.getDepositRequiredAmount()
+                    : Math.round(record.getTotal() * 0.3 * 100.0) / 100.0;
+            record.setDepositRequiredAmount(depositRequired);
+
+            if (newPaid >= record.getTotal()) {
+                record.setPaymentStatus("PAID");
+                record.setStatus("PAID");
+                record.setPaidAt(java.time.LocalDateTime.now());
+                record.setHoldExpiresAt(null);
+                rentalRepo.save(record);
+                try {
+                    vehicleService.markRented(record.getVehicleId(), rentalId);
+                } catch (Exception e) {
+                    log.error("Lỗi cập nhật xe: {}", e.getMessage());
+                }
+                log.info("Đơn {} đã thanh toán đủ qua chuyển khoản", rentalId);
+                return ResponseEntity.ok("OK");
+            }
+
+            if (newPaid >= depositRequired) {
+                record.setPaymentStatus("PAY_AT_STATION");
+                record.setStatus("ACTIVE");
+                java.time.LocalDate holdStart = record.getStartDate() != null
+                        ? record.getStartDate()
+                        : java.time.LocalDate.now();
+                java.time.LocalDateTime holdUntil = holdStart.atStartOfDay().plusDays(1);
+                if (holdUntil.isBefore(java.time.LocalDateTime.now())) {
+                    holdUntil = java.time.LocalDateTime.now().plusDays(1);
+                }
+                record.setHoldExpiresAt(holdUntil);
+            } else {
+                record.setPaymentStatus("DEPOSIT_PENDING");
+            }
+
+            rentalRepo.save(record);
+            log.info("Đơn {} đã ghi nhận đặt cọc {} qua chuyển khoản", rentalId, incomingAmount);
+            return ResponseEntity.ok("OK");
         }
 
         if ("PAID".equalsIgnoreCase(record.getPaymentStatus())) {
