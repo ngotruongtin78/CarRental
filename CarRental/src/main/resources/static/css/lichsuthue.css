@@ -349,6 +349,12 @@ body {
     transition: transform 0.2s ease;
 }
 
+.history-item.pending-payment {
+    border-color: #f6b8b8;
+    background-color: #fff7f7;
+    box-shadow: 0 4px 12px rgba(239, 83, 80, 0.12);
+}
+
 .history-item:hover {
     transform: translateY(-3px);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
