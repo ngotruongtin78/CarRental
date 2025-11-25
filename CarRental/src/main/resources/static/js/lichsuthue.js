@@ -79,6 +79,17 @@ function formatDateTime(dateStr) {
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 }
 
+function formatCoords(lat, lon) {
+    if (typeof lat !== "number" || typeof lon !== "number") return "";
+    return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+}
+
+function toImageDataUrl(base64) {
+    if (!base64) return "";
+    if (typeof base64 !== "string") return "";
+    return base64.startsWith("data:") ? base64 : `data:image/jpeg;base64,${base64}`;
+}
+
 function formatInputDate(dateStr) {
     const parsed = parseDate(dateStr);
     if (!parsed) return "";
@@ -831,6 +842,42 @@ function buildDetailSection(title, rows) {
     return `<div class="modal-section"><h4>${title}</h4><div class="detail-grid">${content}</div></div>`;
 }
 
+function buildPhotoCard(label, base64, timestamp, latitude, longitude, notes) {
+    const hasImage = Boolean(base64);
+    const meta = [];
+    const formattedTime = formatDateTime(timestamp);
+    const coords = formatCoords(latitude, longitude);
+
+    if (formattedTime) meta.push(`<span><i class="fas fa-clock"></i> ${formattedTime}</span>`);
+    if (coords) meta.push(`<span><i class="fas fa-location-dot"></i> ${coords}</span>`);
+    if (notes) meta.push(`<span><i class="fas fa-note-sticky"></i> ${notes}</span>`);
+
+    return `
+        <div class="photo-card">
+            <div class="photo-card__header">
+                <strong>${label}</strong>
+            </div>
+            <div class="photo-card__body">
+                ${hasImage
+        ? `<img src="${toImageDataUrl(base64)}" alt="${label}" loading="lazy">`
+        : `<div class="photo-placeholder">Chưa có ảnh ${label.toLowerCase()}</div>`}
+            </div>
+            ${meta.length ? `<div class="photo-card__meta">${meta.join("<br>")}</div>` : ""}
+        </div>
+    `;
+}
+
+function buildPhotoSection(record) {
+    if (!record) return "";
+    const photos = [
+        buildPhotoCard("Check-in", record.checkinPhotoData, record.startTime, record.checkinLatitude, record.checkinLongitude, record.checkinNotes),
+        buildPhotoCard("Trả xe", record.returnPhotoData, record.endTime, record.returnLatitude, record.returnLongitude, record.returnNotes),
+    ];
+
+    if (!photos.some(Boolean)) return "";
+    return `<div class="modal-section"><h4>Ảnh check-in / trả xe</h4><div class="photo-grid">${photos.join("")}</div></div>`;
+}
+
 async function startExtraFeePayment(record) {
     if (!record || !record.id) return;
     try {
@@ -903,10 +950,13 @@ function openRentalModal(item) {
         notes.push(`<div class="note-block"><strong>Ghi chú phí phát sinh:</strong><br>${record.additionalFeeNote}</div>`);
     }
 
+    const photoSection = buildPhotoSection(record);
+
     rentalModal.body.innerHTML = [
         buildDetailSection("Thông tin chuyến", sanitizedRentalRows),
         buildDetailSection("Xe & chi phí", vehicleRows),
         buildDetailSection("Trạm thuê", stationRows),
+        photoSection,
         notes.length ? `<div class="modal-section">${notes.join("")}</div>` : "",
     ].join("");
 
