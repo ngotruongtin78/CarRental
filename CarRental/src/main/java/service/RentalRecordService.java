@@ -20,9 +20,7 @@ public class RentalRecordService {
     private final VehicleRepository vehicleRepository;
     private final StationRepository stationRepository;
 
-    public RentalRecordService(RentalRecordRepository repo,
-                               VehicleRepository vehicleRepository,
-                               StationRepository stationRepository) {
+    public RentalRecordService(RentalRecordRepository repo, VehicleRepository vehicleRepository, StationRepository stationRepository) {
         this.repo = repo;
         this.vehicleRepository = vehicleRepository;
         this.stationRepository = stationRepository;
@@ -207,10 +205,10 @@ public class RentalRecordService {
         double totalSpent = records.stream().mapToDouble(RentalRecord::getTotal).sum();
         int totalTrips = records.size();
         double averageSpent = totalTrips > 0 ? totalSpent / totalTrips : 0;
-
-        Map<Integer, Long> hourCounts = new HashMap<>();
         long totalMinutes = 0;
         int countedDurations = 0;
+        Map<Integer, Long> hourCounts = new HashMap<>();
+
         for (RentalRecord record : records) {
             if (record.getStartTime() != null) hourCounts.merge(record.getStartTime().getHour(), 1L, Long::sum);
             if (record.getStartTime() != null && record.getEndTime() != null) {
@@ -239,36 +237,20 @@ public class RentalRecordService {
         return repo.save(record);
     }
 
-    // Backward-compatible overload for any callers that still use the old signature.
     public RentalRecord checkIn(String rentalId, String username, String notes) {
-        return checkIn(rentalId, username, notes, null, null, null);
-    }
-
-    public RentalRecord checkIn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
         if (record.getStartTime() == null) record.setStartTime(LocalDateTime.now());
         record.setCheckinNotes(notes);
-        record.setCheckinPhotoData(photoData);
-        record.setCheckinLatitude(latitude);
-        record.setCheckinLongitude(longitude);
         record.setStatus("IN_PROGRESS");
         ensureCreatedAt(record);
         return repo.save(record);
     }
 
-    // Backward-compatible overload for any callers that still use the old signature.
     public RentalRecord requestReturn(String rentalId, String username, String notes) {
-        return requestReturn(rentalId, username, notes, null, null, null);
-    }
-
-    public RentalRecord requestReturn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
         record.setReturnNotes(notes);
-        record.setReturnPhotoData(photoData);
-        record.setReturnLatitude(latitude);
-        record.setReturnLongitude(longitude);
         record.setEndTime(LocalDateTime.now());
         record.setStatus("WAITING_INSPECTION");
         ensureCreatedAt(record);
@@ -281,23 +263,31 @@ public class RentalRecordService {
         int totalTrips = 0;
         int successfulTrips = 0;
         Map<String, Double> revenueByDate = new TreeMap<>();
-
         Map<Integer, Integer> peakHourCounts = new HashMap<>();
         for (int i = 0; i < 24; i++) peakHourCounts.put(i, 0);
-
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
         for (RentalRecord r : allRecords) {
-            boolean isCancelled = "CANCELLED".equals(r.getStatus()) || "EXPIRED".equals(r.getStatus());
-            totalTrips++;
+            String status = r.getStatus() != null ? r.getStatus().toUpperCase() : "";
+            String paymentStatus = r.getPaymentStatus() != null ? r.getPaymentStatus().toUpperCase() : "";
+            boolean isCancelled = status.contains("CANCELLED") || status.contains("EXPIRED") || paymentStatus.contains("CANCELLED") || paymentStatus.contains("EXPIRED");
+
             if (!isCancelled) {
-                totalRevenue += r.getTotal();
+                totalTrips++;
+                double amount = r.getTotal() > 0 ? r.getTotal() : 0;
+                totalRevenue += amount;
                 successfulTrips++;
-                if (r.getStartTime() != null) {
-                    String dateKey = r.getStartTime().format(dateFormatter);
-                    revenueByDate.merge(dateKey, r.getTotal(), Double::sum);
-                    peakHourCounts.merge(r.getStartTime().getHour(), 1, Integer::sum);
-                }
+
+                String dateKey = null;
+                if (r.getStartDate() != null) dateKey = r.getStartDate().format(dateFormatter);
+                else if (r.getStartTime() != null) dateKey = r.getStartTime().format(dateFormatter);
+                else dateKey = java.time.LocalDate.now().format(dateFormatter);
+
+                revenueByDate.merge(dateKey, amount, Double::sum);
+
+                int h = 8;
+                if (r.getStartTime() != null) h = r.getStartTime().getHour();
+                peakHourCounts.merge(h, 1, Integer::sum);
             }
         }
 
@@ -309,7 +299,7 @@ public class RentalRecordService {
         for (int h = 0; h <= 23; h++) {
             peakLabels.add(h + "h");
             int count = peakHourCounts.getOrDefault(h, 0);
-            double percent = successfulTrips > 0 ? ((double) count / successfulTrips) * 100 : 0;
+            double percent = totalTrips > 0 ? ((double) count / totalTrips) * 100 : 0;
             peakValues.add(Math.round(percent * 10.0) / 10.0);
         }
 
@@ -327,40 +317,20 @@ public class RentalRecordService {
     public List<String> getAiSuggestions() {
         List<String> suggestions = new ArrayList<>();
         List<RentalRecord> allRecords = repo.findAll();
-
         Map<String, Long> tripsByStation = allRecords.stream()
                 .filter(r -> !"CANCELLED".equals(r.getStatus()))
                 .collect(Collectors.groupingBy(RentalRecord::getStationId, Collectors.counting()));
 
-        Map<String, Integer> tripsByCarType = new HashMap<>();
-        for (RentalRecord r : allRecords) {
-            if ("CANCELLED".equals(r.getStatus())) continue;
-            vehicleRepository.findById(r.getVehicleId()).ifPresent(v -> {
-                String type = v.getBrand() + " " + v.getType();
-                tripsByCarType.merge(type, 1, Integer::sum);
-            });
-        }
-
         tripsByStation.forEach((stationId, count) -> {
             String stationName = stationRepository.findById(stationId).map(s -> s.getName()).orElse(stationId);
             long currentVehicles = vehicleRepository.findByStationIdAndBookingStatusNot(stationId, "MAINTENANCE").size();
-
             if (currentVehicles > 0 && (count / currentVehicles) >= 5) {
-                suggestions.add("🔥 <strong>Nhu cầu cao tại " + stationName + ":</strong> Tần suất thuê cao (" + count + " chuyến). AI khuyến nghị bổ sung thêm xe.");
-            }
-            else if (currentVehicles > 5 && count < currentVehicles) {
-                suggestions.add("⚠️ <strong>Dư thừa tại " + stationName + ":</strong> Lượng xe nhiều nhưng ít khách. Cần điều chuyển bớt xe.");
+                suggestions.add("🔥 <strong>Nhu cầu cao tại " + stationName + ":</strong> AI khuyến nghị bổ sung thêm xe.");
+            } else if (currentVehicles > 5 && count < currentVehicles) {
+                suggestions.add("⚠️ <strong>Dư thừa tại " + stationName + ":</strong> Cần điều chuyển bớt xe.");
             }
         });
-
-        if (!tripsByCarType.isEmpty()) {
-            String topCar = Collections.max(tripsByCarType.entrySet(), Map.Entry.comparingByValue()).getKey();
-            suggestions.add("⭐ <strong>Xu hướng:</strong> Dòng xe <b>" + topCar + "</b> đang được thuê nhiều nhất. Nên nhập thêm mẫu này.");
-        }
-
-        if (suggestions.isEmpty()) {
-            suggestions.add("ℹ️ <strong>Hệ thống:</strong> Dữ liệu ổn định, chưa có đề xuất thay đổi.");
-        }
+        if (suggestions.isEmpty()) suggestions.add("ℹ️ <strong>Hệ thống:</strong> Dữ liệu ổn định.");
         return suggestions;
     }
 
@@ -368,8 +338,7 @@ public class RentalRecordService {
         if (record == null) return false;
         String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
         String paymentStatus = Optional.ofNullable(record.getPaymentStatus()).orElse("").toUpperCase();
-        boolean cancelled = status.equals("CANCELLED") || status.equals("EXPIRED") || paymentStatus.equals("CANCELLED") || paymentStatus.equals("EXPIRED");
-        return !cancelled;
+        return !status.equals("CANCELLED") && !status.equals("EXPIRED") && !paymentStatus.equals("CANCELLED") && !paymentStatus.equals("EXPIRED");
     }
 
     private StatusView resolveStatus(RentalRecord record) {
@@ -377,20 +346,12 @@ public class RentalRecordService {
         String paymentStatus = Optional.ofNullable(record.getPaymentStatus()).orElse("").toUpperCase();
         String paymentMethod = Optional.ofNullable(record.getPaymentMethod()).orElse("").toLowerCase();
 
-        if (status.equals("RETURNED") || status.equals("COMPLETED")) {
-            return new StatusView("Đã trả xe", "returned");
-        }
-        if (status.equals("WAITING_INSPECTION")) {
-            return new StatusView("Chờ xác nhận trả", "returned");
-        }
-        if (paymentStatus.equals("PAID") || status.equals("PAID") || status.equals("IN_PROGRESS") || status.equals("CONTRACT_SIGNED")) {
-            return new StatusView("Đang thuê", "active");
-        }
-        if (paymentMethod.equals("cash") || paymentStatus.equals("PAY_AT_STATION") || status.equals("PENDING_PAYMENT")) {
-            return new StatusView("Đang chờ thanh toán", "rented");
-        }
+        if (status.equals("RETURNED") || status.equals("COMPLETED")) return new StatusView("Đã trả xe", "returned");
+        if (status.equals("WAITING_INSPECTION")) return new StatusView("Chờ xác nhận trả", "returned");
+        if (paymentStatus.equals("PAID") || status.equals("PAID") || status.equals("IN_PROGRESS") || status.equals("CONTRACT_SIGNED")) return new StatusView("Đang thuê", "active");
+        if (paymentMethod.equals("cash") || paymentStatus.equals("PAY_AT_STATION") || status.equals("PENDING_PAYMENT")) return new StatusView("Đang chờ thanh toán", "rented");
+
         return new StatusView("Đã thuê", "rented");
     }
-
     private record StatusView(String display, String filterKey) {}
 }

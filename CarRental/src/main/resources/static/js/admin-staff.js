@@ -78,11 +78,23 @@ document.addEventListener("DOMContentLoaded", function() {
             const stationObj = stationsCache.find(s => s.id === staff.stationId);
             const stationName = stationObj ? stationObj.name : (staff.stationId || 'Chưa phân công');
 
+            const performanceHtml = `
+                <div style="display: flex; gap: 15px; justify-content: center; align-items: center;">
+                    <span title="Số xe đã giao" style="color: #2980b9; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-arrow-right"></i> ${staff.deliveryCount || 0}
+                    </span>
+                    <span style="color: #ccc;">|</span>
+                    <span title="Số xe đã nhận" style="color: #27ae60; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-arrow-left"></i> ${staff.returnCount || 0}
+                    </span>
+                </div>
+            `;
+
             tr.innerHTML = `
                 <td>${staff.fullName}</td>
                 <td>${stationName}</td>
                 <td>${staff.role === 'ROLE_ADMIN' ? 'Quản trị' : 'Nhân viên'}</td>
-                <td>${staff.performance || 0}</td>
+                <td style="text-align: center;">${performanceHtml}</td>
                 <td><span class="status ${statusClass}">${statusText}</span></td>
                 <td class="actions"><button class="action-button" data-staffid="${staff.id}">...</button></td>
             `;
@@ -135,7 +147,7 @@ document.addEventListener("DOMContentLoaded", function() {
     addStaffBtn.onclick = () => { addStaffForm.reset(); addModal.style.display = "block"; }
     addCloseButton.onclick = () => addModal.style.display = "none";
     editCloseButton.onclick = () => editModal.style.display = "none";
-    addStaffForm.addEventListener('submit', e => { e.preventDefault(); alert('Cần API Create User'); addModal.style.display = "none"; });
+    addStaffForm.addEventListener('submit', e => { e.preventDefault(); alert('Tính năng thêm nhân viên cần API create user.'); addModal.style.display = "none"; });
 
     staffTableBody.addEventListener('click', function(event) {
         if (event.target.classList.contains('action-button')) {
