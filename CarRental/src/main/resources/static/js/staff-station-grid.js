@@ -17,6 +17,13 @@ document.addEventListener("DOMContentLoaded", function() {
             const stationData = await stationResponse.json();
             console.log("Dữ liệu trạm:", stationData);
             const stationId = stationData.id;
+            const stationName = stationData.name || 'Trạm không tên';
+
+            // Cập nhật header với tên trạm
+            const stationNameDisplay = document.getElementById('stationNameDisplay');
+            if (stationNameDisplay) {
+                stationNameDisplay.textContent = stationName;
+            }
 
             if (!stationId) {
                 throw new Error('Không tìm thấy station ID');
@@ -355,4 +362,63 @@ document.addEventListener("DOMContentLoaded", function() {
             alert('Lỗi khi cập nhật: ' + error.message);
         }
     };
+
+    // Event listener cho tìm kiếm theo biển số
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            filterVehicles();
+        });
+    }
+
+    // Event listener cho filter trạng thái (đã có onclick trong HTML)
+    const filterStatus = document.getElementById('filterStatus');
+    if (filterStatus) {
+        filterStatus.addEventListener('change', function() {
+            filterVehicles();
+        });
+    }
 });
+
+/**
+ * Hàm lọc xe theo tìm kiếm biển số và trạng thái
+ */
+function filterVehicles() {
+    const searchValue = document.getElementById('searchInput').value.toLowerCase();
+    const filterValue = document.getElementById('filterStatus').value;
+
+    const cards = document.querySelectorAll('.vehicle-card');
+
+    cards.forEach(card => {
+        // Lấy biển số từ card
+        const plateElement = card.querySelector('.plate');
+        const plate = plateElement ? plateElement.textContent.toLowerCase() : '';
+
+        // Lấy trạng thái từ card (tìm badge-green, badge-orange, v.v.)
+        const statusBadges = card.querySelectorAll('[class*="badge-"]');
+        let status = '';
+        if (statusBadges.length > 0) {
+            const badgeText = statusBadges[0].textContent.trim();
+            if (badgeText.includes('AVAILABLE') || badgeText.includes('Sẵn sàng')) {
+                status = 'AVAILABLE';
+            } else if (badgeText.includes('RENTED') || badgeText.includes('Đang thuê')) {
+                status = 'RENTED';
+            } else if (badgeText.includes('MAINTENANCE') || badgeText.includes('Bảo trì')) {
+                status = 'MAINTENANCE';
+            } else if (badgeText.includes('PENDING_PAYMENT') || badgeText.includes('Chờ thanh toán')) {
+                status = 'PENDING_PAYMENT';
+            }
+        }
+
+        // Kiểm tra điều kiện tìm kiếm
+        const matchSearch = searchValue === '' || plate.includes(searchValue);
+        const matchStatus = filterValue === '' || status === filterValue;
+
+        // Hiển thị hoặc ẩn card
+        if (matchSearch && matchStatus) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}

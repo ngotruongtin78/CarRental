@@ -184,11 +184,11 @@ public class VehicleReportController {
             VehicleReport report = reportOpt.get();
 
             // Tìm RentalRecord dựa trên vehicleId
-            // Lấy RentalRecord mới nhất của xe này với status = "DELIVERED" hoặc "COMPLETED"
+            // Lấy RentalRecord mới nhất của xe này với status = "WAITING_INSPECTION" hoặc "COMPLETED"
             List<RentalRecord> records = rentalRecordRepository.findAll();
             RentalRecord targetRecord = records.stream()
                     .filter(r -> r.getVehicleId().equals(report.getVehicleId()) &&
-                               ("DELIVERED".equals(r.getStatus()) || "COMPLETED".equals(r.getStatus())))
+                               ("WAITING_INSPECTION".equals(r.getStatus()) || "COMPLETED".equals(r.getStatus())))
                     .max((r1, r2) -> {
                         long t1 = r1.getEndTime() != null ? r1.getEndTime().hashCode() : 0;
                         long t2 = r2.getEndTime() != null ? r2.getEndTime().hashCode() : 0;

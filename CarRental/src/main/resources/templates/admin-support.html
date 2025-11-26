@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Hỗ trợ khách hàng</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body, .content-body { color: #333 !important; }
+        textarea {
+            color: #333 !important;
+            background-color: #fff !important;
+            border: 1px solid #ccc;
+            font-family: inherit;
+        }
+        ::placeholder { color: #888 !important; opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div class="admin-container">
+    <div th:replace="~{fragments/admin-nav :: sidebar(activePage='support')}"></div>
+
+    <div class="main-content">
+        <header class="content-header">
+            <div style="flex-grow: 1;"></div>
+            <div class="admin-profile" onclick="toggleProfileMenu(event)">
+                <img th:src="@{/images/admin.png}" alt="Admin" onerror="this.src='https://via.placeholder.com/40'">
+                <span>Admin</span>
+                <i class="fas fa-chevron-down" style="font-size: 12px; margin-left: 8px; color: #777;"></i>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a th:href="@{/logout}" class="logout-item">
+                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <h1 style="margin-bottom: 20px; color: #333;">Hỗ trợ & Khiếu nại</h1>
+            <div id="ticketList" style="display:flex; flex-direction:column; gap:15px;">
+                <p style="text-align: center; color: #666;">Đang tải dữ liệu...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleProfileMenu(event) {
+        event.stopPropagation();
+        const dropdown = document.getElementById('profileDropdown');
+        if (dropdown) dropdown.classList.toggle('show');
+    }
+    window.addEventListener('click', function(event) {
+        if (!event.target.closest('.admin-profile')) {
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown && dropdown.classList.contains('show')) dropdown.classList.remove('show');
+        }
+    });
+
+    async function loadTickets() {
+        try {
+            const res = await fetch('/api/support/admin/all');
+            const data = await res.json();
+            const container = document.getElementById('ticketList');
+
+            if(!data || data.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:40px; color:#888; background:white; border-radius:8px;">📭 Chưa có yêu cầu nào.</div>';
+                return;
+            }
+
+            container.innerHTML = data.map(t => `
+                <div style="background:white; padding:25px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid ${t.status==='RESOLVED'?'#2ecc71':'#f39c12'}; color: #333;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
+                        <div>
+                            <h3 style="margin:0 0 5px 0; font-size:18px; color:#2c3e50;">${t.title}</h3>
+                            <div style="font-size:13px; color:#7f8c8d;">
+                                <i class="fas fa-user-circle"></i> <strong>${t.username}</strong> &bull;
+                                <span>${new Date(t.createdAt).toLocaleString('vi-VN')}</span>
+                            </div>
+                        </div>
+                        <span style="font-weight:bold; font-size:12px; padding:6px 12px; border-radius:20px; background:${t.status==='RESOLVED'?'#e6f7f0':'#fef3e6'}; color:${t.status==='RESOLVED'?'#008a4c':'#f39c12'}">
+                            ${t.status==='RESOLVED' ? 'Đã xử lý' : 'Đang chờ xử lý'}
+                        </span>
+                    </div>
+
+                    <div style="background:#f8f9fa; padding:15px; border-radius:6px; margin-bottom:15px; border:1px solid #eee;">
+                        <p style="margin:0; line-height:1.6; color:#444;">${t.content}</p>
+                    </div>
+
+                    ${t.status === 'PENDING' ? `
+                        <div style="margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
+                            <label style="font-weight:600; font-size:13px; color:#34495e; display:block; margin-bottom:8px;">Phản hồi của Admin:</label>
+                            <textarea id="reply-${t.id}" placeholder="Nhập câu trả lời..." rows="3" style="width:100%; padding:12px; border-radius:6px; margin-bottom:10px; box-sizing:border-box;"></textarea>
+                            <div style="text-align:right;">
+                                <button onclick="replyTicket('${t.id}')" style="padding:10px 24px; background:#3498db; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600;">
+                                    <i class="fas fa-paper-plane"></i> Gửi phản hồi
+                                </button>
+                            </div>
+                        </div>
+                    ` : `
+                        <div style="background:#f0f7ff; padding:15px; border-radius:6px; margin-top:15px; border-left:4px solid #3498db;">
+                            <strong style="color:#2980b9; font-size:14px; display:block; margin-bottom:5px;"><i class="fas fa-headset"></i> Admin phản hồi:</strong>
+                            <p style="margin:0; font-size:15px; color:#333; line-height:1.5;">${t.adminReply}</p>
+                        </div>
+                    `}
+                </div>
+            `).join('');
+        } catch(e) {
+            document.getElementById('ticketList').innerHTML = '<p style="color:red; text-align:center;">Lỗi kết nối server.</p>';
+        }
+    }
+
+    async function replyTicket(id) {
+        const reply = document.getElementById('reply-' + id).value;
+        if(!reply.trim()) return alert("Vui lòng nhập nội dung phản hồi.");
+        if(!confirm("Gửi phản hồi này?")) return;
+
+        try {
+            await fetch(`/api/support/admin/reply/${id}`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({reply})
+            });
+            alert("Đã gửi phản hồi thành công!");
+            loadTickets();
+        } catch(e) { alert("Lỗi kết nối."); }
+    }
+
+    loadTickets();
+</script>
+</body>
+</html>
