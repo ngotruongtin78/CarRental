@@ -84,7 +84,6 @@ public class RentalRecordService {
             item.put("record", record);
             item.put("displayStatus", statusView.display);
             item.put("filterStatus", statusView.filterKey);
-
             vehicleRepository.findById(record.getVehicleId()).ifPresent(vehicle -> {
                 Map<String, Object> vehicleInfo = new LinkedHashMap<>();
                 vehicleInfo.put("id", vehicle.getId());
@@ -94,12 +93,13 @@ public class RentalRecordService {
                 vehicleInfo.put("price", vehicle.getPrice());
                 item.put("vehicle", vehicleInfo);
             });
-
             stationRepository.findById(record.getStationId()).ifPresent(station -> {
                 Map<String, Object> stationInfo = new LinkedHashMap<>();
                 stationInfo.put("id", station.getId());
                 stationInfo.put("name", station.getName());
                 stationInfo.put("address", station.getAddress());
+                stationInfo.put("latitude", station.getLatitude());
+                stationInfo.put("longitude", station.getLongitude());
                 item.put("station", stationInfo);
             });
             response.add(item);
@@ -113,15 +113,14 @@ public class RentalRecordService {
         List<LocalDateTime> timestamps = new ArrayList<>();
 
         Optional.ofNullable(record.getEndTime()).ifPresent(timestamps::add);
-        Optional.ofNullable(toLocalDateTime(record.getEndDate(), true)).ifPresent(timestamps::add);
         Optional.ofNullable(record.getStartTime()).ifPresent(timestamps::add);
-        Optional.ofNullable(toLocalDateTime(record.getStartDate(), false)).ifPresent(timestamps::add);
         Optional.ofNullable(record.getPaidAt()).ifPresent(timestamps::add);
         Optional.ofNullable(record.getDepositPaidAt()).ifPresent(timestamps::add);
-        Optional.ofNullable(record.getHoldExpiresAt()).ifPresent(timestamps::add);
+        Optional.ofNullable(record.getAdditionalFeePaidAt()).ifPresent(timestamps::add);
         Optional.ofNullable(record.getCreatedAt()).ifPresent(timestamps::add);
+        Optional.ofNullable(toLocalDateTime(record.getStartDate(), false)).ifPresent(timestamps::add);
 
-        // Ưu tiên thời điểm mới nhất giữa các mốc thanh toán, nhận xe, trả xe và thời điểm tạo đơn.
+        // Ưu tiên thời điểm mới nhất giữa các mốc thanh toán, nhận xe và thời điểm tạo đơn.
         LocalDateTime newest = timestamps.stream()
                 .filter(Objects::nonNull)
                 .max(LocalDateTime::compareTo)
