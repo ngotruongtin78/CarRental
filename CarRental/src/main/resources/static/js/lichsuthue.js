@@ -711,6 +711,12 @@ function getSortTimestamp(item) {
 
     if (timestamps.length) return Math.max(...timestamps);
 
+    const objectIdTimestamp = [record.id, item?.id]
+        .map(parseObjectIdTimestamp)
+        .find(num => Number.isFinite(num));
+
+    if (Number.isFinite(objectIdTimestamp)) return objectIdTimestamp;
+
     const numericId = [record.id, item?.id]
         .map(val => Number(val))
         .find(num => Number.isFinite(num));
@@ -778,6 +784,23 @@ function parseDate(input) {
             const parsed = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss));
             return isNaN(parsed.getTime()) ? null : parsed;
         }
+    }
+
+    return null;
+}
+
+function parseObjectIdTimestamp(value) {
+    if (!value || typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (trimmed.length >= 8 && /^[a-fA-F0-9]+$/.test(trimmed)) {
+        const seconds = parseInt(trimmed.substring(0, 8), 16);
+        return Number.isFinite(seconds) ? seconds * 1000 : null;
+    }
+
+    const digits = trimmed.replace(/[^0-9]/g, "");
+    if (digits) {
+        const asNumber = Number(digits);
+        return Number.isFinite(asNumber) ? asNumber : null;
     }
 
     return null;

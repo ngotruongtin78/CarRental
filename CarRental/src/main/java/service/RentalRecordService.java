@@ -28,7 +28,10 @@ public class RentalRecordService {
         this.stationRepository = stationRepository;
     }
 
-    public RentalRecord saveRecord(RentalRecord record) { return repo.save(record); }
+    public RentalRecord saveRecord(RentalRecord record) {
+        ensureCreatedAt(record);
+        return repo.save(record);
+    }
     public List<RentalRecord> getHistoryByUsername(String username) { return repo.findByUsername(username); }
     public List<RentalRecord> getAll() { return repo.findAll(); }
     public RentalRecord getById(String id) { return repo.findById(id).orElse(null); }
@@ -72,16 +75,24 @@ public class RentalRecordService {
     private long getSortTimestamp(RentalRecord record) {
         if (record == null) return 0;
 
-        // Primary sort: ngày thuê (ngày bắt đầu đặt xe hoặc thời gian bắt đầu thực tế).
         LocalDateTime rentalStart = Optional.ofNullable(record.getStartTime())
                 .orElseGet(() -> Optional.ofNullable(record.getStartDate())
                         .map(LocalDate::atStartOfDay)
                         .orElse(null));
-        if (rentalStart != null) {
-            return rentalStart.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+
+        LocalDateTime createdAt = record.getCreatedAt();
+
+        // Ưu tiên thời điểm mới nhất giữa ngày thuê, check-in thực tế và thời điểm tạo đơn.
+        LocalDateTime newest = Stream.of(createdAt, rentalStart)
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+
+        if (newest != null) {
+            return newest.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
         }
 
-        // Fallback: thời điểm tạo bản ghi dựa trên ObjectId (ưu tiên hiển thị đơn mới nhất).
+        // Fallback: thời điểm tạo bản ghi dựa trên ObjectId hoặc chuỗi số (ưu tiên hiển thị đơn mới nhất).
         String id = record.getId();
         if (id != null) {
             try {
@@ -101,6 +112,12 @@ public class RentalRecordService {
         }
 
         return 0;
+    }
+
+    private void ensureCreatedAt(RentalRecord record) {
+        if (record != null && record.getCreatedAt() == null) {
+            record.setCreatedAt(LocalDateTime.now());
+        }
     }
 
     public Map<String, Object> calculateStats(String username) {
@@ -136,6 +153,7 @@ public class RentalRecordService {
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
         record.setContractSigned(true);
         record.setStatus("CONTRACT_SIGNED");
+        ensureCreatedAt(record);
         return repo.save(record);
     }
 
@@ -153,6 +171,7 @@ public class RentalRecordService {
         record.setCheckinLatitude(latitude);
         record.setCheckinLongitude(longitude);
         record.setStatus("IN_PROGRESS");
+        ensureCreatedAt(record);
         return repo.save(record);
     }
 
@@ -170,6 +189,7 @@ public class RentalRecordService {
         record.setReturnLongitude(longitude);
         record.setEndTime(LocalDateTime.now());
         record.setStatus("WAITING_INSPECTION");
+        ensureCreatedAt(record);
         return repo.save(record);
     }
 
