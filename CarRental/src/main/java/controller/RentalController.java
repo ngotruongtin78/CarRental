@@ -176,6 +176,7 @@ public class RentalController {
         record.setTotal(vehicle.getPrice() * rentalDays);
         record.setStatus("PENDING_PAYMENT");
         record.setPaymentStatus("PENDING");
+        record.setCreatedAt(LocalDateTime.now());
         record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
 
         rentalRepo.save(record);
@@ -612,7 +613,7 @@ public class RentalController {
 
     @GetMapping("/admin/all-history")
     public ResponseEntity<?> getAllHistoryForAdmin() {
-        List<RentalRecord> records = rentalRecordService.getAll();
+        List<Map<String, Object>> records = rentalRecordService.getAllHistoryDetails();
         return ResponseEntity.ok(records);
     }
 }

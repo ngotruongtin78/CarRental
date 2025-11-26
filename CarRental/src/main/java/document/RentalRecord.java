@@ -26,6 +26,8 @@ public class RentalRecord {
     private LocalDateTime endTime;
     private LocalDateTime holdExpiresAt;
 
+    private LocalDateTime createdAt;
+
     private double total;
     private double damageFee;
 
@@ -114,6 +116,9 @@ public class RentalRecord {
 
     public double getTotal() { return total; }
     public void setTotal(double total) { this.total = total; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public double getDamageFee() { return damageFee; }
     public void setDamageFee(double damageFee) { this.damageFee = damageFee; }
