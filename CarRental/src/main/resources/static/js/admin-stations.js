@@ -14,7 +14,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let allStationsData = [];
 
-
     window.toggleProfileMenu = function(event) {
         event.stopPropagation();
         const dropdown = document.getElementById('profileDropdown');
@@ -34,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         } catch (error) {
             console.error("Không thể tải danh sách trạm:", error);
-            stationTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Lỗi khi tải dữ liệu.</td></tr>';
+            stationTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Lỗi khi tải dữ liệu.</td></tr>';
         }
     }
 
@@ -42,7 +41,7 @@ document.addEventListener("DOMContentLoaded", function() {
         stationTableBody.innerHTML = '';
 
         if (!data || data.length === 0) {
-            stationTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Không tìm thấy trạm nào phù hợp.</td></tr>';
+            stationTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Không tìm thấy trạm nào phù hợp.</td></tr>';
             return;
         }
 
@@ -50,12 +49,36 @@ document.addEventListener("DOMContentLoaded", function() {
             const tr = document.createElement('tr');
             const addressText = station.address ? station.address : "Chưa cập nhật";
 
+            // Lấy dữ liệu thống kê, mặc định là 0 nếu null
+            const available = station.statsAvailable || 0;
+            const rented = station.statsRented || 0;
+            const maintenance = station.statsMaintenance || 0;
+
             tr.innerHTML = `
-                <td>${station.id}</td>
+                <td><strong>${station.id}</strong></td>
                 <td>${station.name}</td>
+
+                <td style="text-align: center;">
+                    <span style="font-weight: bold; color: #27ae60; background: #ebfbf2; padding: 4px 12px; border-radius: 12px;">
+                        ${available}
+                    </span>
+                </td>
+
+                <td style="text-align: center;">
+                    <span style="font-weight: bold; color: #f39c12; background: #fef7e6; padding: 4px 12px; border-radius: 12px;">
+                        ${rented}
+                    </span>
+                </td>
+
+                <td style="text-align: center;">
+                    <span style="font-weight: bold; color: #e74c3c; background: #fdeded; padding: 4px 12px; border-radius: 12px;">
+                        ${maintenance}
+                    </span>
+                </td>
+
                 <td>
-                    <span style="display: block;">${addressText}</span>
-                    <small style="color: #555;">(Lat: ${station.latitude}, Lng: ${station.longitude})</small>
+                    <span style="display: block; font-size: 13px;">${addressText}</span>
+                    <small style="color: #888;">(${station.latitude}, ${station.longitude})</small>
                 </td>
                 <td>
                     <button class="btn-edit" data-id="${station.id}">Sửa</button>

@@ -45,16 +45,6 @@ public class RentalRecordService {
             item.put("record", record);
             item.put("displayStatus", statusView.display);
             item.put("filterStatus", statusView.filterKey);
-            double extraAmount = record.getAdditionalFeeAmount() != null
-                    ? record.getAdditionalFeeAmount()
-                    : record.getDamageFee();
-            double extraPaid = record.getAdditionalFeePaidAmount() != null
-                    ? record.getAdditionalFeePaidAmount()
-                    : 0.0;
-            item.put("additionalFeeAmount", extraAmount);
-            item.put("additionalFeeNote", record.getAdditionalFeeNote());
-            item.put("additionalFeePaidAmount", extraPaid);
-            item.put("additionalFeeOutstanding", Math.max(0, extraAmount - extraPaid));
             vehicleRepository.findById(record.getVehicleId()).ifPresent(vehicle -> {
                 Map<String, Object> vehicleInfo = new LinkedHashMap<>();
                 vehicleInfo.put("id", vehicle.getId());

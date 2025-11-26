@@ -33,7 +33,7 @@ public class StaffReturnController {
     /**
      * Lấy danh sách các xe sẵn sàng trả từ khách hàng
      * Điều kiện:
-     * - RentalRecord có status = "DELIVERED"
+     * - RentalRecord có status = "WAITING_INSPECTION"
      * - RentalRecord.stationId = Staff.stationId (của staff hiện tại)
      */
     @GetMapping("/vehicles-ready")

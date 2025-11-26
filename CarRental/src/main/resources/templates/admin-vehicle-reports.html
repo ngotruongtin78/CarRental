@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý Sự cố & Bảo trì</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" th:href="@{/css/vehicle-reports.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+<div class="admin-container">
+
+    <div th:replace="~{fragments/admin-nav :: sidebar(activePage='vehicle-reports')}"></div>
+
+    <div class="main-content">
+        <header class="content-header">
+            <div style="flex-grow: 1;"></div>
+            <div class="admin-profile" onclick="toggleProfileMenu(event)">
+                <img th:src="@{/images/admin-avatar.png}" alt="Admin">
+                <span>Admin</span>
+                <i class="fas fa-chevron-down" style="font-size: 12px; margin-left: 8px; color: #777;"></i>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a th:href="@{/logout}" class="logout-item"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="content-body">
+            <div class="page-header">
+                <h1>Tình trạng xe</h1>
+            </div>
+
+            <div class="page-header-filters" style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; display:flex; align-items:center;">
+                <label style="margin-right: 10px; font-weight: 600;">Lọc theo:</label>
+
+                <select id="statusFilter" class="filter-select" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="REPORTED">Mới báo cáo</option>
+                    <option value="IN_REPAIR">Đang sửa chữa</option>
+                    <option value="RESOLVED">Đã khắc phục</option>
+                </select>
+
+                <select id="severityFilter" class="filter-select" style="margin-left: 15px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    <option value="">Mức độ</option>
+                    <option value="CRITICAL">Nguy hiểm</option>
+                    <option value="MODERATE">Trung bình</option>
+                    <option value="MINOR">Nhẹ</option>
+                </select>
+            </div>
+
+            <div class="reports-container" id="reportsContainer">
+                <p style="text-align:center; width:100%; margin-top:20px; color:#666;">Đang tải dữ liệu...</p>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div id="reportDetailModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2>Chi tiết sự cố</h2>
+            <span class="close-button" onclick="closeDetailModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="reportDetailContent" style="padding: 20px;"></div>
+        <div class="modal-footer" style="padding: 15px; border-top: 1px solid #eee; text-align: right;">
+            <button class="btn-secondary" onclick="closeDetailModal()" style="margin-right: 10px; padding: 8px 15px; cursor: pointer;">Đóng</button>
+            <button class="btn-primary" onclick="markAsResolved()" style="padding: 8px 15px; cursor: pointer;"> Đã khắc phục xong</button>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/admin-vehicle-reports.js}"></script>
+
+</body>
+</html>

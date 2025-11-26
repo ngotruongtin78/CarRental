@@ -324,8 +324,6 @@ public class RentalController {
             vehicleService.markPendingPaymentHidden(record.getVehicleId(), rentalId);
 
             response.put("depositRequired", deposit);
-            response.put("depositPaid", record.getDepositPaidAmount());
-            response.put("depositRemaining", Math.max(0.0, deposit - record.getDepositPaidAmount()));
             response.put("depositPending", true);
             response.put("paymentStatus", record.getPaymentStatus());
             response.put("paymentMethod", paymentMethod);

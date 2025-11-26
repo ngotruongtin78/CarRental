@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const vehicleTableBody = document.getElementById('vehicleTableBody');
     const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter'); // [MỚI]
 
     const addVehicleBtn = document.getElementById('addVehicleBtn');
     const addModal = document.getElementById('addVehicleModal');
@@ -40,6 +41,8 @@ document.addEventListener("DOMContentLoaded", function() {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             allVehiclesData = await response.json();
+
+            // Sắp xếp: StationID -> Biển số
             allVehiclesData.sort((a, b) => {
                 const numA = parseInt(a.stationId.replace('st', '')) || 0;
                 const numB = parseInt(b.stationId.replace('st', '')) || 0;
@@ -47,7 +50,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 return a.plate.localeCompare(b.plate);
             });
 
-            renderTable(allVehiclesData);
+            // Gọi hàm lọc ngay khi tải xong (để áp dụng nếu có giá trị mặc định)
+            filterVehicles();
 
         } catch (error) {
             console.error("Lỗi:", error);
@@ -97,37 +101,50 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
+    // [CẬP NHẬT] Hàm lọc kết hợp: Tìm kiếm + Trạng thái
     function filterVehicles() {
         if (!allVehiclesData) return;
 
         const searchText = searchInput.value.toLowerCase().trim();
+        const filterStatus = statusFilter ? statusFilter.value : 'all';
 
         const filtered = allVehiclesData.filter(vehicle => {
+            // 1. Điều kiện tìm kiếm
             const plate = (vehicle.plate || "").toLowerCase();
             const brand = (vehicle.brand || "").toLowerCase();
             const type = (vehicle.type || "").toLowerCase();
             const stationId = (vehicle.stationId || "").toLowerCase();
 
-            return plate.includes(searchText) ||
-                   brand.includes(searchText) ||
-                   type.includes(searchText) ||
-                   stationId.includes(searchText);
+            const matchesSearch = plate.includes(searchText) ||
+                                  brand.includes(searchText) ||
+                                  type.includes(searchText) ||
+                                  stationId.includes(searchText);
+
+            // 2. Điều kiện trạng thái
+            let matchesStatus = true;
+            // Mặc định nếu null thì coi như AVAILABLE để dễ lọc
+            const status = vehicle.bookingStatus || 'AVAILABLE';
+
+            if (filterStatus === 'available') {
+                matchesStatus = (status === 'AVAILABLE');
+            } else if (filterStatus === 'rented') {
+                matchesStatus = (status === 'RENTED' || status === 'PENDING_PAYMENT');
+            } else if (filterStatus === 'maintenance') {
+                matchesStatus = (status === 'MAINTENANCE');
+            }
+
+            return matchesSearch && matchesStatus;
         });
 
         renderTable(filtered);
     }
 
-    if (searchInput) {
-        searchInput.addEventListener('input', filterVehicles);
-    }
+    if (searchInput) searchInput.addEventListener('input', filterVehicles);
+    if (statusFilter) statusFilter.addEventListener('change', filterVehicles);
 
-    addVehicleBtn.onclick = function() {
-        addVehicleForm.reset();
-        addModal.style.display = "block";
-    }
-    addCloseButton.onclick = function() {
-        addModal.style.display = "none";
-    }
+    // --- XỬ LÝ THÊM MỚI ---
+    addVehicleBtn.onclick = () => { addVehicleForm.reset(); addModal.style.display = "block"; }
+    addCloseButton.onclick = () => addModal.style.display = "none";
 
     addVehicleForm.addEventListener('submit', async function(event) {
         event.preventDefault();
@@ -155,17 +172,17 @@ document.addEventListener("DOMContentLoaded", function() {
                 alert('Lỗi khi thêm xe.');
             }
         } catch (error) {
-            console.error(error);
             alert('Lỗi kết nối.');
         }
     });
 
+    // --- XỬ LÝ SỬA / XÓA ---
     vehicleTableBody.addEventListener('click', async function(event) {
         const target = event.target;
         const id = target.dataset.id;
         if (!id) return;
 
-        // Xóa
+        // XÓA
         if (target.classList.contains('btn-delete')) {
             if (confirm(`Bạn có chắc muốn xóa xe ID: ${id}?`)) {
                 try {
@@ -176,12 +193,14 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
 
+        // SỬA
         if (target.classList.contains('btn-edit')) {
             try {
                 const response = await fetch(`/api/vehicles/admin/${id}`);
                 if (!response.ok) throw new Error('Không tìm thấy xe');
                 const vehicle = await response.json();
 
+                // Điền dữ liệu vào Form
                 editVehicleForm.querySelector('#edit-vehicleId').value = vehicle.id;
                 editVehicleForm.querySelector('#edit-plate').value = vehicle.plate;
                 editVehicleForm.querySelector('#edit-brand').value = vehicle.brand;
@@ -190,9 +209,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 editVehicleForm.querySelector('#edit-price').value = vehicle.price;
                 editVehicleForm.querySelector('#edit-stationId').value = vehicle.stationId;
 
-                const statusSelect = editVehicleForm.querySelector('#edit-available');
+                // Xử lý trạng thái (Cho phép chọn thủ công 3 loại)
+                const statusSelect = editVehicleForm.querySelector('#edit-bookingStatus');
                 if(statusSelect) {
-                     statusSelect.value = vehicle.available ? "true" : "false";
+                    if (['AVAILABLE', 'RENTED', 'MAINTENANCE'].includes(vehicle.bookingStatus)) {
+                        statusSelect.value = vehicle.bookingStatus;
+                    } else if (vehicle.bookingStatus === 'PENDING_PAYMENT') {
+                        statusSelect.value = 'RENTED';
+                    } else {
+                        statusSelect.value = 'AVAILABLE';
+                    }
                 }
 
                 editModal.style.display = "block";
@@ -200,10 +226,17 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
+    // --- XỬ LÝ LƯU CẬP NHẬT ---
     editVehicleForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         const formData = new FormData(editVehicleForm);
         const id = formData.get('id');
+
+        // Lấy trạng thái từ dropdown
+        const selectedStatus = formData.get('bookingStatus');
+        // Tự động cập nhật available: chỉ True khi chọn Sẵn sàng
+        const isAvailable = (selectedStatus === 'AVAILABLE');
+
         const vehicleData = {
             id: id,
             plate: formData.get('plate'),
@@ -212,7 +245,10 @@ document.addEventListener("DOMContentLoaded", function() {
             battery: parseInt(formData.get('battery')),
             price: parseFloat(formData.get('price')),
             stationId: formData.get('stationId'),
-            available: formData.get('available') === 'true'
+
+            // Gửi cả 2 trường
+            bookingStatus: selectedStatus,
+            available: isAvailable
         };
 
         try {
@@ -236,5 +272,11 @@ document.addEventListener("DOMContentLoaded", function() {
     window.onclick = function(event) {
         if (event.target == addModal) addModal.style.display = "none";
         if (event.target == editModal) editModal.style.display = "none";
+        if (!event.target.closest('.admin-profile')) {
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown && dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+            }
+        }
     }
 });

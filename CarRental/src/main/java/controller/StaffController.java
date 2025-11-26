@@ -8,9 +8,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/staff")
 public class StaffController {
 
-    @GetMapping("/receive")
-    public String showReceiveVehiclePage() {
-        return "staff-return-vehicle";
+    @GetMapping("/station-grid")
+    public String showStationGridPage() {
+        return "staff-station-grid";
+    }
+
+    @GetMapping("/handover")
+    public String showHandoverPage() {
+        return "staff-handover";
     }
 
     @GetMapping("/deliver")
@@ -23,17 +28,17 @@ public class StaffController {
         return "staff-return-vehicle";
     }
 
+    @GetMapping("/receive")
+    public String showReceiveVehiclePageLegacy() {
+        return "staff-return-vehicle";
+    }
+
     @GetMapping("/verify")
     public String showVerificationPage() {
         return "staff-verification";
     }
 
-    @GetMapping("/station-grid")
-    public String showStationGridPage() {
-        return "staff-station-grid";
-    }
-
-    @GetMapping("/reports")
+    @GetMapping("/vehicle-reports")
     public String showReportsPage() {
         return "vehicle-reports";
     }

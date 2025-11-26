@@ -5,6 +5,14 @@
     <title>Lịch sử thuê xe</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .detail-row { display: flex; margin-bottom: 10px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
+        .detail-label { font-weight: 600; width: 150px; color: #555; }
+        .detail-value { color: #333; flex: 1; }
+        .section-title { font-size: 16px; font-weight: 700; color: #3498db; margin: 20px 0 10px 0; text-transform: uppercase; }
+        .btn-view { background-color: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-view:hover { background-color: #2980b9; }
+    </style>
 </head>
 <body>
 
@@ -36,17 +44,18 @@
 
             <div class="data-table-container">
                 <div class="table-filters">
-                    <input type="text" id="searchInput" placeholder="Tìm kiếm theo UserID, VehicleID...">
+                    <input type="text" id="searchInput" placeholder="Tìm kiếm theo UserID, Biển số...">
                 </div>
                 <table class="data-table">
                     <thead>
                     <tr>
-                        <th>Rental ID</th>
-                        <th>User ID</th>
-                        <th>Vehicle ID</th>
-                        <th>Station ID</th>
+                        <th>Mã đơn</th>
+                        <th>Người thuê</th>
+                        <th>Thông tin xe</th>
+                        <th>Điểm thuê</th>
                         <th>Trạng thái</th>
                         <th>Tổng giá (VND)</th>
+                        <th>Hành động</th>
                     </tr>
                     </thead>
                     <tbody id="historyTableBody">
@@ -54,6 +63,21 @@
                 </table>
             </div>
         </main>
+    </div>
+</div>
+
+<div id="rentalDetailModal" class="modal">
+    <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+            <h2>Chi tiết đơn thuê</h2>
+            <span class="close-button" onclick="closeDetailModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="detailContent" style="padding: 20px; max-height: 70vh; overflow-y: auto;">
+            <p>Đang tải...</p>
+        </div>
+        <div class="modal-footer" style="padding: 15px 20px; text-align: right; border-top: 1px solid #eee;">
+            <button class="btn-primary" onclick="closeDetailModal()">Đóng</button>
+        </div>
     </div>
 </div>
 

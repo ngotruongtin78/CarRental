@@ -2,7 +2,7 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Quản lý độ xe</title>
+    <title>Quản lý đội xe</title>
     <link rel="stylesheet" th:href="@{/css/admin.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
@@ -31,14 +31,22 @@
 
         <main class="content-body">
             <div class="page-header">
-                <h1>Tổng quan độ xe</h1>
+                <h1>Tổng quan đội xe</h1>
                 <button id="addVehicleBtn" class="btn-primary">+ Thêm xe mới</button>
             </div>
 
             <div class="data-table-container">
-                <div class="table-filters">
-                    <input type="text" id="searchInput" placeholder="Tìm kiếm xe...">
+                <div class="table-filters" style="display: flex; gap: 15px; align-items: center;">
+                    <input type="text" id="searchInput" placeholder="Tìm kiếm xe (Biển số, hãng, trạm)..." style="width: 300px;">
+
+                    <select id="statusFilter" style="padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="available">Sẵn sàng</option>
+                        <option value="rented">Đang thuê</option>
+                        <option value="maintenance">Bảo trì</option>
+                    </select>
                 </div>
+
                 <table class="data-table">
                     <thead>
                     <tr>
@@ -128,13 +136,16 @@
                 <label for="edit-stationId">Station ID (Điều phối)</label>
                 <input type="text" id="edit-stationId" name="stationId" required>
             </div>
+
             <div class="form-group">
-                <label for="edit-available">Trạng thái</label>
-                <select id="edit-available" name="available">
-                    <option value="true">Sẵn sàng</option>
-                    <option value="false">Đang thuê / Bảo trì</option>
+                <label for="edit-bookingStatus">Trạng thái</label>
+                <select id="edit-bookingStatus" name="bookingStatus">
+                    <option value="AVAILABLE">Sẵn sàng</option>
+                    <option value="RENTED">Đang thuê / Chờ thanh toán</option>
+                    <option value="MAINTENANCE">Bảo trì</option>
                 </select>
             </div>
+
             <button type="submit" class="btn-primary">Cập nhật</button>
         </form>
     </div>

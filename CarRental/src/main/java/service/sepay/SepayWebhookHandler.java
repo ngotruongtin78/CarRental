@@ -101,7 +101,6 @@ public class SepayWebhookHandler {
 
         double depositRemaining = Math.max(0, depositRequired - currentDeposit);
 
-        // Nếu chưa đánh dấu giao dịch đặt cọc nhưng đây là đơn tiền mặt còn thiếu cọc -> coi như giao dịch cọc
         if (!depositFlow && !incidentFlow && cashFlow && depositRemaining > 0) {
             depositFlow = true;
             log.info("Suy luận webhook là giao dịch đặt cọc cho {} vì đơn tiền mặt còn thiếu cọc", rentalId);
@@ -153,7 +152,6 @@ public class SepayWebhookHandler {
         }
 
         if (incomingAmount <= 0 && depositFlow) {
-            // Nếu dữ liệu webhook không trả về số tiền, giả định khách đã chuyển đúng phần còn thiếu của tiền cọc
             incomingAmount = depositRemaining > 0 ? depositRemaining : depositRequired;
             record.setDepositRequiredAmount(depositRequired);
         }

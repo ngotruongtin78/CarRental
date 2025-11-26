@@ -17,6 +17,7 @@ public class StationController {
     private final StationRepository stationRepo;
     private final VehicleRepository vehicleRepo;
     private final SequenceGeneratorService sequenceGenerator;
+
     public StationController(StationRepository stationRepo,
                              VehicleRepository vehicleRepo,
                              SequenceGeneratorService sequenceGenerator) {
@@ -25,9 +26,9 @@ public class StationController {
         this.sequenceGenerator = sequenceGenerator;
     }
 
+    // API cho trang chủ (Khách hàng)
     @GetMapping
     public List<Map<String, Object>> getStations() {
-
         List<Station> stations = stationRepo.findAll();
         List<Map<String, Object>> data = new ArrayList<>();
 
@@ -39,8 +40,8 @@ public class StationController {
             map.put("longitude", st.getLongitude());
             map.put("address", st.getAddress());
 
-            //Đếm số xe có sẵn
-            long count = vehicleRepo.countByStationIdAndAvailable(st.getId(), true);
+            // Cập nhật luôn cho khách hàng để họ thấy đúng số lượng xe sẵn sàng
+            long count = vehicleRepo.countAvailableVehiclesRobust(st.getId());
             map.put("availableCars", count);
 
             data.add(map);
@@ -55,9 +56,37 @@ public class StationController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Station not found"));
     }
 
+    // API cho Admin Dashboard
     @GetMapping("/admin/all")
-    public List<Station> getStationsForAdmin() {
-        return stationRepo.findAll();
+    public ResponseEntity<List<Map<String, Object>>> getStationsForAdmin() {
+        List<Station> stations = stationRepo.findAll();
+        List<Map<String, Object>> response = new ArrayList<>();
+
+        for (Station st : stations) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("id", st.getId());
+            map.put("name", st.getName());
+            map.put("address", st.getAddress());
+            map.put("latitude", st.getLatitude());
+            map.put("longitude", st.getLongitude());
+
+            // 1. Sẵn sàng: Dùng hàm mới để đếm cả xe cũ lẫn xe mới
+            long countAvailable = vehicleRepo.countAvailableVehiclesRobust(st.getId());
+
+            // 2. Đang thuê: Cộng dồn RENTED và PENDING_PAYMENT
+            long countRented = vehicleRepo.countByStationIdAndBookingStatus(st.getId(), "RENTED");
+            long countPending = vehicleRepo.countByStationIdAndBookingStatus(st.getId(), "PENDING_PAYMENT");
+
+            // 3. Bảo trì
+            long countMaintenance = vehicleRepo.countByStationIdAndBookingStatus(st.getId(), "MAINTENANCE");
+
+            map.put("statsAvailable", countAvailable);
+            map.put("statsRented", countRented + countPending);
+            map.put("statsMaintenance", countMaintenance);
+
+            response.add(map);
+        }
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/admin/{id}")
@@ -81,11 +110,10 @@ public class StationController {
 
     @DeleteMapping("/admin/delete/{id}")
     public ResponseEntity<String> deleteStation(@PathVariable("id") String id) {
-
-        if (vehicleRepo.countByStationIdAndAvailable(id, true) > 0 || vehicleRepo.countByStationIdAndAvailable(id, false) > 0) {
+        // Kiểm tra kỹ trước khi xóa: phải dùng hàm Robust để không xóa nhầm trạm còn xe cũ
+        if (vehicleRepo.countAvailableVehiclesRobust(id) > 0 || vehicleRepo.countByStationIdAndAvailable(id, false) > 0) {
             return new ResponseEntity<>("Không thể xóa trạm vì vẫn còn xe.", HttpStatus.BAD_REQUEST);
         }
-
         stationRepo.deleteById(id);
         return new ResponseEntity<>("Xóa trạm " + id + " thành công!", HttpStatus.OK);
     }
