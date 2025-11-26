@@ -48,7 +48,7 @@ public class StaffHandoverController {
                     continue;
                 }
 
-                boolean readyForHandover = paymentStatus.equals("PAID") || paymentStatus.equals("PAY_AT_STATION")
+                boolean readyForHandover = paymentStatus.equals("PAID") || paymentStatus.equals("DEPOSIT_PENDING")
                         || status.equals("CONTRACT_SIGNED") || status.equals("IN_PROGRESS");
 
                 if (!readyForHandover) {

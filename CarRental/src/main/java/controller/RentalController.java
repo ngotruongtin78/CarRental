@@ -16,14 +16,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/rental")
@@ -36,6 +33,7 @@ public class RentalController {
     private final VehicleService vehicleService;
     private final RentalRecordService rentalRecordService;
     private final UserRepository userRepository;
+
     public RentalController(RentalRecordRepository rentalRepo,
                             VehicleRepository vehicleRepo,
                             StationRepository stationRepository,
@@ -56,6 +54,7 @@ public class RentalController {
         return auth != null ? auth.getName() : null;
     }
 
+    // Kiểm tra và hủy đơn nếu hết hạn giữ xe
     private boolean expireIfNeeded(RentalRecord record) {
         if (record == null) return false;
 
@@ -72,31 +71,8 @@ public class RentalController {
         return false;
     }
 
-    private void expirePendingHoldsForUser(String username) {
-        if (username == null) return;
-        List<RentalRecord> rentals = rentalRepo.findByUsername(username);
-        for (RentalRecord record : rentals) {
-            expireIfNeeded(record);
-        }
-    }
-
-    private double distanceInMeters(double lat1, double lon1, double lat2, double lon2) {
-        double radLat1 = Math.toRadians(lat1);
-        double radLat2 = Math.toRadians(lat2);
-        double deltaLat = Math.toRadians(lat2 - lat1);
-        double deltaLon = Math.toRadians(lon2 - lon1);
-
-        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
-                + Math.cos(radLat1) * Math.cos(radLat2)
-                * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        double earthRadius = 6371000; // meters
-        return earthRadius * c;
-    }
-
     @PostMapping("/checkout")
     public Map<String, Object> checkout(@RequestBody Map<String, Object> req) {
-
         String vehicleId = (String) req.get("vehicleId");
         String stationId = (String) req.get("stationId");
 
@@ -129,6 +105,7 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Vehicle not available");
         }
 
+        // Kiểm tra trạng thái xe
         String bookingState = vehicle.getBookingStatus() == null ? "AVAILABLE" : vehicle.getBookingStatus();
         if ("RENTED".equalsIgnoreCase(bookingState)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Vehicle already rented");
@@ -150,13 +127,6 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid date format");
         }
 
-        if (startDate.isBefore(LocalDate.now())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày bắt đầu không được ở quá khứ");
-        }
-        if (endDate.isBefore(startDate)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
-        }
-
         final long daySpan = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         int rentalDays = (int) Math.max(1, daySpan);
 
@@ -172,6 +142,7 @@ public class RentalController {
         record.setEndDate(endDate);
         record.setRentalDays(rentalDays);
         record.setDistanceKm(distanceKm != null ? distanceKm : 0);
+        record.setStartTime(startDate.atStartOfDay());
         record.setEndTime(endDate.plusDays(1).atStartOfDay());
         record.setTotal(vehicle.getPrice() * rentalDays);
         record.setStatus("PENDING_PAYMENT");
@@ -196,7 +167,6 @@ public class RentalController {
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
-        expirePendingHoldsForUser(username);
         return ResponseEntity.ok(rentalRecordService.getHistoryDetails(username));
     }
 
@@ -245,13 +215,6 @@ public class RentalController {
             payload.put("paymentStatus", record.getPaymentStatus());
             payload.put("status", record.getStatus());
             payload.put("holdExpiresAt", record.getHoldExpiresAt());
-            payload.put("depositRequiredAmount", record.getDepositRequiredAmount());
-            payload.put("depositPaidAmount", record.getDepositPaidAmount());
-            payload.put("depositPaidAt", record.getDepositPaidAt());
-            payload.put("additionalFeeAmount", record.getAdditionalFeeAmount());
-            payload.put("additionalFeeNote", record.getAdditionalFeeNote());
-            payload.put("additionalFeePaidAmount", record.getAdditionalFeePaidAmount());
-            payload.put("additionalFeePaidAt", record.getAdditionalFeePaidAt());
 
             if (vehicle != null) {
                 payload.put("vehicle", vehicle);
@@ -308,39 +271,19 @@ public class RentalController {
 
         record.setTotal(calculatedTotal);
         record.setPaymentMethod(paymentMethod);
+        record.setPaymentStatus(paymentMethod.equals("cash") ? "PAY_AT_STATION" : "BANK_TRANSFER");
+
+        // Dù là tiền mặt hay chuyển khoản, đều giữ trạng thái PENDING_PAYMENT cho đến khi hoàn tất
         record.setStatus("PENDING_PAYMENT");
-
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("rentalDays", rentalDays);
-
-        if (paymentMethod.equals("cash")) {
-            double deposit = Math.round(calculatedTotal * 0.3 * 100.0) / 100.0;
-            record.setDepositRequiredAmount(deposit);
-            record.setDepositPaidAmount(Optional.ofNullable(record.getDepositPaidAmount()).orElse(0.0));
-            record.setPaymentStatus("DEPOSIT_PENDING");
-
-            LocalDateTime holdUntil = LocalDateTime.now().plusMinutes(15);
-            record.setHoldExpiresAt(holdUntil);
-            rentalRepo.save(record);
-            vehicleService.markPendingPaymentHidden(record.getVehicleId(), rentalId);
-
-            response.put("depositRequired", deposit);
-            response.put("depositPending", true);
-            response.put("paymentStatus", record.getPaymentStatus());
-            response.put("paymentMethod", paymentMethod);
-            response.put("total", calculatedTotal);
-            return ResponseEntity.ok(response);
-        }
-
-        record.setPaymentStatus("BANK_TRANSFER");
         record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
         rentalRepo.save(record);
         vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
 
+        Map<String, Object> response = new LinkedHashMap<>();
         response.put("paymentStatus", record.getPaymentStatus());
         response.put("total", calculatedTotal);
+        response.put("rentalDays", rentalDays);
         response.put("paymentMethod", paymentMethod);
-        response.put("depositPending", false);
         return ResponseEntity.ok(response);
     }
 
@@ -354,92 +297,12 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
         }
 
-        String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
-        if (List.of("IN_PROGRESS", "WAITING_INSPECTION", "RETURNED", "COMPLETED").contains(status)) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body("Không thể hủy vì chuyến thuê đã bắt đầu hoặc đang chờ kiểm tra.");
-        }
-
         record.setStatus("CANCELLED");
         record.setPaymentStatus("CANCELLED");
         record.setHoldExpiresAt(null);
         rentalRepo.save(record);
         vehicleService.releaseHold(record.getVehicleId(), rentalId);
         return ResponseEntity.ok(Map.of("status", "CANCELLED"));
-    }
-
-    @PostMapping("/{rentalId}/dates")
-    public ResponseEntity<?> updateRentalDates(@PathVariable("rentalId") String rentalId,
-                                               @RequestBody Map<String, String> body) {
-        String username = getCurrentUsername();
-        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
-
-        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
-        if (record == null || !Objects.equals(record.getUsername(), username)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
-        }
-
-        if (expireIfNeeded(record)) {
-            return ResponseEntity.status(HttpStatus.GONE)
-                    .body("Đơn đặt đã hết hạn thanh toán. Vui lòng đặt lại.");
-        }
-
-        String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
-        if (List.of("IN_PROGRESS", "WAITING_INSPECTION", "RETURNED", "COMPLETED").contains(status)) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body("Không thể chỉnh sửa chuyến thuê đã bắt đầu hoặc đang chờ kiểm tra.");
-        }
-
-        final LocalDate startDate;
-        final LocalDate endDate;
-        try {
-            startDate = Optional.ofNullable(body.get("startDate")).map(LocalDate::parse).orElse(record.getStartDate());
-            endDate = Optional.ofNullable(body.get("endDate")).map(LocalDate::parse).orElse(startDate);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Định dạng ngày không hợp lệ");
-        }
-
-        if (startDate == null || endDate == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Thiếu ngày bắt đầu hoặc kết thúc");
-        }
-
-        if (startDate.isBefore(LocalDate.now())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày bắt đầu phải từ hôm nay trở đi");
-        }
-        if (endDate.isBefore(startDate)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
-        }
-
-        Vehicle vehicle = vehicleRepo.findById(record.getVehicleId()).orElse(null);
-        if (vehicle == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Vehicle missing for rental");
-        }
-
-        long daySpan = ChronoUnit.DAYS.between(startDate, endDate) + 1;
-        int rentalDays = (int) Math.max(1, daySpan);
-
-        record.setStartDate(startDate);
-        record.setEndDate(endDate);
-        record.setRentalDays(rentalDays);
-        record.setEndTime(endDate.plusDays(1).atStartOfDay());
-        record.setTotal(vehicle.getPrice() * rentalDays);
-
-        if ("cash".equalsIgnoreCase(record.getPaymentMethod())) {
-            LocalDateTime holdUntil = startDate.atStartOfDay().plusDays(1);
-            if (record.getHoldExpiresAt() == null || record.getHoldExpiresAt().isBefore(holdUntil)) {
-                record.setHoldExpiresAt(holdUntil);
-            }
-        }
-
-        rentalRepo.save(record);
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("startDate", record.getStartDate());
-        response.put("endDate", record.getEndDate());
-        response.put("rentalDays", record.getRentalDays());
-        response.put("total", record.getTotal());
-        response.put("holdExpiresAt", record.getHoldExpiresAt());
-        response.put("status", record.getStatus());
-        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{rentalId}/sign-contract")
@@ -450,170 +313,80 @@ public class RentalController {
         return Map.of("status", "SIGNED", "contractSigned", true);
     }
 
-    @PostMapping(value = "/{rentalId}/check-in", consumes = {MediaType.ALL_VALUE})
-    public ResponseEntity<?> checkIn(
-            @PathVariable("rentalId") String rentalId,
-            @RequestParam(value = "photo", required = false) MultipartFile photo,
-            @RequestParam(value = "notes", required = false) String notes,
-            @RequestParam(value = "latitude", required = false) Double latitude,
-            @RequestParam(value = "longitude", required = false) Double longitude,
-            @RequestBody(required = false) byte[] rawBody) {
+    @PostMapping("/{rentalId}/check-in")
+    public Map<String, Object> checkIn(@PathVariable("rentalId") String rentalId, @RequestBody(required = false) Map<String, String> body) {
         String username = getCurrentUsername();
-        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        String notes = body != null ? body.getOrDefault("notes", "") : "";
 
-        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
-        if (record == null || !Objects.equals(record.getUsername(), username)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
-        }
+        RentalRecord record = rentalRecordService.checkIn(rentalId, username, notes);
+        if (record == null) return Map.of("error", "Rental not found or unauthorized");
 
-        if ("IN_PROGRESS".equalsIgnoreCase(record.getStatus())
-                || "WAITING_INSPECTION".equalsIgnoreCase(record.getStatus())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body("Bạn đã check-in hoặc đang trong quá trình thuê xe.");
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        if (record.getStartDate() != null && now.isBefore(record.getStartDate().atStartOfDay())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Chưa tới thời gian nhận xe trong lịch đặt trước.");
-        }
-        if (record.getEndDate() != null && now.isAfter(record.getEndDate().plusDays(1).atStartOfDay())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Đã quá thời gian nhận xe của chuyến này.");
-        }
-
-        if (!record.isContractSigned()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Vui lòng đọc và chấp thuận hợp đồng trước khi check-in.");
-        }
-
-        if (latitude == null || longitude == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Vui lòng bật định vị để xác nhận bạn đang ở trạm thuê.");
-        }
-
-        var station = record.getStationId() != null ? stationRepository.findById(record.getStationId()).orElse(null) : null;
-        if (station == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Không tìm thấy thông tin trạm thuê cho chuyến này.");
-        }
-
-        double distanceMeters = distanceInMeters(latitude, longitude, station.getLatitude(), station.getLongitude());
-        if (Double.isNaN(distanceMeters) || distanceMeters > 50) {
-            long rounded = Math.round(distanceMeters);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Bạn cần có mặt trong bán kính 50m của trạm thuê để check-in. Khoảng cách hiện tại: " + rounded + "m.");
-        }
-
-        byte[] photoData = null;
-        try {
-            if (photo != null && !photo.isEmpty()) {
-                photoData = photo.getBytes();
-            } else if (rawBody != null && rawBody.length > 0) {
-                photoData = rawBody;
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Không đọc được ảnh check-in. Vui lòng thử lại.");
-        }
-
-        if (photoData == null || photoData.length == 0) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Vui lòng chụp hoặc tải ảnh tình trạng xe để check-in.");
-        }
-
-        RentalRecord updated = rentalRecordService.checkIn(
-                rentalId,
-                username,
-                notes != null ? notes : "",
-                photoData,
-                latitude,
-                longitude);
-        if (updated == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found or unauthorized");
-
-        vehicleService.updateAvailable(updated.getVehicleId(), false);
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("status", updated.getStatus());
-        response.put("checkinNotes", updated.getCheckinNotes());
-        response.put("startTime", updated.getStartTime());
-        response.put("photoUploaded", true);
-        return ResponseEntity.ok(response);
+        vehicleService.updateAvailable(record.getVehicleId(), false);
+        return Map.of(
+                "status", record.getStatus(),
+                "checkinNotes", record.getCheckinNotes(),
+                "startTime", record.getStartTime()
+        );
     }
 
-    @PostMapping(value = "/{rentalId}/return", consumes = {MediaType.ALL_VALUE})
-    public ResponseEntity<?> requestReturn(@PathVariable("rentalId") String rentalId,
-                                           @RequestParam(value = "photo", required = false) MultipartFile photo,
-                                           @RequestParam(value = "notes", required = false) String notes,
-                                           @RequestParam(value = "latitude", required = false) Double latitude,
-                                           @RequestParam(value = "longitude", required = false) Double longitude,
-                                           @RequestBody(required = false) byte[] rawBody) {
+    @PostMapping("/{rentalId}/return")
+    public Map<String, Object> requestReturn(@PathVariable("rentalId") String rentalId, @RequestBody(required = false) Map<String, String> body) {
         String username = getCurrentUsername();
-        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        String notes = body != null ? body.getOrDefault("notes", "") : "";
 
-        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
-        if (record == null || !Objects.equals(record.getUsername(), username)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found or unauthorized");
-        }
+        RentalRecord record = rentalRecordService.requestReturn(rentalId, username, notes);
+        if (record == null) return Map.of("error", "Rental not found or unauthorized");
 
-        if (!"IN_PROGRESS".equalsIgnoreCase(record.getStatus())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body("Chỉ trả xe khi chuyến đang được thuê.");
-        }
-
-        if (latitude == null || longitude == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Vui lòng bật định vị và đứng tại trạm để trả xe.");
-        }
-
-        var station = record.getStationId() != null ? stationRepository.findById(record.getStationId()).orElse(null) : null;
-        if (station == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Không tìm thấy thông tin trạm cho chuyến này.");
-        }
-
-        double distanceMeters = distanceInMeters(latitude, longitude, station.getLatitude(), station.getLongitude());
-        if (Double.isNaN(distanceMeters) || distanceMeters > 50) {
-            long rounded = Math.round(distanceMeters);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Vị trí nằm ngoài khu vực trạm hoặc sai trạm (cách khoảng " + rounded + "m).");
-        }
-
-        byte[] photoData = null;
-        try {
-            if (photo != null && !photo.isEmpty()) {
-                photoData = photo.getBytes();
-            } else if (rawBody != null && rawBody.length > 0) {
-                photoData = rawBody;
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Không đọc được ảnh trả xe. Vui lòng thử lại.");
-        }
-
-        if (photoData == null || photoData.length == 0) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Vui lòng chụp hoặc tải ảnh tình trạng xe khi trả.");
-        }
-
-        RentalRecord updated = rentalRecordService.requestReturn(
-                rentalId,
-                username,
-                notes != null ? notes : "",
-                photoData,
-                latitude,
-                longitude);
-        if (updated == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found or unauthorized");
-
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("status", updated.getStatus());
-        response.put("returnNotes", updated.getReturnNotes());
-        response.put("endTime", updated.getEndTime());
-        return ResponseEntity.ok(response);
+        return Map.of(
+                "status", record.getStatus(),
+                "returnNotes", record.getReturnNotes(),
+                "endTime", record.getEndTime()
+        );
     }
 
+    // API dành cho Admin: Lấy danh sách lịch sử chi tiết
     @GetMapping("/admin/all-history")
     public ResponseEntity<?> getAllHistoryForAdmin() {
         List<Map<String, Object>> records = rentalRecordService.getAllHistoryDetails();
         return ResponseEntity.ok(records);
+    }
+
+    // API dành cho Admin: Lấy chi tiết một đơn hàng
+    @GetMapping("/admin/detail/{id}")
+    public ResponseEntity<?> getRentalDetailForAdmin(@PathVariable("id") String id) {
+        try {
+            RentalRecord record = rentalRepo.findById(id).orElse(null);
+            if (record == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Không tìm thấy đơn thuê"));
+            }
+
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("rental", record);
+
+            // Lấy thông tin xe
+            if (record.getVehicleId() != null) {
+                response.put("vehicle", vehicleRepo.findById(record.getVehicleId()).orElse(null));
+            }
+
+            // Lấy thông tin trạm
+            if (record.getStationId() != null) {
+                response.put("station", stationRepository.findById(record.getStationId()).orElse(null));
+            }
+
+            // Lấy thông tin khách hàng
+            if (record.getUsername() != null) {
+                User user = userRepository.findByUsername(record.getUsername());
+                if(user != null) {
+                    user.setPassword(null); // Bảo mật
+                    user.setLicenseData(null); // Giảm tải
+                    user.setIdCardData(null);
+                    response.put("customer", user);
+                }
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
+        }
     }
 }

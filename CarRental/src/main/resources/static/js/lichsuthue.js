@@ -188,10 +188,7 @@ function hasCheckedIn(record) {
     if (!record) return false;
     const status = (record.status || "").toUpperCase();
     if (["IN_PROGRESS", "WAITING_INSPECTION", "RETURNED", "COMPLETED"].includes(status)) return true;
-
-    if (record.checkinPhotoData || record.checkinLatitude || record.checkinLongitude) return true;
-    const actualStart = parseDate(record.checkinTime || record.actualStartTime);
-    return !!actualStart;
+    return Boolean(record.startTime);
 }
 
 function openContractModal(rentalId, afterAccept) {
@@ -499,7 +496,7 @@ async function cancelRental(record) {
             return;
         }
         removeHistoryRecord(record.id);
-        alert("Đã hủy đơn thuê và giải phóng xe.");
+        alert("Đã hủy đơn thuê! Nếu đã đặt cọc hoặc chuyển khoản thì gửi yêu cầu hỗ trợ trong hồ sơ cá nhân để được hoàn tiền.");
     } catch (err) {
         alert(err.message || "Không hủy được chuyến thuê. Thử lại sau.");
     }
@@ -592,10 +589,6 @@ function renderHistoryItem(item) {
     const withinWindow = isWithinRentalWindow(record);
     const modifiable = canModifyReservation(record);
     const pendingPayment = hasOutstandingUpfrontPayment(record);
-
-    if (pendingPayment) {
-        container.classList.add("pending-payment");
-    }
 
     if (pendingPayment) {
         const note = document.createElement("span");
@@ -760,48 +753,22 @@ function renderHistoryList(list) {
 
 function parseDate(input) {
     if (!input) return null;
-    if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
+    const dt = new Date(input);
+    return isNaN(dt.getTime()) ? null : dt;
+}
 
-    const raw = typeof input === "string" ? input.trim() : input;
-
-    // Native number timestamps
-    if (typeof raw === "number" && Number.isFinite(raw)) {
-        const asDate = new Date(raw);
-        return isNaN(asDate.getTime()) ? null : asDate;
+function parseObjectIdTimestamp(value) {
+    if (!value || typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (trimmed.length >= 8 && /^[a-fA-F0-9]+$/.test(trimmed)) {
+        const seconds = parseInt(trimmed.substring(0, 8), 16);
+        return Number.isFinite(seconds) ? seconds * 1000 : null;
     }
 
-    const direct = new Date(raw);
-    if (!isNaN(direct.getTime())) return direct;
-
-    // Arrays from Jackson for LocalDate/LocalDateTime: [yyyy, MM, dd, HH, mm, ss, nano]
-    if (Array.isArray(raw)) {
-        const [y, m = 1, d = 1, hh = 0, mm = 0, ss = 0, nano = 0] = raw;
-        const parsed = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss), Number(nano) / 1e6);
-        return isNaN(parsed.getTime()) ? null : parsed;
-    }
-
-    // Objects like {year: 2024, month: 5, day: 12, hour: 10, minute: 30, second: 0}
-    if (typeof raw === "object") {
-        const year = raw.year ?? raw.y;
-        const month = (raw.monthValue ?? raw.month ?? raw.m) ?? 1;
-        const day = raw.dayOfMonth ?? raw.day ?? raw.d ?? 1;
-        const hour = raw.hour ?? raw.h ?? 0;
-        const minute = raw.minute ?? raw.min ?? raw.i ?? 0;
-        const second = raw.second ?? raw.s ?? 0;
-        const nano = raw.nano ?? raw.ms ?? 0;
-        if (year) {
-            const parsed = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second), Number(nano) / 1e6);
-            if (!isNaN(parsed.getTime())) return parsed;
-        }
-    }
-
-    if (typeof raw === "string") {
-        const match = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[ T](\d{1,2})(?::(\d{1,2})(?::(\d{1,2}))?)?)?$/);
-        if (match) {
-            const [, d, m, y, hh = "0", mm = "0", ss = "0"] = match;
-            const parsed = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss));
-            return isNaN(parsed.getTime()) ? null : parsed;
-        }
+    const digits = trimmed.replace(/[^0-9]/g, "");
+    if (digits) {
+        const asNumber = Number(digits);
+        return Number.isFinite(asNumber) ? asNumber : null;
     }
 
     return null;
@@ -1126,8 +1093,8 @@ function openRentalModal(item) {
                 <div class="payment-text">
                     <h4>Chưa hoàn tất thanh toán</h4>
                     <p>${record.holdExpiresAt
-                        ? `Giữ chỗ tới: ${formatDateTime(record.holdExpiresAt)}`
-                        : "Bạn có thể chọn phương thức thanh toán để tiếp tục giữ xe."}</p>
+            ? `Giữ chỗ tới: ${formatDateTime(record.holdExpiresAt)}`
+            : "Bạn có thể chọn phương thức thanh toán để tiếp tục giữ xe."}</p>
                 </div>
                 <button type="button" class="btn-continue-payment">
                     <i class="fas fa-credit-card"></i> Thanh toán ngay

@@ -11,7 +11,6 @@
     <nav class="sidebar-staff">
         <div class="logo">⚡️ EV Station</div>
         <ul>
-            <li><a href="/staff/station-grid">Bảng điều khiển</a></li>
             <li><a th:href="@{/staff/station-grid}" class="active">Quản lý xe</a></li>
             <li><a th:href="@{/staff/return}">Nhận xe</a></li>
             <li><a th:href="@{/staff/deliver}">Giao xe</a></li>
@@ -23,19 +22,25 @@
 
     <div class="main-content-staff">
         <header class="content-header-staff">
-            <div class="header-title">Quản lý xe tại điểm: Q.1</div>
+            <div class="header-title">Quản lý xe tại điểm: <span id="stationNameDisplay">Đang tải...</span></div>
         </header>
 
         <main class="content-body-staff">
 
             <div class="page-header-filters">
                 <div class="search-box">
-                    <label for="searchInput">Tìm kiếm xe</label>
+                    <label for="searchInput">🔍 Tìm kiếm xe</label>
                     <input type="text" id="searchInput" placeholder="Tìm kiếm theo biển số xe...">
                 </div>
-                <div class="filter-group" style="margin-left: auto;">
-                    <label>&nbsp;</label>
-                    <button id="addVehicleBtn" class="btn btn-primary">+ Thêm xe mới tại điểm</button>
+                <div class="filter-group">
+                    <label for="filterStatus">🚗 Lọc theo trạng thái:</label>
+                    <select id="filterStatus" onchange="filterVehicles()">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="AVAILABLE">Sẵn sàng</option>
+                        <option value="RENTED">Đang được thuê</option>
+                        <option value="MAINTENANCE">Chưa sẵn sàng / Bảo trì</option>
+                        <option value="PENDING_PAYMENT">Chờ thanh toán</option>
+                    </select>
                 </div>
             </div>
 
