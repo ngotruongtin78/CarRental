@@ -16,7 +16,7 @@
         <header class="content-header">
             <div style="flex-grow: 1;"></div>
             <div class="admin-profile" onclick="toggleProfileMenu(event)">
-                <img th:src="@{/images/admin-avatar.png}" alt="Admin">
+                <img th:src="@{/images/admin.png}" alt="Admin" onerror="this.src='https://via.placeholder.com/40'">
                 <span>Admin</span>
                 <i class="fas fa-chevron-down" style="font-size: 12px; margin-left: 8px; color: #777;"></i>
                 <div class="profile-dropdown" id="profileDropdown">
@@ -28,25 +28,28 @@
         </header>
 
         <main class="content-body">
-            <div class="page-header">
+            <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h1>Báo cáo & Phân tích</h1>
+
+                <div class="report-filter">
+                    <select id="stationFilter" style="padding: 10px 15px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; min-width: 200px; background-color: white; cursor: pointer;">
+                        <option value="all">-- Tất cả điểm thuê --</option>
+                    </select>
+                </div>
             </div>
 
             <div class="kpi-grid">
                 <div class="kpi-card">
                     <h3>Doanh thu tổng</h3>
-                    <div class="value" id="kpi-revenue">---</div>
-                    <div class="change positive" id="kpi-revenue-change">+0% so với tháng trước</div>
+                    <div class="value" id="kpi-revenue">0đ</div>
                 </div>
                 <div class="kpi-card">
                     <h3>Tổng số chuyến</h3>
-                    <div class="value" id="kpi-trips">---</div>
-                    <div class="change" id="kpi-trips-change">⚡️</div>
+                    <div class="value" id="kpi-trips">0</div>
                 </div>
                 <div class="kpi-card">
-                    <h3>Tỷ lệ sử dụng trung bình</h3>
-                    <div class="value" id="kpi-utilization">---%</div>
-                    <div class="change"id="kpi-utilization-change">📊</div>
+                    <h3>Tỷ lệ lấp đầy</h3>
+                    <div class="value" id="kpi-utilization">0%</div>
                 </div>
             </div>
 
@@ -58,6 +61,7 @@
                     <p style="color: #666;">Đang phân tích dữ liệu...</p>
                 </div>
             </div>
+
             <div class="chart-grid-container">
                 <div class="chart-grid-left">
                     <div class="chart-container">
@@ -76,7 +80,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script th:src="@{/js/admin-reports.js}"></script>
 
 </body>
