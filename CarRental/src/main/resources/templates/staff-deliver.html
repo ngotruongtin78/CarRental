@@ -11,7 +11,6 @@
     <nav class="sidebar-staff">
         <div class="logo">⚡️ EV Station</div>
         <ul>
-            <li><a href="#">Bảng điều khiển</a></li>
             <li><a th:href="@{/staff/station-grid}">Quản lý xe</a></li>
             <li><a th:href="@{/staff/return}">Nhận xe</a></li>
             <li><a th:href="@{/staff/deliver}" class="active">Giao xe</a></li>
@@ -122,6 +121,20 @@
                         <input type="text" id="deliverPaymentStatus" disabled>
                     </div>
                 </div>
+
+                <!-- Hiển thị khi paymentStatus = PAY_AT_STATION -->
+                <div id="depositInfoSection" style="display: none; margin-top: 15px; padding: 12px; background-color: #f0f8ff; border-left: 4px solid #2196f3; border-radius: 4px;">
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>💰 Tiền đã đặt cọc:</label>
+                            <input type="text" id="deliverDepositPaidAmount" disabled style="color: #4caf50; font-weight: 600;">
+                        </div>
+                        <div class="form-group">
+                            <label>⏳ Tiền còn phải thanh toán:</label>
+                            <input type="text" id="deliverRemainingAmount" disabled style="color: #ff9800; font-weight: 600;">
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Phần 4: Chụp hình giao xe -->
@@ -166,7 +179,22 @@
                 </div>
             </div>
 
-            <!-- Phần 5: Ghi chú -->
+            <!-- Phần 5: Chữ ký xác nhận -->
+            <div class="modal-section">
+                <h3 class="modal-section-title">✍️ Chữ ký xác nhận</h3>
+                <p style="font-size: 14px; color: #666; margin-bottom: 10px;">Khách hàng và nhân viên vui lòng ký xác nhận đã đồng ý với các chi phí và tình trạng xe.</p>
+                <div style="border: 2px solid #ddd; border-radius: 6px; overflow: hidden; background-color: #ffffff;">
+                    <canvas id="signaturePad" width="600" height="200" style="display: block; cursor: crosshair; width: 100%; touch-action: none;"></canvas>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="clearSignature()" style="padding: 8px 16px; margin-right: 5px;">
+                        🗑️ Xóa chữ ký
+                    </button>
+                    <span id="signatureStatus" style="font-size: 12px; color: #999; margin-left: 10px;"></span>
+                </div>
+            </div>
+
+            <!-- Phần 6: Ghi chú -->
             <div class="modal-section">
                 <h3 class="modal-section-title">📝 Ghi chú giao xe</h3>
                 <div class="form-group">
@@ -182,6 +210,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 <script th:src="@{/js/staff-deliver.js}"></script>
 
 </body>
