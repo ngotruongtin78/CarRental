@@ -7,6 +7,7 @@ import CarRental.example.repository.VehicleRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -71,22 +72,24 @@ public class RentalRecordService {
     private long getSortTimestamp(RentalRecord record) {
         if (record == null) return 0;
 
-        List<LocalDateTime> candidates = new ArrayList<>();
-        if (record.getPaidAt() != null) candidates.add(record.getPaidAt());
-        if (record.getDepositPaidAt() != null) candidates.add(record.getDepositPaidAt());
-        if (record.getHoldExpiresAt() != null) candidates.add(record.getHoldExpiresAt());
-        if (record.getStartTime() != null) candidates.add(record.getStartTime());
-        if (record.getEndTime() != null) candidates.add(record.getEndTime());
-        if (record.getStartDate() != null) candidates.add(record.getStartDate().atStartOfDay());
-        if (record.getEndDate() != null) candidates.add(record.getEndDate().atStartOfDay());
-
-        Optional<LocalDateTime> newest = candidates.stream().max(Comparator.naturalOrder());
-        if (newest.isPresent()) {
-            return newest.get().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        // Primary sort: ngày thuê (ngày bắt đầu đặt xe hoặc thời gian bắt đầu thực tế).
+        LocalDateTime rentalStart = Optional.ofNullable(record.getStartTime())
+                .orElseGet(() -> Optional.ofNullable(record.getStartDate())
+                        .map(LocalDate::atStartOfDay)
+                        .orElse(null));
+        if (rentalStart != null) {
+            return rentalStart.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
         }
 
+        // Fallback: thời điểm tạo bản ghi dựa trên ObjectId (ưu tiên hiển thị đơn mới nhất).
         String id = record.getId();
         if (id != null) {
+            try {
+                return new org.bson.types.ObjectId(id).getTimestamp() * 1000L;
+            } catch (IllegalArgumentException ignored) {
+                // ID không phải ObjectId, tiếp tục xuống dưới.
+            }
+
             String digits = id.replaceAll("[^0-9]", "");
             if (!digits.isEmpty()) {
                 try {
