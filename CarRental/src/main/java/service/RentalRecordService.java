@@ -36,7 +36,7 @@ public class RentalRecordService {
     public List<Map<String, Object>> getHistoryDetails(String username) {
         List<RentalRecord> records = repo.findByUsername(username)
                 .stream().filter(this::isVisibleInHistory)
-                .sorted(Comparator.comparing(RentalRecord::getStartDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
+                .sorted(Comparator.comparingLong(this::getSortTimestamp).reversed())
                 .toList();
         List<Map<String, Object>> response = new ArrayList<>();
         for (RentalRecord record : records) {
@@ -66,6 +66,38 @@ public class RentalRecordService {
             response.add(item);
         }
         return response;
+    }
+
+    private long getSortTimestamp(RentalRecord record) {
+        if (record == null) return 0;
+
+        List<LocalDateTime> candidates = new ArrayList<>();
+        if (record.getPaidAt() != null) candidates.add(record.getPaidAt());
+        if (record.getDepositPaidAt() != null) candidates.add(record.getDepositPaidAt());
+        if (record.getHoldExpiresAt() != null) candidates.add(record.getHoldExpiresAt());
+        if (record.getStartTime() != null) candidates.add(record.getStartTime());
+        if (record.getEndTime() != null) candidates.add(record.getEndTime());
+        if (record.getStartDate() != null) candidates.add(record.getStartDate().atStartOfDay());
+        if (record.getEndDate() != null) candidates.add(record.getEndDate().atStartOfDay());
+
+        Optional<LocalDateTime> newest = candidates.stream().max(Comparator.naturalOrder());
+        if (newest.isPresent()) {
+            return newest.get().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        }
+
+        String id = record.getId();
+        if (id != null) {
+            String digits = id.replaceAll("[^0-9]", "");
+            if (!digits.isEmpty()) {
+                try {
+                    return Long.parseLong(digits);
+                } catch (NumberFormatException ignored) {
+                    // Fallback to 0 below.
+                }
+            }
+        }
+
+        return 0;
     }
 
     public Map<String, Object> calculateStats(String username) {
