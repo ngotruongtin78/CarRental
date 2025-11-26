@@ -48,6 +48,42 @@ public class RentalRecordService {
             item.put("record", record);
             item.put("displayStatus", statusView.display);
             item.put("filterStatus", statusView.filterKey);
+            vehicleRepository.findById(record.getVehicleId()).ifPresent(vehicle -> {
+                Map<String, Object> vehicleInfo = new LinkedHashMap<>();
+                vehicleInfo.put("id", vehicle.getId());
+                vehicleInfo.put("type", vehicle.getType());
+                vehicleInfo.put("plate", vehicle.getPlate());
+                vehicleInfo.put("brand", vehicle.getBrand());
+                vehicleInfo.put("price", vehicle.getPrice());
+                item.put("vehicle", vehicleInfo);
+            });
+            stationRepository.findById(record.getStationId()).ifPresent(station -> {
+                Map<String, Object> stationInfo = new LinkedHashMap<>();
+                stationInfo.put("id", station.getId());
+                stationInfo.put("name", station.getName());
+                stationInfo.put("address", station.getAddress());
+                stationInfo.put("latitude", station.getLatitude());
+                stationInfo.put("longitude", station.getLongitude());
+                item.put("station", stationInfo);
+            });
+            response.add(item);
+        }
+        return response;
+    }
+
+    public List<Map<String, Object>> getAllHistoryDetails() {
+        List<RentalRecord> records = repo.findAll()
+                .stream()
+                .filter(this::isVisibleInHistory)
+                .sorted(buildHistoryComparator())
+                .toList();
+        List<Map<String, Object>> response = new ArrayList<>();
+        for (RentalRecord record : records) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            StatusView statusView = resolveStatus(record);
+            item.put("record", record);
+            item.put("displayStatus", statusView.display);
+            item.put("filterStatus", statusView.filterKey);
 
             vehicleRepository.findById(record.getVehicleId()).ifPresent(vehicle -> {
                 Map<String, Object> vehicleInfo = new LinkedHashMap<>();

@@ -774,6 +774,23 @@ function parseObjectIdTimestamp(value) {
     return null;
 }
 
+function parseObjectIdTimestamp(value) {
+    if (!value || typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (trimmed.length >= 8 && /^[a-fA-F0-9]+$/.test(trimmed)) {
+        const seconds = parseInt(trimmed.substring(0, 8), 16);
+        return Number.isFinite(seconds) ? seconds * 1000 : null;
+    }
+
+    const digits = trimmed.replace(/[^0-9]/g, "");
+    if (digits) {
+        const asNumber = Number(digits);
+        return Number.isFinite(asNumber) ? asNumber : null;
+    }
+
+    return null;
+}
+
 function parseNumericId(value) {
     if (value === undefined || value === null) return null;
     if (typeof value === "number" && Number.isFinite(value)) return value;
