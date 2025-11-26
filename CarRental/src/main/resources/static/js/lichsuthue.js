@@ -595,10 +595,9 @@ function renderHistoryItem(item) {
     const statusUpper = (record.status || "").toUpperCase();
     const paymentStatusUpper = (record.paymentStatus || "").toUpperCase();
     const paymentMethod = (record.paymentMethod || "").toUpperCase();
-    const offlinePayment = isOfflinePaymentMethod(paymentMethod);
-    const unpaidStatus = ["PENDING", "UNPAID", "CHUA_THANH_TOAN", "PENDING_PAYMENT", "PAY_AT_STATION"].includes(paymentStatusUpper);
+    const unpaidStatus = ["PENDING", "UNPAID", "CHUA_THANH_TOAN", "PENDING_PAYMENT"].includes(paymentStatusUpper);
 
-    const highlightUnpaid = statusUpper === "PENDING_PAYMENT" || unpaidStatus || (offlinePayment && paymentStatusUpper !== "PAID");
+    const highlightUnpaid = statusUpper === "PENDING_PAYMENT" || unpaidStatus;
     if (highlightUnpaid || statusUpper === "WAITING_INSPECTION") {
         statusBadge.classList.add("warning");
     }
@@ -641,9 +640,9 @@ function renderHistoryItem(item) {
         const btnCheckin = document.createElement("button");
         btnCheckin.className = "action-button";
         btnCheckin.innerHTML = '<i class="fas fa-check"></i> Check-in nhận xe';
-        btnCheckin.disabled = pendingPayment || !record.contractSigned || !withinWindow;
-        if (pendingPayment) {
-            btnCheckin.title = "Thanh toán cọc/chuyển khoản trước khi check-in";
+        btnCheckin.disabled = !record.contractSigned || !withinWindow;
+        if (pendingPayment && !record.contractSigned) {
+            btnCheckin.title = "Ký hợp đồng điện tử trước khi check-in";
         } else if (!record.contractSigned) {
             btnCheckin.title = "Ký hợp đồng điện tử trước khi check-in";
         } else if (!withinWindow) {
@@ -779,6 +778,23 @@ function parseDate(input) {
     if (!input) return null;
     const dt = new Date(input);
     return isNaN(dt.getTime()) ? null : dt;
+}
+
+function parseObjectIdTimestamp(value) {
+    if (!value || typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (trimmed.length >= 8 && /^[a-fA-F0-9]+$/.test(trimmed)) {
+        const seconds = parseInt(trimmed.substring(0, 8), 16);
+        return Number.isFinite(seconds) ? seconds * 1000 : null;
+    }
+
+    const digits = trimmed.replace(/[^0-9]/g, "");
+    if (digits) {
+        const asNumber = Number(digits);
+        return Number.isFinite(asNumber) ? asNumber : null;
+    }
+
+    return null;
 }
 
 function parseObjectIdTimestamp(value) {
@@ -993,7 +1009,7 @@ function renderBadges(item) {
 
     const paymentStatus = (record.paymentStatus || "").toUpperCase();
     const paymentMethod = record.paymentMethod || "";
-    const paymentWarning = ["PENDING", "UNPAID", "CHUA_THANH_TOAN", "PENDING_PAYMENT"].includes(paymentStatus) || (isOfflinePaymentMethod(paymentMethod) && paymentStatus !== "PAID");
+    const paymentWarning = ["PENDING", "UNPAID", "CHUA_THANH_TOAN", "PENDING_PAYMENT"].includes(paymentStatus) || hasOutstandingUpfrontPayment(record);
 
     if (record.paymentStatus) badges.push({ text: `Thanh toán: ${record.paymentStatus}`, className: paymentWarning ? "warning" : "" });
     if (record.paymentMethod) badges.push({ text: `PTTT: ${record.paymentMethod}`, className: paymentWarning ? "warning" : "" });
@@ -1136,10 +1152,10 @@ function openRentalModal(item) {
         paymentSection.innerHTML = `
             <div class="payment-callout">
                 <div class="payment-text">
-                    <h4>Chưa hoàn tất thanh toán</h4>
+                    <h4>Đang giữ chỗ, cần thanh toán</h4>
                     <p>${record.holdExpiresAt
-            ? `Giữ chỗ tới: ${formatDateTime(record.holdExpiresAt)}`
-            : "Bạn có thể chọn phương thức thanh toán để tiếp tục giữ xe."}</p>
+                        ? `Vui lòng thanh toán trước ${formatDateTime(record.holdExpiresAt)} để giữ xe.`
+                        : "Thanh toán để tiếp tục quá trình thuê và giữ chỗ của bạn."}</p>
                 </div>
                 <button type="button" class="btn-continue-payment">
                     <i class="fas fa-credit-card"></i> Thanh toán ngay
