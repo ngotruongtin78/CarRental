@@ -176,6 +176,7 @@ public class RentalController {
         record.setTotal(vehicle.getPrice() * rentalDays);
         record.setStatus("PENDING_PAYMENT");
         record.setPaymentStatus("PENDING");
+        record.setCreatedAt(LocalDateTime.now());
         record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
 
         rentalRepo.save(record);

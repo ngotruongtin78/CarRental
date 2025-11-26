@@ -7,6 +7,7 @@ import CarRental.example.repository.VehicleRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -27,7 +28,10 @@ public class RentalRecordService {
         this.stationRepository = stationRepository;
     }
 
-    public RentalRecord saveRecord(RentalRecord record) { return repo.save(record); }
+    public RentalRecord saveRecord(RentalRecord record) {
+        ensureCreatedAt(record);
+        return repo.save(record);
+    }
     public List<RentalRecord> getHistoryByUsername(String username) { return repo.findByUsername(username); }
     public List<RentalRecord> getAll() { return repo.findAll(); }
     public RentalRecord getById(String id) { return repo.findById(id).orElse(null); }
@@ -36,7 +40,7 @@ public class RentalRecordService {
     public List<Map<String, Object>> getHistoryDetails(String username) {
         List<RentalRecord> records = repo.findByUsername(username)
                 .stream().filter(this::isVisibleInHistory)
-                .sorted(Comparator.comparing(RentalRecord::getStartDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
+                .sorted(Comparator.comparingLong(this::getSortTimestamp).reversed())
                 .toList();
         List<Map<String, Object>> response = new ArrayList<>();
         for (RentalRecord record : records) {
@@ -66,6 +70,54 @@ public class RentalRecordService {
             response.add(item);
         }
         return response;
+    }
+
+    private long getSortTimestamp(RentalRecord record) {
+        if (record == null) return 0;
+
+        LocalDateTime rentalStart = Optional.ofNullable(record.getStartTime())
+                .orElseGet(() -> Optional.ofNullable(record.getStartDate())
+                        .map(LocalDate::atStartOfDay)
+                        .orElse(null));
+
+        LocalDateTime createdAt = record.getCreatedAt();
+
+        // Ưu tiên thời điểm mới nhất giữa ngày thuê, check-in thực tế và thời điểm tạo đơn.
+        LocalDateTime newest = Stream.of(createdAt, rentalStart)
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+
+        if (newest != null) {
+            return newest.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        }
+
+        // Fallback: thời điểm tạo bản ghi dựa trên ObjectId hoặc chuỗi số (ưu tiên hiển thị đơn mới nhất).
+        String id = record.getId();
+        if (id != null) {
+            try {
+                return new org.bson.types.ObjectId(id).getTimestamp() * 1000L;
+            } catch (IllegalArgumentException ignored) {
+                // ID không phải ObjectId, tiếp tục xuống dưới.
+            }
+
+            String digits = id.replaceAll("[^0-9]", "");
+            if (!digits.isEmpty()) {
+                try {
+                    return Long.parseLong(digits);
+                } catch (NumberFormatException ignored) {
+                    // Fallback to 0 below.
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    private void ensureCreatedAt(RentalRecord record) {
+        if (record != null && record.getCreatedAt() == null) {
+            record.setCreatedAt(LocalDateTime.now());
+        }
     }
 
     public Map<String, Object> calculateStats(String username) {
@@ -101,6 +153,7 @@ public class RentalRecordService {
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
         record.setContractSigned(true);
         record.setStatus("CONTRACT_SIGNED");
+        ensureCreatedAt(record);
         return repo.save(record);
     }
 
@@ -118,6 +171,7 @@ public class RentalRecordService {
         record.setCheckinLatitude(latitude);
         record.setCheckinLongitude(longitude);
         record.setStatus("IN_PROGRESS");
+        ensureCreatedAt(record);
         return repo.save(record);
     }
 
@@ -135,6 +189,7 @@ public class RentalRecordService {
         record.setReturnLongitude(longitude);
         record.setEndTime(LocalDateTime.now());
         record.setStatus("WAITING_INSPECTION");
+        ensureCreatedAt(record);
         return repo.save(record);
     }
 
