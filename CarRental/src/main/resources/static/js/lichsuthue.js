@@ -188,7 +188,10 @@ function hasCheckedIn(record) {
     if (!record) return false;
     const status = (record.status || "").toUpperCase();
     if (["IN_PROGRESS", "WAITING_INSPECTION", "RETURNED", "COMPLETED"].includes(status)) return true;
-    return Boolean(record.startTime);
+
+    const hasPhoto = Boolean(record.checkinPhotoData);
+    const actualStart = parseDate(record.checkinTime || record.actualStartTime);
+    return hasPhoto || !!actualStart;
 }
 
 function openContractModal(rentalId, afterAccept) {
@@ -718,6 +721,7 @@ function getSortTimestamp(item) {
         record.paidAt ?? item?.paidAt,
         record.depositPaidAt ?? item?.depositPaidAt,
         record.additionalFeePaidAt ?? item?.additionalFeePaidAt,
+        record.holdExpiresAt ?? item?.holdExpiresAt,
         record.createdAt ?? item?.createdAt,
         record.startDate ?? item?.startDate
     ]

@@ -117,6 +117,7 @@ public class RentalRecordService {
         Optional.ofNullable(record.getPaidAt()).ifPresent(timestamps::add);
         Optional.ofNullable(record.getDepositPaidAt()).ifPresent(timestamps::add);
         Optional.ofNullable(record.getAdditionalFeePaidAt()).ifPresent(timestamps::add);
+        Optional.ofNullable(record.getHoldExpiresAt()).ifPresent(timestamps::add);
         Optional.ofNullable(record.getCreatedAt()).ifPresent(timestamps::add);
         Optional.ofNullable(toLocalDateTime(record.getStartDate(), false)).ifPresent(timestamps::add);
 
