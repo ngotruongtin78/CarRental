@@ -7,6 +7,7 @@ import CarRental.example.repository.VehicleRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -36,7 +37,7 @@ public class RentalRecordService {
     public List<Map<String, Object>> getHistoryDetails(String username) {
         List<RentalRecord> records = repo.findByUsername(username)
                 .stream().filter(this::isVisibleInHistory)
-                .sorted(Comparator.comparing(RentalRecord::getStartDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
+                .sorted(Comparator.comparingLong(this::getSortTimestamp).reversed())
                 .toList();
         List<Map<String, Object>> response = new ArrayList<>();
         for (RentalRecord record : records) {
@@ -66,6 +67,40 @@ public class RentalRecordService {
             response.add(item);
         }
         return response;
+    }
+
+    private long getSortTimestamp(RentalRecord record) {
+        if (record == null) return 0;
+
+        // Primary sort: ngày thuê (ngày bắt đầu đặt xe hoặc thời gian bắt đầu thực tế).
+        LocalDateTime rentalStart = Optional.ofNullable(record.getStartTime())
+                .orElseGet(() -> Optional.ofNullable(record.getStartDate())
+                        .map(LocalDate::atStartOfDay)
+                        .orElse(null));
+        if (rentalStart != null) {
+            return rentalStart.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        }
+
+        // Fallback: thời điểm tạo bản ghi dựa trên ObjectId (ưu tiên hiển thị đơn mới nhất).
+        String id = record.getId();
+        if (id != null) {
+            try {
+                return new org.bson.types.ObjectId(id).getTimestamp() * 1000L;
+            } catch (IllegalArgumentException ignored) {
+                // ID không phải ObjectId, tiếp tục xuống dưới.
+            }
+
+            String digits = id.replaceAll("[^0-9]", "");
+            if (!digits.isEmpty()) {
+                try {
+                    return Long.parseLong(digits);
+                } catch (NumberFormatException ignored) {
+                    // Fallback to 0 below.
+                }
+            }
+        }
+
+        return 0;
     }
 
     public Map<String, Object> calculateStats(String username) {
