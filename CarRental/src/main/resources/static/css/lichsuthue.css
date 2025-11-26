@@ -355,6 +355,12 @@ body {
     box-shadow: 0 4px 12px rgba(239, 83, 80, 0.12);
 }
 
+.history-item.unpaid-highlight {
+    border-color: #ffd37a;
+    background-color: #fff9e6;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.18);
+}
+
 .history-item:hover {
     transform: translateY(-3px);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);

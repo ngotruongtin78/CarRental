@@ -505,18 +505,36 @@ async function cancelRental(record) {
     }
 }
 
+function hasDepositRequirement(record) {
+    if (!record) return false;
+    const depositRequired = Number(record.depositRequiredAmount || 0);
+    const depositPaid = Number(record.depositPaidAmount || 0);
+    return depositRequired > 0 && depositPaid < depositRequired;
+}
+
+function isOfflinePaymentMethod(method) {
+    const normalized = (method || "").toUpperCase();
+    return ["CASH", "PAY_AT_STATION", "BANK_TRANSFER", "TRANSFER", "CHUYENKHOAN", "TIENMAT"]
+        .some(flag => normalized.includes(flag));
+}
+
 function canContinuePayment(record) {
     if (!record) return false;
     if (isCancelled(record) || isCompleted(record)) return false;
 
     const statusUpper = (record.status || "").toUpperCase();
     const paymentStatus = (record.paymentStatus || "").toUpperCase();
+    const offlinePayment = isOfflinePaymentMethod(record.paymentMethod);
+    const depositPending = hasDepositRequirement(record);
 
     const hasPendingPayment =
         statusUpper === "PENDING_PAYMENT" ||
         paymentStatus === "PENDING" ||
+        paymentStatus === "UNPAID" ||
+        paymentStatus === "CHUA_THANH_TOAN" ||
         !record.paymentMethod;
 
+    if (offlinePayment && !depositPending) return false;
     if (!hasPendingPayment) return false;
 
     if (!record.holdExpiresAt) return true;
@@ -526,9 +544,7 @@ function canContinuePayment(record) {
 
 function hasOutstandingUpfrontPayment(record) {
     if (!record) return false;
-    const depositRequired = Number(record.depositRequiredAmount || 0);
-    const depositPaid = Number(record.depositPaidAmount || 0);
-    const depositPending = depositRequired > 0 && depositPaid < depositRequired;
+    const depositPending = hasDepositRequirement(record);
 
     return depositPending || canContinuePayment(record);
 }
@@ -580,9 +596,12 @@ function renderHistoryItem(item) {
     statusBadge.classList.add("status-badge");
     statusBadge.innerText = `Trạng thái: ${displayStatus}`;
     const statusUpper = (record.status || "").toUpperCase();
-    if (displayStatus.toLowerCase().includes("chờ thanh toán") || statusUpper === "PENDING_PAYMENT") {
-        statusBadge.classList.add("warning");
-    } else if (statusUpper === "WAITING_INSPECTION") {
+    const paymentStatusUpper = (record.paymentStatus || "").toUpperCase();
+    const paymentMethod = (record.paymentMethod || "").toUpperCase();
+    const unpaidStatus = ["PENDING", "UNPAID", "CHUA_THANH_TOAN", "PENDING_PAYMENT"].includes(paymentStatusUpper);
+
+    const highlightUnpaid = statusUpper === "PENDING_PAYMENT" || unpaidStatus;
+    if (highlightUnpaid || statusUpper === "WAITING_INSPECTION") {
         statusBadge.classList.add("warning");
     }
     actions.appendChild(statusBadge);
@@ -592,9 +611,10 @@ function renderHistoryItem(item) {
     const withinWindow = isWithinRentalWindow(record);
     const modifiable = canModifyReservation(record);
     const pendingPayment = hasOutstandingUpfrontPayment(record);
+    const highlightUnpaidItem = pendingPayment || highlightUnpaid;
 
-    if (pendingPayment) {
-        container.classList.add("pending-payment");
+    if (highlightUnpaidItem) {
+        container.classList.add("unpaid-highlight");
     }
 
     if (pendingPayment) {
@@ -623,9 +643,9 @@ function renderHistoryItem(item) {
         const btnCheckin = document.createElement("button");
         btnCheckin.className = "action-button";
         btnCheckin.innerHTML = '<i class="fas fa-check"></i> Check-in nhận xe';
-        btnCheckin.disabled = pendingPayment || !record.contractSigned || !withinWindow;
-        if (pendingPayment) {
-            btnCheckin.title = "Thanh toán cọc/chuyển khoản trước khi check-in";
+        btnCheckin.disabled = !record.contractSigned || !withinWindow;
+        if (pendingPayment && !record.contractSigned) {
+            btnCheckin.title = "Ký hợp đồng điện tử trước khi check-in";
         } else if (!record.contractSigned) {
             btnCheckin.title = "Ký hợp đồng điện tử trước khi check-in";
         } else if (!withinWindow) {
@@ -697,13 +717,12 @@ function getSortTimestamp(item) {
     const record = item?.record || item || {};
     const timestamps = [
         record.endTime ?? item?.endTime,
-        record.endDate ?? item?.endDate,
         record.startTime ?? item?.startTime,
-        record.startDate ?? item?.startDate,
         record.paidAt ?? item?.paidAt,
         record.depositPaidAt ?? item?.depositPaidAt,
-        record.holdExpiresAt ?? item?.holdExpiresAt,
-        record.createdAt ?? item?.createdAt
+        record.additionalFeePaidAt ?? item?.additionalFeePaidAt,
+        record.createdAt ?? item?.createdAt,
+        record.startDate ?? item?.startDate
     ]
         .map(parseDate)
         .map(d => (d ? d.getTime() : null))
@@ -711,11 +730,37 @@ function getSortTimestamp(item) {
 
     if (timestamps.length) return Math.max(...timestamps);
 
+    const objectIdTimestamp = [record.id, item?.id]
+        .map(parseObjectIdTimestamp)
+        .find(num => Number.isFinite(num));
+
+    if (Number.isFinite(objectIdTimestamp)) return objectIdTimestamp;
+
     const numericId = [record.id, item?.id]
-        .map(val => Number(val))
+        .map(parseNumericId)
         .find(num => Number.isFinite(num));
 
     return Number.isFinite(numericId) ? numericId : 0;
+}
+
+function getSortKey(item) {
+    const record = item?.record || item || {};
+    const primaryValue = getSortTimestamp(item);
+    const primary = Number.isFinite(primaryValue) ? primaryValue : 0;
+    const created = parseDate(record.createdAt ?? item?.createdAt)?.getTime() ?? 0;
+    const objectIdTs = parseObjectIdTimestamp(record.id ?? item?.id) ?? 0;
+    const numericId = parseNumericId(record.id ?? item?.id) ?? 0;
+    return { primary, created, objectIdTs, numericId };
+}
+
+function compareHistoryItems(a, b) {
+    const ka = getSortKey(a);
+    const kb = getSortKey(b);
+
+    return (kb.primary - ka.primary)
+        || (kb.created - ka.created)
+        || (kb.objectIdTs - ka.objectIdTs)
+        || (kb.numericId - ka.numericId);
 }
 
 function renderHistoryList(list) {
@@ -727,9 +772,7 @@ function renderHistoryList(list) {
     }
 
     listEl.innerHTML = "";
-    const sortedList = [...list].sort(
-        (a, b) => getSortTimestamp(b) - getSortTimestamp(a)
-    );
+    const sortedList = [...list].sort(compareHistoryItems);
     sortedList.forEach(item => listEl.appendChild(renderHistoryItem(item)));
     updateAnalyticsFromHistory(sortedList);
 }
@@ -781,6 +824,32 @@ function parseDate(input) {
     }
 
     return null;
+}
+
+function parseObjectIdTimestamp(value) {
+    if (!value || typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (trimmed.length >= 8 && /^[a-fA-F0-9]+$/.test(trimmed)) {
+        const seconds = parseInt(trimmed.substring(0, 8), 16);
+        return Number.isFinite(seconds) ? seconds * 1000 : null;
+    }
+
+    const digits = trimmed.replace(/[^0-9]/g, "");
+    if (digits) {
+        const asNumber = Number(digits);
+        return Number.isFinite(asNumber) ? asNumber : null;
+    }
+
+    return null;
+}
+
+function parseNumericId(value) {
+    if (value === undefined || value === null) return null;
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    const digits = String(value).replace(/[^0-9]/g, "");
+    if (!digits) return null;
+    const parsed = Number(digits);
+    return Number.isFinite(parsed) ? parsed : null;
 }
 
 function matchesVehicleType(vehicleType, filterValue) {
@@ -933,8 +1002,12 @@ function renderBadges(item) {
     const statusText = item.displayStatus || record.displayStatus || record.status;
     if (statusText) badges.push({ text: statusText, className: "" });
 
-    if (record.paymentStatus) badges.push({ text: `Thanh toán: ${record.paymentStatus}`, className: record.paymentStatus.toUpperCase().includes("PENDING") ? "warning" : "" });
-    if (record.paymentMethod) badges.push({ text: `PTTT: ${record.paymentMethod}`, className: "" });
+    const paymentStatus = (record.paymentStatus || "").toUpperCase();
+    const paymentMethod = record.paymentMethod || "";
+    const paymentWarning = ["PENDING", "UNPAID", "CHUA_THANH_TOAN", "PENDING_PAYMENT"].includes(paymentStatus) || hasOutstandingUpfrontPayment(record);
+
+    if (record.paymentStatus) badges.push({ text: `Thanh toán: ${record.paymentStatus}`, className: paymentWarning ? "warning" : "" });
+    if (record.paymentMethod) badges.push({ text: `PTTT: ${record.paymentMethod}`, className: paymentWarning ? "warning" : "" });
 
     badges.forEach(b => {
         const el = document.createElement("span");
@@ -1074,10 +1147,10 @@ function openRentalModal(item) {
         paymentSection.innerHTML = `
             <div class="payment-callout">
                 <div class="payment-text">
-                    <h4>Chưa hoàn tất thanh toán</h4>
+                    <h4>Đang giữ chỗ, cần thanh toán</h4>
                     <p>${record.holdExpiresAt
-                        ? `Giữ chỗ tới: ${formatDateTime(record.holdExpiresAt)}`
-                        : "Bạn có thể chọn phương thức thanh toán để tiếp tục giữ xe."}</p>
+                        ? `Vui lòng thanh toán trước ${formatDateTime(record.holdExpiresAt)} để giữ xe.`
+                        : "Thanh toán để tiếp tục quá trình thuê và giữ chỗ của bạn."}</p>
                 </div>
                 <button type="button" class="btn-continue-payment">
                     <i class="fas fa-credit-card"></i> Thanh toán ngay
