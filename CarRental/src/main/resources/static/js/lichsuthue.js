@@ -711,11 +711,37 @@ function getSortTimestamp(item) {
 
     if (timestamps.length) return Math.max(...timestamps);
 
+    const objectIdTimestamp = [record.id, item?.id]
+        .map(parseObjectIdTimestamp)
+        .find(num => Number.isFinite(num));
+
+    if (Number.isFinite(objectIdTimestamp)) return objectIdTimestamp;
+
     const numericId = [record.id, item?.id]
-        .map(val => Number(val))
+        .map(parseNumericId)
         .find(num => Number.isFinite(num));
 
     return Number.isFinite(numericId) ? numericId : 0;
+}
+
+function getSortKey(item) {
+    const record = item?.record || item || {};
+    const primaryValue = getSortTimestamp(item);
+    const primary = Number.isFinite(primaryValue) ? primaryValue : 0;
+    const created = parseDate(record.createdAt ?? item?.createdAt)?.getTime() ?? 0;
+    const objectIdTs = parseObjectIdTimestamp(record.id ?? item?.id) ?? 0;
+    const numericId = parseNumericId(record.id ?? item?.id) ?? 0;
+    return { primary, created, objectIdTs, numericId };
+}
+
+function compareHistoryItems(a, b) {
+    const ka = getSortKey(a);
+    const kb = getSortKey(b);
+
+    return (kb.primary - ka.primary)
+        || (kb.created - ka.created)
+        || (kb.objectIdTs - ka.objectIdTs)
+        || (kb.numericId - ka.numericId);
 }
 
 function renderHistoryList(list) {
@@ -727,9 +753,7 @@ function renderHistoryList(list) {
     }
 
     listEl.innerHTML = "";
-    const sortedList = [...list].sort(
-        (a, b) => getSortTimestamp(b) - getSortTimestamp(a)
-    );
+    const sortedList = [...list].sort(compareHistoryItems);
     sortedList.forEach(item => listEl.appendChild(renderHistoryItem(item)));
     updateAnalyticsFromHistory(sortedList);
 }
@@ -781,6 +805,32 @@ function parseDate(input) {
     }
 
     return null;
+}
+
+function parseObjectIdTimestamp(value) {
+    if (!value || typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (trimmed.length >= 8 && /^[a-fA-F0-9]+$/.test(trimmed)) {
+        const seconds = parseInt(trimmed.substring(0, 8), 16);
+        return Number.isFinite(seconds) ? seconds * 1000 : null;
+    }
+
+    const digits = trimmed.replace(/[^0-9]/g, "");
+    if (digits) {
+        const asNumber = Number(digits);
+        return Number.isFinite(asNumber) ? asNumber : null;
+    }
+
+    return null;
+}
+
+function parseNumericId(value) {
+    if (value === undefined || value === null) return null;
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    const digits = String(value).replace(/[^0-9]/g, "");
+    if (!digits) return null;
+    const parsed = Number(digits);
+    return Number.isFinite(parsed) ? parsed : null;
 }
 
 function matchesVehicleType(vehicleType, filterValue) {
