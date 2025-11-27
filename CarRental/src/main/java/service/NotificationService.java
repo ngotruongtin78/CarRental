@@ -41,9 +41,7 @@ public class NotificationService {
     
     public void markAllAsRead(String userId) {
         List<Notification> unread = notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedDateDesc(userId);
-        unread.forEach(notification -> {
-            notification.setRead(true);
-            notificationRepository.save(notification);
-        });
+        unread.forEach(notification -> notification.setRead(true));
+        notificationRepository.saveAll(unread);
     }
 }

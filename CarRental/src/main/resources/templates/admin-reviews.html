@@ -396,6 +396,14 @@
         container.innerHTML = html;
     }
     
+    // Helper function to escape HTML to prevent XSS
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
     function renderReviews(reviews) {
         const container = document.getElementById('reviewsList');
         
@@ -414,9 +422,9 @@
             <div class="review-card">
                 <div class="review-header">
                     <div class="customer-info">
-                        <div class="customer-avatar">${review.customerName ? review.customerName.charAt(0).toUpperCase() : '?'}</div>
+                        <div class="customer-avatar">${review.customerName ? escapeHtml(review.customerName.charAt(0).toUpperCase()) : '?'}</div>
                         <div>
-                            <div class="customer-name">${review.customerName || 'Khách hàng'}</div>
+                            <div class="customer-name">${escapeHtml(review.customerName) || 'Khách hàng'}</div>
                             <div class="review-date">${new Date(review.reviewDate).toLocaleString('vi-VN')}</div>
                         </div>
                     </div>
@@ -440,17 +448,17 @@
                 <div class="review-details">
                     <div class="detail-item">
                         <i class="fas fa-car"></i>
-                        <span>${review.vehicleName || 'N/A'}</span>
+                        <span>${escapeHtml(review.vehicleName) || 'N/A'}</span>
                     </div>
                     <div class="detail-item">
                         <i class="fas fa-user-tie"></i>
-                        <span>${review.staffName || 'N/A'}</span>
+                        <span>${escapeHtml(review.staffName) || 'N/A'}</span>
                     </div>
                 </div>
                 
                 ${review.comment ? `
                     <div class="review-comment">
-                        <p>"${review.comment}"</p>
+                        <p>"${escapeHtml(review.comment)}"</p>
                     </div>
                 ` : ''}
             </div>
@@ -498,8 +506,21 @@
             const stats = await res.json();
             
             document.getElementById('totalReviews').textContent = stats.totalReviews || 0;
-            document.getElementById('avgCarRating').innerHTML = `<i class="fas fa-star"></i> ${stats.avgCarRating || 0}`;
-            document.getElementById('avgStaffRating').innerHTML = `<i class="fas fa-star"></i> ${stats.avgStaffRating || 0}`;
+            
+            // Use textContent for the number values and create icon separately
+            const avgCarEl = document.getElementById('avgCarRating');
+            avgCarEl.innerHTML = '';
+            const carIcon = document.createElement('i');
+            carIcon.className = 'fas fa-star';
+            avgCarEl.appendChild(carIcon);
+            avgCarEl.appendChild(document.createTextNode(' ' + (stats.avgCarRating || 0)));
+            
+            const avgStaffEl = document.getElementById('avgStaffRating');
+            avgStaffEl.innerHTML = '';
+            const staffIcon = document.createElement('i');
+            staffIcon.className = 'fas fa-star';
+            avgStaffEl.appendChild(staffIcon);
+            avgStaffEl.appendChild(document.createTextNode(' ' + (stats.avgStaffRating || 0)));
             
             if (stats.carRatingDistribution) {
                 renderRatingDistribution(stats.carRatingDistribution);

@@ -144,8 +144,8 @@ async function submitReview() {
         });
         
         if (!res.ok) {
-            const errorText = await res.text();
-            alert(errorText || 'Không thể gửi đánh giá. Vui lòng thử lại.');
+            // Use predefined error messages to avoid XSS from server responses
+            alert('Không thể gửi đánh giá. Vui lòng thử lại.');
             return;
         }
         

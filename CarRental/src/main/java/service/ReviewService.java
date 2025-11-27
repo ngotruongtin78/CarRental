@@ -11,6 +11,8 @@ import java.util.*;
 @Service
 public class ReviewService {
     
+    private static final double DECIMAL_PLACES_MULTIPLIER = 10.0;
+    
     private final ReviewRepository reviewRepository;
     private final RentalRecordRepository rentalRecordRepository;
     
@@ -108,8 +110,8 @@ public class ReviewService {
         }
         
         stats.put("totalReviews", allReviews.size());
-        stats.put("avgCarRating", carRatingCount > 0 ? Math.round((totalCarRating / carRatingCount) * 10.0) / 10.0 : 0.0);
-        stats.put("avgStaffRating", staffRatingCount > 0 ? Math.round((totalStaffRating / staffRatingCount) * 10.0) / 10.0 : 0.0);
+        stats.put("avgCarRating", carRatingCount > 0 ? Math.round((totalCarRating / carRatingCount) * DECIMAL_PLACES_MULTIPLIER) / DECIMAL_PLACES_MULTIPLIER : 0.0);
+        stats.put("avgStaffRating", staffRatingCount > 0 ? Math.round((totalStaffRating / staffRatingCount) * DECIMAL_PLACES_MULTIPLIER) / DECIMAL_PLACES_MULTIPLIER : 0.0);
         stats.put("carRatingDistribution", carRatingDistribution);
         stats.put("staffRatingDistribution", staffRatingDistribution);
         

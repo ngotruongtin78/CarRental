@@ -46,8 +46,20 @@ public class ReviewController {
             String bookingId = (String) body.get("bookingId");
             String carId = (String) body.get("carId");
             String staffId = (String) body.get("staffId");
-            Integer carRating = body.get("carRating") != null ? ((Number) body.get("carRating")).intValue() : null;
-            Integer staffRating = body.get("staffRating") != null ? ((Number) body.get("staffRating")).intValue() : null;
+            
+            Integer carRating = null;
+            Integer staffRating = null;
+            
+            Object carRatingObj = body.get("carRating");
+            if (carRatingObj instanceof Number) {
+                carRating = ((Number) carRatingObj).intValue();
+            }
+            
+            Object staffRatingObj = body.get("staffRating");
+            if (staffRatingObj instanceof Number) {
+                staffRating = ((Number) staffRatingObj).intValue();
+            }
+            
             String comment = (String) body.get("comment");
             
             Review review = reviewService.createReview(bookingId, user.getId(), carId, staffId, carRating, staffRating, comment);

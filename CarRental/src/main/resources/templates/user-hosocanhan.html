@@ -457,13 +457,21 @@
                 return;
             }
             
+            // Helper function to escape HTML to prevent XSS
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
             container.innerHTML = notifications.map(notif => `
-                <div class="notification-item" style="border: 1px solid ${notif.read ? '#eee' : '#3498db'}; padding: 12px 15px; border-radius: 8px; background: ${notif.read ? '#fdfdfd' : '#f0f7ff'}; color: #333; cursor: pointer; transition: all 0.2s;" onclick="markNotificationRead('${notif.id}', this)">
+                <div class="notification-item" style="border: 1px solid ${notif.read ? '#eee' : '#3498db'}; padding: 12px 15px; border-radius: 8px; background: ${notif.read ? '#fdfdfd' : '#f0f7ff'}; color: #333; cursor: pointer; transition: all 0.2s;" onclick="markNotificationRead('${escapeHtml(notif.id)}', this)">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <div style="flex: 1;">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <i class="fas ${notif.type === 'SUPPORT_REPLY' ? 'fa-headset' : 'fa-bell'}" style="color: ${notif.read ? '#999' : '#3498db'};"></i>
-                                <p style="margin: 0; font-size: 14px; color: ${notif.read ? '#666' : '#333'}; font-weight: ${notif.read ? 'normal' : '500'};">${notif.message}</p>
+                                <p style="margin: 0; font-size: 14px; color: ${notif.read ? '#666' : '#333'}; font-weight: ${notif.read ? 'normal' : '500'};">${escapeHtml(notif.message)}</p>
                             </div>
                             <div style="margin-top: 6px; font-size: 11px; color: #aaa; margin-left: 24px;">
                                 ${new Date(notif.createdDate).toLocaleString('vi-VN')}
@@ -481,7 +489,7 @@
     
     async function markNotificationRead(id, element) {
         try {
-            await fetch(`/api/notifications/mark-read/${id}`, { method: 'POST' });
+            await fetch(`/api/notifications/mark-read/${encodeURIComponent(id)}`, { method: 'POST' });
             // Update UI
             if (element) {
                 element.style.background = '#fdfdfd';

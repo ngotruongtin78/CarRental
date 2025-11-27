@@ -86,7 +86,7 @@ public class StaffHandoverController {
     }
 
     @GetMapping("/{id}")
-    public Map<String, Object> getHandoverDetail(@PathVariable String id) {
+    public Map<String, Object> getHandoverDetail(@PathVariable("id") String id) {
         Map<String, Object> response = new HashMap<>();
 
         try {
@@ -173,7 +173,7 @@ public class StaffHandoverController {
     }
 
     @PostMapping("/confirm/{id}")
-    public Map<String, Object> confirmHandover(@PathVariable String id) {
+    public Map<String, Object> confirmHandover(@PathVariable("id") String id) {
         Map<String, Object> response = new HashMap<>();
 
         try {
