@@ -207,6 +207,48 @@
         </div>
     </div>
 </div>
+<div id="rating-modal" class="dialog-modal">
+    <div class="dialog-overlay"></div>
+    <div class="dialog-content">
+        <div class="dialog-header">
+            <h3>Đánh giá chuyến đi</h3>
+            <button class="dialog-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="dialog-body">
+            <p class="dialog-hint">Chọn số sao cho xe và nhân viên hỗ trợ. Bạn có thể thêm nhận xét nếu muốn.</p>
+            <div class="rating-grid">
+                <div class="form-field">
+                    <label>Xe đã thuê</label>
+                    <div class="star-group" id="vehicle-stars">
+                        <label><input type="radio" name="vehicle-rating" value="1">1 ⭐</label>
+                        <label><input type="radio" name="vehicle-rating" value="2">2 ⭐</label>
+                        <label><input type="radio" name="vehicle-rating" value="3">3 ⭐</label>
+                        <label><input type="radio" name="vehicle-rating" value="4">4 ⭐</label>
+                        <label><input type="radio" name="vehicle-rating" value="5" checked>5 ⭐</label>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label>Nhân viên phục vụ</label>
+                    <div class="star-group" id="staff-stars">
+                        <label><input type="radio" name="staff-rating" value="1">1 ⭐</label>
+                        <label><input type="radio" name="staff-rating" value="2">2 ⭐</label>
+                        <label><input type="radio" name="staff-rating" value="3">3 ⭐</label>
+                        <label><input type="radio" name="staff-rating" value="4">4 ⭐</label>
+                        <label><input type="radio" name="staff-rating" value="5" checked>5 ⭐</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-field">
+                <label for="rating-comment">Nhận xét (tuỳ chọn)</label>
+                <textarea id="rating-comment" rows="3" placeholder="Bạn thấy xe và nhân viên như thế nào?"></textarea>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn-primary" id="btn-rating-submit">Gửi đánh giá</button>
+            <button type="button" class="btn-tertiary" id="btn-rating-cancel">Hủy</button>
+        </div>
+    </div>
+</div>
 <div id="extra-fee-modal" class="dialog-modal">
     <div class="dialog-overlay"></div>
     <div class="dialog-content">

@@ -198,9 +198,9 @@ public class PaymentController {
     }
 
     @GetMapping("/create-qr")
-    public ResponseEntity<?> createQr(@RequestParam int amount,
-                                      @RequestParam String description,
-                                      @RequestParam(required = false) String orderId,
+    public ResponseEntity<?> createQr(@RequestParam("amount") int amount,
+                                      @RequestParam("description") String description,
+                                      @RequestParam(value = "orderId", required = false) String orderId,
                                       @RequestParam(value = "deposit", required = false) Boolean deposit) {
         if (amount <= 0 || description.isBlank()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

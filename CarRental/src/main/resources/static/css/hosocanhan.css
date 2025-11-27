@@ -570,3 +570,105 @@ body {
         width: 100%;
     }
 }
+.support-card {
+    margin-top: 20px;
+}
+
+.support-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.support-subtitle {
+    margin: 4px 0 0;
+    color: #637381;
+    font-size: 13px;
+}
+
+.support-form {
+    margin: 12px 0 16px;
+    display: grid;
+    gap: 10px;
+}
+
+.support-form .form-field label {
+    font-weight: 600;
+    color: #2f6b2f;
+}
+
+.support-form select,
+.support-form textarea {
+    width: 100%;
+    border: 1px solid #d1e3d1;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 14px;
+}
+
+.support-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.support-item {
+    border: 1px solid #eef3ef;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fdfefc;
+}
+
+.support-item.unread {
+    border-color: #f5d565;
+    background: #fff9e6;
+}
+
+.support-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.support-content {
+    margin: 6px 0;
+    color: #1e293b;
+    line-height: 1.4;
+}
+
+.support-reply {
+    background: #f2f8f2;
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: #1f3a1f;
+}
+
+.support-pending {
+    color: #8c8c8c;
+    font-style: italic;
+}
+
+.support-empty {
+    text-align: center;
+    color: #8c8c8c;
+    padding: 10px;
+}
+
+.pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.pill-support { background: #e8f5e9; color: #2e7d32; }
+.pill-complaint { background: #fff3cd; color: #c47a0b; }
+
+.support-time {
+    color: #637381;
+    font-size: 12px;
+}
