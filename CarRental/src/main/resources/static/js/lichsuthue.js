@@ -600,8 +600,17 @@ function renderHistoryItem(item) {
     const paymentMethod = (record.paymentMethod || "").toUpperCase();
     const unpaidStatus = ["PENDING", "UNPAID", "CHUA_THANH_TOAN", "PENDING_PAYMENT"].includes(paymentStatusUpper);
 
-    const highlightUnpaid = statusUpper === "PENDING_PAYMENT" || unpaidStatus;
-    if (highlightUnpaid || statusUpper === "WAITING_INSPECTION") {
+    // Kiểm tra phí phát sinh chưa thanh toán
+    const extraAmount = Number(record.additionalFeeAmount || 0);
+    const extraPaid = Number(record.additionalFeePaidAmount || 0);
+    const hasUnpaidExtraFee = extraAmount > 0 && extraPaid < extraAmount;
+
+    // Không highlight nếu status là COMPLETED hoặc RETURNED và tất cả phí đã thanh toán
+    const isCompletedOrReturned = statusUpper === "COMPLETED" || statusUpper === "RETURNED";
+    const highlightUnpaid = (statusUpper === "PENDING_PAYMENT" || unpaidStatus) && !isCompletedOrReturned;
+
+    // Chỉ hiển thị warning badge khi thực sự còn khoản chưa thanh toán
+    if (highlightUnpaid || hasUnpaidExtraFee || statusUpper === "WAITING_INSPECTION") {
         statusBadge.classList.add("warning");
     }
     actions.appendChild(statusBadge);
@@ -611,7 +620,9 @@ function renderHistoryItem(item) {
     const withinWindow = isWithinRentalWindow(record);
     const modifiable = canModifyReservation(record);
     const pendingPayment = hasOutstandingUpfrontPayment(record);
-    const highlightUnpaidItem = pendingPayment || highlightUnpaid;
+
+    // Chỉ highlight khi thực sự còn khoản chưa thanh toán
+    const highlightUnpaidItem = pendingPayment || highlightUnpaid || hasUnpaidExtraFee;
 
     if (highlightUnpaidItem) {
         container.classList.add("unpaid-highlight");
