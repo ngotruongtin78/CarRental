@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /**
  * Lấy danh sách các xe sẵn sàng trả từ API
- * Điều kiện: status = "DELIVERED" (xe đã được giao cho khách)
+ * Điều kiện: status = "WAITING_INSPECTION" (xe đã được giao cho khách)
  */
 function loadReturnVehicles() {
     fetch('/api/staff/return/vehicles-ready')
@@ -173,9 +173,40 @@ function handleReturnVehicle(rentalId, plate, customerName) {
             document.getElementById('returnRequestLoc').value = formatLocation(data.returnLatitude, data.returnLongitude);
             document.getElementById('returnCustomerNote').value = data.returnNotes || 'Không có';
 
-            // Làm trống phí hư hỏng và ghi chú
+            // Hiển thị ảnh xe trước khi giao (deliveryPhotoData)
+            if (data.deliveryPhotoData) {
+                // deliveryPhotoData là base64 hoặc binary, nếu là binary cần convert
+                let photoSrc = data.deliveryPhotoData;
+
+                // Nếu không phải data URL, thêm prefix
+                if (!photoSrc.startsWith('data:')) {
+                    // Giả sử deliveryPhotoData là string hoặc blob
+                    if (typeof photoSrc === 'string') {
+                        photoSrc = 'data:image/png;base64,' + photoSrc;
+                    }
+                }
+
+                document.getElementById('deliveryPhotoPreviewBox').style.display = 'block';
+                document.getElementById('noDeliveryPhotoBox').style.display = 'none';
+                document.getElementById('deliveryPhotoPreviewImg').src = photoSrc;
+            } else {
+                document.getElementById('deliveryPhotoPreviewBox').style.display = 'none';
+                document.getElementById('noDeliveryPhotoBox').style.display = 'block';
+            }
+
+            // Làm trống phí phát sinh và ghi chú
             document.getElementById('returnDamageFee').value = '';
             document.getElementById('returnNote').value = '';
+
+            // Reset camera state
+            closeReturnCamera();
+            document.getElementById('returnVideoStream').style.display = 'none';
+            document.getElementById('returnPhotoPreview').style.display = 'none';
+            document.getElementById('returnCameraControls').style.display = 'block';
+            document.getElementById('returnCaptureControls').style.display = 'none';
+            document.getElementById('returnRetakeControls').style.display = 'none';
+            window.currentReturnPhotoBase64 = null;
+            window.currentReturnPhotoFileName = null;
 
             // Mở modal
             document.getElementById('returnModal').style.display = 'block';
@@ -196,7 +227,7 @@ function closeReturnModal() {
 
 /**
  * Xác nhận trả xe
- * Gửi POST request với damageFee và returnNote
+ * Gửi POST request với damageFee (phí phát sinh) và returnNote
  */
 function confirmReturn() {
     if (!currentRentalId) {
@@ -207,7 +238,7 @@ function confirmReturn() {
     const damageFee = document.getElementById('returnDamageFee').value || '0';
     const note = document.getElementById('returnNote').value;
 
-    // Xây dựng URL với tham số damageFee và returnNote
+    // Xây dựng URL với tham số damageFee (phí phát sinh) và returnNote
     let url = `/api/staff/return/${currentRentalId}/confirm?damageFee=${damageFee}`;
     if (note && note.trim()) {
         url += `&returnNote=${encodeURIComponent(note)}`;
@@ -231,6 +262,15 @@ function confirmReturn() {
         if (data.error) {
             alert('Lỗi: ' + data.error);
         } else {
+            // ✅ Gửi ảnh nếu có (await để đảm bảo hoàn thành)
+            const photoBase64 = window.currentReturnPhotoBase64;
+            if (photoBase64) {
+                console.log('🔵 [RETURN] Có ảnh, đang lưu...');
+                saveReturnPhoto(currentRentalId, photoBase64);
+            } else {
+                console.log('🔵 [RETURN] Không có ảnh chụp');
+            }
+
             // ✅ Hiển thị chi tiết trả xe thành công
             const successMsg = `✓ Xe đã được trả thành công!\n\n` +
                 `Trạng thái đơn: ${data.rentalStatus || 'COMPLETED'}\n` +
@@ -315,3 +355,167 @@ function filterTable() {
     }
 }
 
+/**
+ * Mở camera để chụp hình trả xe
+ */
+async function startReturnCamera() {
+    try {
+        const video = document.getElementById('returnVideoStream');
+        const controls = document.getElementById('returnCameraControls');
+        const captureControls = document.getElementById('returnCaptureControls');
+
+        // Yêu cầu quyền truy cập camera
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+        });
+
+        video.srcObject = stream;
+        video.style.display = 'block';
+        controls.style.display = 'none';
+        captureControls.style.display = 'block';
+
+        // Lưu stream để đóng sau
+        window.returnMediaStream = stream;
+
+        // Đợi video sẵn sàng
+        video.onloadedmetadata = function() {
+            video.play().catch(err => console.error('Lỗi play video:', err));
+        };
+
+    } catch (error) {
+        console.error('Lỗi khi mở camera:', error);
+        alert('Không thể mở camera. Vui lòng kiểm tra quyền truy cập.');
+    }
+}
+
+/**
+ * Chụp ảnh từ camera
+ */
+function captureReturnPhoto() {
+    const video = document.getElementById('returnVideoStream');
+    const canvas = document.getElementById('returnPhotoCanvas');
+    const context = canvas.getContext('2d');
+
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+        alert('Vui lòng đợi camera tải xong trước khi chụp');
+        return;
+    }
+
+    // Set canvas size theo kích thước video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Vẽ frame hiện tại từ video vào canvas
+    context.drawImage(video, 0, 0);
+
+    // Convert canvas to base64
+    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+
+    if (!imageData || imageData.length < 100) {
+        alert('Lỗi khi chụp ảnh. Vui lòng thử lại.');
+        return;
+    }
+
+    // Hiển thị ảnh đã chụp
+    const preview = document.getElementById('returnPhotoPreview');
+    const previewImg = document.getElementById('returnPreviewImg');
+    const photoFileName = document.getElementById('returnPhotoFileName');
+
+    previewImg.src = imageData;
+    photoFileName.textContent = 'Ảnh trả xe - ' + new Date().toLocaleTimeString('vi-VN');
+    preview.style.display = 'block';
+
+    // Lưu ảnh base64
+    window.currentReturnPhotoBase64 = imageData;
+    window.currentReturnPhotoFileName = 'return-photo-' + Date.now() + '.jpg';
+
+    // Ẩn video và hiển thị button chụp lại
+    video.style.display = 'none';
+    document.getElementById('returnCaptureControls').style.display = 'none';
+    document.getElementById('returnRetakeControls').style.display = 'block';
+
+    // Đóng camera
+    closeReturnCamera();
+}
+
+/**
+ * Đóng camera
+ */
+function closeReturnCamera() {
+    if (window.returnMediaStream) {
+        window.returnMediaStream.getTracks().forEach(track => track.stop());
+        window.returnMediaStream = null;
+    }
+
+    const video = document.getElementById('returnVideoStream');
+    video.style.display = 'none';
+    video.srcObject = null;
+}
+
+/**
+ * Reset ảnh - chụp lại
+ */
+function resetReturnPhoto() {
+    // Xóa ảnh preview
+    document.getElementById('returnPhotoPreview').style.display = 'none';
+    document.getElementById('returnPreviewImg').src = '';
+
+    // Reset state
+    window.currentReturnPhotoBase64 = null;
+    window.currentReturnPhotoFileName = null;
+
+    // Hiển thị button mở camera
+    document.getElementById('returnCameraControls').style.display = 'block';
+    document.getElementById('returnRetakeControls').style.display = 'none';
+}
+
+/**
+ * Lưu ảnh trả xe vào RentalRecord (receivePhotoData)
+ */
+async function saveReturnPhoto(rentalId, photoBase64) {
+    try {
+        console.log('🔵 [RETURN] Bắt đầu lưu ảnh nhận xe...');
+        console.log('RentalId:', rentalId);
+        console.log('Kích thước ảnh:', photoBase64.length, 'bytes');
+
+        if (!photoBase64 || photoBase64.length < 100) {
+            console.warn('⚠️ [RETURN] Ảnh không hợp lệ');
+            return;
+        }
+
+        // Convert base64 to binary
+        console.log('🔵 [RETURN] Đang convert base64 to binary...');
+        const binaryString = atob(photoBase64.split(',')[1]);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        console.log('✅ [RETURN] Binary size:', bytes.length, 'bytes');
+
+        // Gửi binary data lên server
+        console.log('🔵 [RETURN] Gửi request PUT /api/staff/return/' + rentalId + '/receive-photo');
+        const response = await fetch(`/api/staff/return/${rentalId}/receive-photo`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/octet-stream',
+                'X-Photo-Name': window.currentReturnPhotoFileName || 'receive-photo'
+            },
+            body: bytes.buffer
+        });
+
+        console.log('🔵 [RETURN] Response status:', response.status);
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('✅ [RETURN] Ảnh nhận xe đã được lưu thành công!');
+            console.log('✅ [RETURN] Response:', result);
+        } else {
+            const errorData = await response.text();
+            console.error('❌ [RETURN] Lỗi khi lưu ảnh (status ' + response.status + ')');
+            console.error('❌ [RETURN] Error:', errorData);
+        }
+    } catch (error) {
+        console.error('❌ [RETURN] Lỗi xử lý ảnh:', error);
+        console.error('❌ [RETURN] Stack:', error.stack);
+    }
+}
