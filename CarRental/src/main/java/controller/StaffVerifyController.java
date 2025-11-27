@@ -94,7 +94,7 @@ public class StaffVerifyController {
      * Lấy chi tiết người dùng kèm thông tin giấy tờ (Base64)
      */
     @GetMapping("/verifications/detail/{userId}")
-    public Map<String, Object> getVerificationDetail(@PathVariable String userId) {
+    public Map<String, Object> getVerificationDetail(@PathVariable("userId") String userId) {
         Optional<User> userOpt = userRepo.findById(userId);
 
         if (userOpt.isEmpty()) {

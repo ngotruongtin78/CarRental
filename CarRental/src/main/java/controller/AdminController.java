@@ -51,6 +51,7 @@ public class AdminController {
     @GetMapping("/reports") public String showReportsDashboard() { return "admin-reports"; }
     @GetMapping("/vehicle-reports") public String showVehicleReportsManagement() { return "admin-vehicle-reports"; }
     @GetMapping("/support") public String showSupportManagement() { return "admin-support"; }
+    @GetMapping("/reviews") public String showReviewsManagement() { return "admin-reviews"; }
 
     @GetMapping("/staff/all")
     @ResponseBody

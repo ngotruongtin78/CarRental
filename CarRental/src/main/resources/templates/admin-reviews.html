@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Đánh giá từ khách hàng</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body, .content-body { color: #333 !important; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .stat-card .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-card .stat-value.stars {
+            color: #f1c40f;
+        }
+        
+        .rating-distribution {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+        
+        .rating-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .rating-bar .stars {
+            width: 80px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .rating-bar .bar-container {
+            flex: 1;
+            height: 20px;
+            background: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .rating-bar .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f1c40f, #f39c12);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        .rating-bar .count {
+            width: 40px;
+            text-align: right;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .filters-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .filter-group label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #333;
+            background: white;
+            min-width: 150px;
+        }
+        
+        .review-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .customer-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .customer-avatar {
+            width: 45px;
+            height: 45px;
+            background: #3498db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .customer-name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        
+        .review-date {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .ratings-row {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .rating-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .rating-label {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .stars-display {
+            display: flex;
+            gap: 2px;
+        }
+        
+        .stars-display i {
+            color: #f1c40f;
+            font-size: 16px;
+        }
+        
+        .stars-display i.empty {
+            color: #ddd;
+        }
+        
+        .review-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .detail-item i {
+            color: #3498db;
+            width: 20px;
+        }
+        
+        .detail-item span {
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .review-comment {
+            padding: 15px;
+            background: #fff8e6;
+            border-radius: 8px;
+            border-left: 3px solid #f1c40f;
+        }
+        
+        .review-comment p {
+            margin: 0;
+            color: #555;
+            font-style: italic;
+            line-height: 1.6;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 12px;
+        }
+        
+        .empty-state i {
+            font-size: 60px;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .empty-state p {
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+<div class="admin-container">
+    <div th:replace="~{fragments/admin-nav :: sidebar(activePage='reviews')}"></div>
+
+    <div class="main-content">
+        <header class="content-header">
+            <div style="flex-grow: 1;"></div>
+            <div class="admin-profile" onclick="toggleProfileMenu(event)">
+                <img th:src="@{/images/admin.png}" alt="Admin" onerror="this.src='https://via.placeholder.com/40'">
+                <span>Admin</span>
+                <i class="fas fa-chevron-down" style="font-size: 12px; margin-left: 8px; color: #777;"></i>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a th:href="@{/logout}" class="logout-item">
+                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <h1 style="margin-bottom: 25px; color: #333;">Đánh giá từ khách hàng</h1>
+            
+            <!-- Statistics -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <h3>Tổng số đánh giá</h3>
+                    <div class="stat-value" id="totalReviews">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Rating trung bình xe</h3>
+                    <div class="stat-value stars" id="avgCarRating">
+                        <i class="fas fa-star"></i> 0.0
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <h3>Rating trung bình nhân viên</h3>
+                    <div class="stat-value stars" id="avgStaffRating">
+                        <i class="fas fa-star"></i> 0.0
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Rating Distribution -->
+            <div class="rating-distribution">
+                <h3 style="margin: 0 0 20px 0; color: #333;">Phân bố đánh giá xe</h3>
+                <div id="carRatingDistribution">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+            
+            <!-- Filters -->
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label>Lọc theo rating</label>
+                    <select id="ratingFilter" onchange="applyFilters()">
+                        <option value="all">Tất cả</option>
+                        <option value="5">5 sao</option>
+                        <option value="4">4 sao</option>
+                        <option value="3">3 sao</option>
+                        <option value="2">2 sao</option>
+                        <option value="1">1 sao</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Loại đánh giá</label>
+                    <select id="typeFilter" onchange="applyFilters()">
+                        <option value="all">Tất cả</option>
+                        <option value="car">Chỉ đánh giá xe</option>
+                        <option value="staff">Chỉ đánh giá nhân viên</option>
+                        <option value="both">Cả xe và nhân viên</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Sắp xếp theo</label>
+                    <select id="sortFilter" onchange="applyFilters()">
+                        <option value="date-desc">Mới nhất</option>
+                        <option value="date-asc">Cũ nhất</option>
+                        <option value="rating-high">Rating cao nhất</option>
+                        <option value="rating-low">Rating thấp nhất</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Reviews List -->
+            <div id="reviewsList">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <h3>Đang tải dữ liệu...</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let allReviews = [];
+    
+    function toggleProfileMenu(event) {
+        event.stopPropagation();
+        const dropdown = document.getElementById('profileDropdown');
+        if (dropdown) dropdown.classList.toggle('show');
+    }
+    
+    window.addEventListener('click', function(event) {
+        if (!event.target.closest('.admin-profile')) {
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown && dropdown.classList.contains('show')) dropdown.classList.remove('show');
+        }
+    });
+    
+    function renderStars(rating) {
+        let html = '';
+        for (let i = 1; i <= 5; i++) {
+            html += `<i class="fas fa-star ${i <= rating ? '' : 'empty'}"></i>`;
+        }
+        return html;
+    }
+    
+    function renderRatingDistribution(distribution) {
+        const container = document.getElementById('carRatingDistribution');
+        const total = distribution.reduce((a, b) => a + b, 0);
+        
+        let html = '';
+        for (let i = 4; i >= 0; i--) {
+            const count = distribution[i];
+            const percentage = total > 0 ? (count / total * 100) : 0;
+            html += `
+                <div class="rating-bar">
+                    <span class="stars">${i + 1} sao</span>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: ${percentage}%"></div>
+                    </div>
+                    <span class="count">${count}</span>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+    }
+    
+    // Helper function to escape HTML to prevent XSS
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function renderReviews(reviews) {
+        const container = document.getElementById('reviewsList');
+        
+        if (!reviews || reviews.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-star"></i>
+                    <h3>Chưa có đánh giá nào</h3>
+                    <p>Các đánh giá từ khách hàng sẽ xuất hiện ở đây</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = reviews.map(review => `
+            <div class="review-card">
+                <div class="review-header">
+                    <div class="customer-info">
+                        <div class="customer-avatar">${review.customerName ? escapeHtml(review.customerName.charAt(0).toUpperCase()) : '?'}</div>
+                        <div>
+                            <div class="customer-name">${escapeHtml(review.customerName) || 'Khách hàng'}</div>
+                            <div class="review-date">${new Date(review.reviewDate).toLocaleString('vi-VN')}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ratings-row">
+                    ${review.carRating ? `
+                        <div class="rating-item">
+                            <span class="rating-label">Đánh giá xe</span>
+                            <div class="stars-display">${renderStars(review.carRating)}</div>
+                        </div>
+                    ` : ''}
+                    ${review.staffRating ? `
+                        <div class="rating-item">
+                            <span class="rating-label">Đánh giá nhân viên</span>
+                            <div class="stars-display">${renderStars(review.staffRating)}</div>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="review-details">
+                    <div class="detail-item">
+                        <i class="fas fa-car"></i>
+                        <span>${escapeHtml(review.vehicleName) || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-user-tie"></i>
+                        <span>${escapeHtml(review.staffName) || 'N/A'}</span>
+                    </div>
+                </div>
+                
+                ${review.comment ? `
+                    <div class="review-comment">
+                        <p>"${escapeHtml(review.comment)}"</p>
+                    </div>
+                ` : ''}
+            </div>
+        `).join('');
+    }
+    
+    function applyFilters() {
+        let filtered = [...allReviews];
+        
+        // Rating filter
+        const ratingFilter = document.getElementById('ratingFilter').value;
+        if (ratingFilter !== 'all') {
+            const rating = parseInt(ratingFilter);
+            filtered = filtered.filter(r => r.carRating === rating || r.staffRating === rating);
+        }
+        
+        // Type filter
+        const typeFilter = document.getElementById('typeFilter').value;
+        if (typeFilter === 'car') {
+            filtered = filtered.filter(r => r.carRating && !r.staffRating);
+        } else if (typeFilter === 'staff') {
+            filtered = filtered.filter(r => !r.carRating && r.staffRating);
+        } else if (typeFilter === 'both') {
+            filtered = filtered.filter(r => r.carRating && r.staffRating);
+        }
+        
+        // Sort
+        const sortFilter = document.getElementById('sortFilter').value;
+        if (sortFilter === 'date-desc') {
+            filtered.sort((a, b) => new Date(b.reviewDate) - new Date(a.reviewDate));
+        } else if (sortFilter === 'date-asc') {
+            filtered.sort((a, b) => new Date(a.reviewDate) - new Date(b.reviewDate));
+        } else if (sortFilter === 'rating-high') {
+            filtered.sort((a, b) => (b.carRating || 0) - (a.carRating || 0));
+        } else if (sortFilter === 'rating-low') {
+            filtered.sort((a, b) => (a.carRating || 0) - (b.carRating || 0));
+        }
+        
+        renderReviews(filtered);
+    }
+    
+    async function loadStats() {
+        try {
+            const res = await fetch('/api/reviews/admin/stats');
+            const stats = await res.json();
+            
+            document.getElementById('totalReviews').textContent = stats.totalReviews || 0;
+            
+            // Use textContent for the number values and create icon separately
+            const avgCarEl = document.getElementById('avgCarRating');
+            avgCarEl.innerHTML = '';
+            const carIcon = document.createElement('i');
+            carIcon.className = 'fas fa-star';
+            avgCarEl.appendChild(carIcon);
+            avgCarEl.appendChild(document.createTextNode(' ' + (stats.avgCarRating || 0)));
+            
+            const avgStaffEl = document.getElementById('avgStaffRating');
+            avgStaffEl.innerHTML = '';
+            const staffIcon = document.createElement('i');
+            staffIcon.className = 'fas fa-star';
+            avgStaffEl.appendChild(staffIcon);
+            avgStaffEl.appendChild(document.createTextNode(' ' + (stats.avgStaffRating || 0)));
+            
+            if (stats.carRatingDistribution) {
+                renderRatingDistribution(stats.carRatingDistribution);
+            }
+        } catch (e) {
+            console.error('Error loading stats:', e);
+        }
+    }
+    
+    async function loadReviews() {
+        try {
+            const res = await fetch('/api/reviews/admin/all');
+            allReviews = await res.json();
+            renderReviews(allReviews);
+        } catch (e) {
+            console.error('Error loading reviews:', e);
+            document.getElementById('reviewsList').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Lỗi tải dữ liệu</h3>
+                    <p>Không thể kết nối đến server</p>
+                </div>
+            `;
+        }
+    }
+    
+    // Initialize
+    loadStats();
+    loadReviews();
+</script>
+</body>
+</html>

@@ -255,8 +255,127 @@
         </div>
     </div>
 </div>
+
+<!-- Review Modal -->
+<div id="review-modal" class="dialog-modal">
+    <div class="dialog-overlay"></div>
+    <div class="dialog-content" style="max-width: 500px;">
+        <div class="dialog-header">
+            <h3>Đánh giá chuyến thuê</h3>
+            <button class="dialog-close" type="button" aria-label="Đóng">&times;</button>
+        </div>
+        <div class="dialog-body">
+            <p class="dialog-hint">Đánh giá trải nghiệm thuê xe của bạn để giúp chúng tôi cải thiện dịch vụ.</p>
+            
+            <!-- Car Rating -->
+            <div class="review-rating-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                    <i class="fas fa-car" style="margin-right: 5px; color: #3498db;"></i>Đánh giá xe
+                </label>
+                <div class="star-rating" id="car-rating">
+                    <i class="fas fa-star" data-rating="1"></i>
+                    <i class="fas fa-star" data-rating="2"></i>
+                    <i class="fas fa-star" data-rating="3"></i>
+                    <i class="fas fa-star" data-rating="4"></i>
+                    <i class="fas fa-star" data-rating="5"></i>
+                </div>
+                <input type="hidden" id="car-rating-value" value="0">
+            </div>
+            
+            <!-- Staff Rating -->
+            <div class="review-rating-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                    <i class="fas fa-user-tie" style="margin-right: 5px; color: #27ae60;"></i>Đánh giá nhân viên
+                </label>
+                <div class="star-rating" id="staff-rating">
+                    <i class="fas fa-star" data-rating="1"></i>
+                    <i class="fas fa-star" data-rating="2"></i>
+                    <i class="fas fa-star" data-rating="3"></i>
+                    <i class="fas fa-star" data-rating="4"></i>
+                    <i class="fas fa-star" data-rating="5"></i>
+                </div>
+                <input type="hidden" id="staff-rating-value" value="0">
+            </div>
+            
+            <!-- Comment -->
+            <div class="review-comment-group" style="margin-bottom: 15px;">
+                <label for="review-comment" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                    <i class="fas fa-comment" style="margin-right: 5px; color: #9b59b6;"></i>Bình luận (tùy chọn)
+                </label>
+                <textarea id="review-comment" rows="4" placeholder="Chia sẻ trải nghiệm của bạn..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; resize: vertical; font-family: inherit; font-size: 14px; color: #333;"></textarea>
+            </div>
+            
+            <input type="hidden" id="review-booking-id">
+            <input type="hidden" id="review-car-id">
+            <input type="hidden" id="review-staff-id">
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn-primary" id="btn-review-submit">
+                <i class="fas fa-paper-plane"></i> Gửi đánh giá
+            </button>
+            <button type="button" class="btn-tertiary" id="btn-review-cancel">Hủy</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .star-rating {
+        display: flex;
+        gap: 8px;
+        font-size: 28px;
+    }
+    .star-rating i {
+        color: #ddd;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .star-rating i:hover,
+    .star-rating i.hover {
+        color: #f1c40f;
+        transform: scale(1.1);
+    }
+    .star-rating i.active {
+        color: #f1c40f;
+    }
+    .btn-review {
+        background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+    .btn-review:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(241, 196, 15, 0.4);
+    }
+    .btn-review:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    .reviewed-badge {
+        background: #e8f5e9;
+        color: #2e7d32;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+</style>
+
 <script src="/js/user-menu.js"></script>
 <script src="/js/station-search.js"></script>
 <script src="/js/lichsuthue.js"></script>
+<script src="/js/review.js"></script>
 </body>
 </html>

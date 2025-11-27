@@ -214,6 +214,20 @@
             </div>
         </div>
 
+        <!-- Notifications Section -->
+        <div class="card notification-card" style="margin-top: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <h2 style="margin:0; font-size:24px; color:#333;">Thông báo</h2>
+                    <span id="notification-badge" class="notification-badge" style="display: none; background: #e74c3c; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold;">0</span>
+                </div>
+                <button class="doc-button secondary" id="btn-mark-all-read" onclick="markAllNotificationsRead()" style="background:#3498db; color:white; border:none; font-size: 12px; padding: 8px 12px;">Đánh dấu tất cả đã đọc</button>
+            </div>
+            <div id="notification-list" style="display: flex; flex-direction: column; gap: 10px;">
+                <p style="text-align: center; color: #777;">Đang tải thông báo...</p>
+            </div>
+        </div>
+
         <div class="profile-actions">
             <a href="/logout" class="btn-logout" style="margin-top:10px;"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>
         </div>
@@ -413,10 +427,107 @@
     document.getElementById("btn-idcard").onclick = () => upload("idcard");
     document.getElementById("btn-request-verification").onclick = requestVerification;
 
+    // --- NOTIFICATION FUNCTIONS ---
+    async function loadNotifications() {
+        const container = document.getElementById('notification-list');
+        const badge = document.getElementById('notification-badge');
+        const markAllBtn = document.getElementById('btn-mark-all-read');
+        
+        try {
+            const res = await fetch('/api/notifications');
+            if (!res.ok) return;
+            const notifications = await res.json();
+            
+            // Get unread count
+            const countRes = await fetch('/api/notifications/unread-count');
+            if (countRes.ok) {
+                const countData = await countRes.json();
+                if (countData.count > 0) {
+                    badge.style.display = 'inline-block';
+                    badge.textContent = countData.count;
+                    markAllBtn.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                    markAllBtn.style.display = 'none';
+                }
+            }
+            
+            if (notifications.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">Bạn chưa có thông báo nào.</p>';
+                return;
+            }
+            
+            // Helper function to escape HTML to prevent XSS
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            container.innerHTML = notifications.map(notif => `
+                <div class="notification-item" style="border: 1px solid ${notif.read ? '#eee' : '#3498db'}; padding: 12px 15px; border-radius: 8px; background: ${notif.read ? '#fdfdfd' : '#f0f7ff'}; color: #333; cursor: pointer; transition: all 0.2s;" onclick="markNotificationRead('${escapeHtml(notif.id)}', this)">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i class="fas ${notif.type === 'SUPPORT_REPLY' ? 'fa-headset' : 'fa-bell'}" style="color: ${notif.read ? '#999' : '#3498db'};"></i>
+                                <p style="margin: 0; font-size: 14px; color: ${notif.read ? '#666' : '#333'}; font-weight: ${notif.read ? 'normal' : '500'};">${escapeHtml(notif.message)}</p>
+                            </div>
+                            <div style="margin-top: 6px; font-size: 11px; color: #aaa; margin-left: 24px;">
+                                ${new Date(notif.createdDate).toLocaleString('vi-VN')}
+                                ${!notif.read ? '<span style="margin-left: 8px; color: #3498db; font-weight: bold;">• Mới</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) { 
+            console.error(e);
+            container.innerHTML = '<p style="color: #999; text-align: center;">Lỗi tải thông báo.</p>'; 
+        }
+    }
+    
+    async function markNotificationRead(id, element) {
+        try {
+            await fetch(`/api/notifications/mark-read/${encodeURIComponent(id)}`, { method: 'POST' });
+            // Update UI
+            if (element) {
+                element.style.background = '#fdfdfd';
+                element.style.borderColor = '#eee';
+                element.querySelector('i').style.color = '#999';
+                element.querySelector('p').style.color = '#666';
+                element.querySelector('p').style.fontWeight = 'normal';
+                const newBadge = element.querySelector('span[style*="color: #3498db"]');
+                if (newBadge) newBadge.remove();
+            }
+            // Update badge count
+            const countRes = await fetch('/api/notifications/unread-count');
+            if (countRes.ok) {
+                const countData = await countRes.json();
+                const badge = document.getElementById('notification-badge');
+                if (countData.count > 0) {
+                    badge.style.display = 'inline-block';
+                    badge.textContent = countData.count;
+                } else {
+                    badge.style.display = 'none';
+                    document.getElementById('btn-mark-all-read').style.display = 'none';
+                }
+            }
+        } catch (e) { console.error(e); }
+    }
+    
+    async function markAllNotificationsRead() {
+        try {
+            await fetch('/api/notifications/mark-all-read', { method: 'POST' });
+            loadNotifications();
+        } catch (e) { console.error(e); }
+    }
+
     loadProfile();
     loadStats();
     refreshDocs();
     loadSupportHistory();
+    loadNotifications();
 </script>
 <script src="/js/station-search.js"></script>
 </body>

@@ -688,6 +688,11 @@ function renderHistoryItem(item) {
 
     container.appendChild(actions);
 
+    // Add review button for completed bookings
+    if (isCompleted(record) && typeof addReviewButton === 'function') {
+        addReviewButton(container, record, vehicle, station);
+    }
+
     if (record.checkinNotes) {
         const p = document.createElement("p");
         p.className = "note-text";
