@@ -1,7 +1,10 @@
 package CarRental.example.controller;
 
 import CarRental.example.document.CustomerSupport;
+import CarRental.example.document.User;
 import CarRental.example.repository.CustomerSupportRepository;
+import CarRental.example.repository.UserRepository;
+import CarRental.example.service.NotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,9 +18,15 @@ import java.util.Map;
 public class CustomerSupportController {
 
     private final CustomerSupportRepository supportRepo;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
-    public CustomerSupportController(CustomerSupportRepository supportRepo) {
+    public CustomerSupportController(CustomerSupportRepository supportRepo, 
+                                      NotificationService notificationService,
+                                      UserRepository userRepository) {
         this.supportRepo = supportRepo;
+        this.notificationService = notificationService;
+        this.userRepository = userRepository;
     }
 
     // 1. Khách hàng gửi yêu cầu
@@ -64,6 +73,14 @@ public class CustomerSupportController {
         ticket.setAdminReply(body.get("reply"));
         ticket.setStatus("RESOLVED");
         supportRepo.save(ticket);
+        
+        // Create notification for the user
+        User user = userRepository.findByUsername(ticket.getUsername());
+        if (user != null) {
+            String message = "Yêu cầu hỗ trợ \"" + ticket.getTitle() + "\" đã được Admin phản hồi.";
+            notificationService.createNotification(user.getId(), message, "SUPPORT_REPLY", ticket.getId());
+        }
+        
         return ResponseEntity.ok("Đã phản hồi");
     }
 }
