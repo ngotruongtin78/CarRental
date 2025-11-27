@@ -13,8 +13,15 @@ let stationCache = [];
 let userCoordinates = null;
 let documentInfo = null;
 
+function getTodayLocalDate() {
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    const local = new Date(now.getTime() - tzOffset);
+    return local.toISOString().split("T")[0];
+}
+
 function initDates() {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getTodayLocalDate();
     const startInput = document.getElementById("start-date");
     const endInput = document.getElementById("end-date");
     if (startInput) {
@@ -429,7 +436,7 @@ const startInput = document.getElementById("start-date");
 const endInput = document.getElementById("end-date");
 if (startInput) {
     startInput.addEventListener("change", () => {
-        const today = new Date().toISOString().split("T")[0];
+        const today = getTodayLocalDate();
         if (startInput.value < today) {
             startInput.value = today;
         }
