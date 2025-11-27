@@ -600,17 +600,13 @@ function renderHistoryItem(item) {
     const paymentMethod = (record.paymentMethod || "").toUpperCase();
     const unpaidStatus = ["PENDING", "UNPAID", "CHUA_THANH_TOAN", "PENDING_PAYMENT"].includes(paymentStatusUpper);
 
-    // Kiểm tra phí phát sinh chưa thanh toán
-    const extraAmount = Number(record.additionalFeeAmount || 0);
-    const extraPaid = Number(record.additionalFeePaidAmount || 0);
-    const hasUnpaidExtraFee = extraAmount > 0 && extraPaid < extraAmount;
+    // Kiểm tra các trạng thái cần highlight
+    const highlightUnpaid = statusUpper === "PENDING_PAYMENT" || unpaidStatus;
+    const isCurrentlyRenting = statusUpper === "IN_PROGRESS"; // Đang thuê xe
+    const isWaitingInspection = statusUpper === "WAITING_INSPECTION"; // Chờ kiểm tra
 
-    // Không highlight nếu status là COMPLETED hoặc RETURNED và tất cả phí đã thanh toán
-    const isCompletedOrReturned = statusUpper === "COMPLETED" || statusUpper === "RETURNED";
-    const highlightUnpaid = (statusUpper === "PENDING_PAYMENT" || unpaidStatus) && !isCompletedOrReturned;
-
-    // Chỉ hiển thị warning badge khi thực sự còn khoản chưa thanh toán
-    if (highlightUnpaid || hasUnpaidExtraFee || statusUpper === "WAITING_INSPECTION") {
+    // Thêm warning cho status badge
+    if (highlightUnpaid || isWaitingInspection) {
         statusBadge.classList.add("warning");
     }
     actions.appendChild(statusBadge);
@@ -621,8 +617,13 @@ function renderHistoryItem(item) {
     const modifiable = canModifyReservation(record);
     const pendingPayment = hasOutstandingUpfrontPayment(record);
 
-    // Chỉ highlight khi thực sự còn khoản chưa thanh toán
-    const highlightUnpaidItem = pendingPayment || highlightUnpaid || hasUnpaidExtraFee;
+    // Kiểm tra phí phát sinh
+    const extraAmount = Number(record.additionalFeeAmount || 0);
+    const extraPaid = Number(record.additionalFeePaidAmount || 0);
+    const hasUnpaidExtraFee = extraAmount > 0 && extraPaid < extraAmount;
+
+    // Highlight khi: đang thuê HOẶC chờ kiểm tra HOẶC còn khoản chưa thanh toán
+    const highlightUnpaidItem = isCurrentlyRenting || isWaitingInspection || pendingPayment || highlightUnpaid || hasUnpaidExtraFee;
 
     if (highlightUnpaidItem) {
         container.classList.add("unpaid-highlight");
