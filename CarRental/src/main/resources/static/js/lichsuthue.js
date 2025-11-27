@@ -104,6 +104,58 @@ function formatMoney(value) {
     return `${Number(value).toLocaleString("vi-VN")} VNĐ`;
 }
 
+function formatPaymentMethod(method) {
+    if (!method) return "---";
+    const normalized = method.toUpperCase();
+    const map = {
+        "BANK_TRANSFER": "Chuyển khoản",
+        "CASH": "Tiền mặt",
+        "PAY_AT_STATION": "Thanh toán tại trạm",
+        "TRANSFER": "Chuyển khoản",
+        "CHUYENKHOAN": "Chuyển khoản",
+        "TIENMAT": "Tiền mặt"
+    };
+    return map[normalized] || method;
+}
+
+function formatPaymentStatus(status, record) {
+    if (!status) return "Chưa cập nhật";
+    const normalized = status.toUpperCase();
+    
+    // Check if completed/returned and has no unpaid extra fees - should show "Hoàn tất"
+    if (record) {
+        const recordStatus = (record.status || "").toUpperCase();
+        const extraAmount = Number(record.additionalFeeAmount || 0);
+        const extraPaid = Number(record.additionalFeePaidAmount || 0);
+        const hasUnpaidExtraFee = extraAmount > 0 && extraPaid < extraAmount;
+        
+        if (["COMPLETED", "RETURNED"].includes(recordStatus)) {
+            if (hasUnpaidExtraFee) {
+                return "Chờ thanh toán phí phát sinh";
+            }
+            return "Hoàn tất";
+        }
+    }
+    
+    // Status mappings for when record context is not available or record is not completed/returned
+    const map = {
+        "PENDING": "Chờ thanh toán",
+        "PAID": "Đã thanh toán",
+        "UNPAID": "Chưa thanh toán",
+        "PAY_AT_STATION": "Thanh toán tại trạm",
+        "BANK_TRANSFER": "Đã chuyển khoản",
+        "DEPOSIT_PAID": "Đã đặt cọc 30%",
+        "PENDING_EXTRA_FEE": "Chờ thanh toán phí phát sinh",
+        "COMPLETED": "Hoàn tất",
+        "CANCELLED": "Đã hủy",
+        "EXPIRED": "Đã hết hạn",
+        "CHUA_THANH_TOAN": "Chưa thanh toán",
+        "PENDING_PAYMENT": "Chờ thanh toán"
+    };
+    
+    return map[normalized] || status;
+}
+
 function haversineDistanceMeters(lat1, lon1, lat2, lon2) {
     const R = 6371000; // m
     const toRad = deg => (deg * Math.PI) / 180;
@@ -601,12 +653,24 @@ function renderHistoryItem(item) {
     const unpaidStatus = ["PENDING", "UNPAID", "CHUA_THANH_TOAN", "PENDING_PAYMENT"].includes(paymentStatusUpper);
 
     // Kiểm tra các trạng thái cần highlight
-    const highlightUnpaid = statusUpper === "PENDING_PAYMENT" || unpaidStatus;
+    const completedOrReturned = ["COMPLETED", "RETURNED"].includes(statusUpper);
+    let highlightUnpaid = statusUpper === "PENDING_PAYMENT" || unpaidStatus;
     const isCurrentlyRenting = statusUpper === "IN_PROGRESS"; // Đang thuê xe
     const isWaitingInspection = statusUpper === "WAITING_INSPECTION"; // Chờ kiểm tra
 
+    // Không highlight nếu đã hoàn thành và không có phí phát sinh chưa thanh toán
+    // Kiểm tra phí phát sinh
+    const extraAmount = Number(record.additionalFeeAmount || 0);
+    const extraPaid = Number(record.additionalFeePaidAmount || 0);
+    const hasUnpaidExtraFee = extraAmount > 0 && extraPaid < extraAmount;
+
+    // Nếu đã hoàn thành và không còn phí phát sinh chưa thanh toán, không cần warning
+    if (completedOrReturned && !hasUnpaidExtraFee) {
+        highlightUnpaid = false;
+    }
+
     // Thêm warning cho status badge
-    if (highlightUnpaid || isWaitingInspection) {
+    if ((highlightUnpaid && !completedOrReturned) || isWaitingInspection || (completedOrReturned && hasUnpaidExtraFee)) {
         statusBadge.classList.add("warning");
     }
     actions.appendChild(statusBadge);
@@ -617,13 +681,13 @@ function renderHistoryItem(item) {
     const modifiable = canModifyReservation(record);
     const pendingPayment = hasOutstandingUpfrontPayment(record);
 
-    // Kiểm tra phí phát sinh
-    const extraAmount = Number(record.additionalFeeAmount || 0);
-    const extraPaid = Number(record.additionalFeePaidAmount || 0);
-    const hasUnpaidExtraFee = extraAmount > 0 && extraPaid < extraAmount;
-
-    // Highlight khi: đang thuê HOẶC chờ kiểm tra HOẶC còn khoản chưa thanh toán
-    const highlightUnpaidItem = isCurrentlyRenting || isWaitingInspection || pendingPayment || highlightUnpaid || hasUnpaidExtraFee;
+    // Highlight khi: đang thuê HOẶC chờ kiểm tra HOẶC còn khoản chưa thanh toán (nhưng không nếu đã hoàn thành và trả phí xong)
+    let highlightUnpaidItem = isCurrentlyRenting || isWaitingInspection || pendingPayment || highlightUnpaid || hasUnpaidExtraFee;
+    
+    // Không highlight nếu đã hoàn thành và không có phí phát sinh chưa thanh toán
+    if (completedOrReturned && !hasUnpaidExtraFee) {
+        highlightUnpaidItem = false;
+    }
 
     if (highlightUnpaidItem) {
         container.classList.add("unpaid-highlight");
@@ -1028,12 +1092,38 @@ function renderBadges(item) {
     const statusText = item.displayStatus || record.displayStatus || record.status;
     if (statusText) badges.push({ text: statusText, className: "" });
 
-    const paymentStatus = (record.paymentStatus || "").toUpperCase();
-    const paymentMethod = record.paymentMethod || "";
-    const paymentWarning = ["PENDING", "UNPAID", "CHUA_THANH_TOAN", "PENDING_PAYMENT"].includes(paymentStatus) || hasOutstandingUpfrontPayment(record);
+    const paymentStatusUpper = (record.paymentStatus || "").toUpperCase();
+    const recordStatus = (record.status || "").toUpperCase();
+    const extraAmount = Number(record.additionalFeeAmount || 0);
+    const extraPaid = Number(record.additionalFeePaidAmount || 0);
+    const hasUnpaidExtraFee = extraAmount > 0 && extraPaid < extraAmount;
+    const completedOrReturned = ["COMPLETED", "RETURNED"].includes(recordStatus);
+    
+    // Determine payment warning - don't show warning if completed/returned without extra fees
+    let paymentWarning = ["PENDING", "UNPAID", "CHUA_THANH_TOAN", "PENDING_PAYMENT"].includes(paymentStatusUpper) 
+        || hasOutstandingUpfrontPayment(record);
+    
+    // If completed and no unpaid extra fees, no warning
+    if (completedOrReturned && !hasUnpaidExtraFee) {
+        paymentWarning = false;
+    }
+    // If completed but has unpaid extra fee, show warning
+    if (completedOrReturned && hasUnpaidExtraFee) {
+        paymentWarning = true;
+    }
 
-    if (record.paymentStatus) badges.push({ text: `Thanh toán: ${record.paymentStatus}`, className: paymentWarning ? "warning" : "" });
-    if (record.paymentMethod) badges.push({ text: `PTTT: ${record.paymentMethod}`, className: paymentWarning ? "warning" : "" });
+    if (record.paymentStatus) {
+        badges.push({ 
+            text: `Thanh toán: ${formatPaymentStatus(record.paymentStatus, record)}`, 
+            className: paymentWarning ? "warning" : "" 
+        });
+    }
+    if (record.paymentMethod) {
+        badges.push({ 
+            text: `PTTT: ${formatPaymentMethod(record.paymentMethod)}`, 
+            className: "" 
+        });
+    }
 
     badges.forEach(b => {
         const el = document.createElement("span");
@@ -1127,8 +1217,8 @@ function openRentalModal(item) {
         { label: "Số ngày", value: record.rentalDays ? `${record.rentalDays} ngày` : "---" },
         { label: "Tổng phí", value: formatMoney(record.total) },
         { label: "Trạng thái", value: item.displayStatus || record.status || "" },
-        { label: "Thanh toán", value: record.paymentStatus || "Chưa cập nhật" },
-        { label: "PT thanh toán", value: record.paymentMethod || "---" },
+        { label: "Thanh toán", value: formatPaymentStatus(record.paymentStatus, record) },
+        { label: "PT thanh toán", value: formatPaymentMethod(record.paymentMethod) },
         { label: "Giữ chỗ tới", value: record.holdExpiresAt ? formatDateTime(record.holdExpiresAt) : "---" },
         extraAmount > 0
             ? { label: "Chi phí phát sinh", value: `${formatMoney(extraAmount)}${extraOutstanding > 0 ? ` (còn ${formatMoney(extraOutstanding)})` : ""}` }
