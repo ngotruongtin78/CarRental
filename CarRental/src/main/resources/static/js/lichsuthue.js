@@ -137,6 +137,7 @@ function formatPaymentStatus(status, record) {
         }
     }
     
+    // Status mappings for when record context is not available or record is not completed/returned
     const map = {
         "PENDING": "Chờ thanh toán",
         "PAID": "Đã thanh toán",
