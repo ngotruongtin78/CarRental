@@ -41,6 +41,7 @@ public class AdminController {
     @GetMapping("/history") public String showHistoryManagement() { return "admin-history"; }
     @GetMapping("/reports") public String showReportsDashboard() { return "admin-reports"; }
     @GetMapping("/vehicle-reports") public String showVehicleReportsManagement() { return "admin-vehicle-reports"; }
+    @GetMapping("/ratings") public String showRatingsDashboard() { return "admin-ratings"; }
 
     @GetMapping("/staff/all")
     @ResponseBody

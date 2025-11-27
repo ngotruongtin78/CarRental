@@ -96,6 +96,12 @@ public class StaffVerifyController {
     @GetMapping("/verifications/detail/{userId}")
     public Map<String, Object> getVerificationDetail(@PathVariable String userId) {
         Optional<User> userOpt = userRepo.findById(userId);
+        if (userOpt.isEmpty()) {
+            User byUsername = userRepo.findByUsername(userId);
+            if (byUsername != null) {
+                userOpt = Optional.of(byUsername);
+            }
+        }
 
         if (userOpt.isEmpty()) {
             return Collections.singletonMap("error", "User not found");

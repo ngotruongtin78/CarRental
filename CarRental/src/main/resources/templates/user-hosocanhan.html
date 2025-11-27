@@ -120,6 +120,35 @@
             </div>
         </div>
 
+        <div class="card support-card">
+            <div class="support-header">
+                <div>
+                    <h2>Thông báo & phản hồi</h2>
+                    <p class="support-subtitle">Nhận phản hồi từ admin cho yêu cầu hỗ trợ hoặc khiếu nại</p>
+                </div>
+                <span class="badge" id="support-counter">0 phản hồi</span>
+            </div>
+
+            <div class="support-form">
+                <div class="form-field">
+                    <label for="support-category">Loại yêu cầu</label>
+                    <select id="support-category">
+                        <option value="SUPPORT">Hỗ trợ</option>
+                        <option value="COMPLAINT">Khiếu nại</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="support-content">Nội dung</label>
+                    <textarea id="support-content" rows="3" placeholder="Mô tả vấn đề bạn gặp phải..."></textarea>
+                </div>
+                <button class="doc-button" id="btn-support-submit"><i class="fas fa-paper-plane"></i> Gửi yêu cầu</button>
+            </div>
+
+            <div id="support-list" class="support-list">
+                <div class="support-empty">Chưa có phản hồi nào.</div>
+            </div>
+        </div>
+
         <div class="profile-actions">
             <a href="/logout" class="btn-logout" style="margin-top:10px;">
                 <i class="fas fa-sign-out-alt"></i> Đăng xuất
@@ -316,14 +345,84 @@
         }
     }
 
+    async function loadSupportTickets() {
+        try {
+            const res = await fetch("/api/support/tickets/my");
+            if (!res.ok) return;
+            const tickets = await res.json();
+            const list = document.getElementById("support-list");
+            const counter = document.getElementById("support-counter");
+
+            counter.innerText = `${tickets.length} phản hồi`;
+
+            if (!tickets.length) {
+                list.innerHTML = '<div class="support-empty">Chưa có phản hồi nào.</div>';
+                return;
+            }
+
+            list.innerHTML = "";
+            tickets.forEach(ticket => {
+                const div = document.createElement("div");
+                div.className = `support-item ${ticket.adminReply && !ticket.seenByUser ? "unread" : ""}`;
+                const created = ticket.updatedAt ? new Date(ticket.updatedAt) : null;
+                const timeText = created ? created.toLocaleString('vi-VN') : '';
+                div.innerHTML = `
+                    <div class="support-meta">
+                        <span class="pill pill-${ticket.category?.toLowerCase() || 'support'}">${ticket.category === 'COMPLAINT' ? 'Khiếu nại' : 'Hỗ trợ'}</span>
+                        <span class="support-time">${timeText}</span>
+                    </div>
+                    <div class="support-content">${ticket.content || ''}</div>
+                    ${ticket.adminReply ? `<div class="support-reply"><strong>Phản hồi admin:</strong> ${ticket.adminReply}</div>` : '<div class="support-pending">Chưa có phản hồi</div>'}
+                `;
+                list.appendChild(div);
+
+                if (ticket.adminReply && !ticket.seenByUser) {
+                    fetch(`/api/support/tickets/${ticket.id}/ack`, { method: "POST" });
+                }
+            });
+        } catch (e) {
+            console.error("Không tải được phản hồi", e);
+        }
+    }
+
+    async function submitSupportTicket() {
+        const category = document.getElementById("support-category").value;
+        const content = document.getElementById("support-content").value.trim();
+        if (!content) {
+            alert("Vui lòng nhập nội dung cần hỗ trợ.");
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/support/tickets", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ category, content })
+            });
+
+            if (!res.ok) {
+                const msg = await res.text();
+                alert(msg || "Không gửi được yêu cầu.");
+                return;
+            }
+            document.getElementById("support-content").value = "";
+            loadSupportTickets();
+            alert("Đã gửi yêu cầu, chúng tôi sẽ phản hồi sớm.");
+        } catch (e) {
+            alert("Không gửi được yêu cầu hỗ trợ.");
+        }
+    }
+
     document.getElementById("btn-license").onclick = () => upload("license");
     document.getElementById("btn-idcard").onclick = () => upload("idcard");
     document.getElementById("btn-request-verification").onclick = requestVerification;
+    document.getElementById("btn-support-submit").onclick = submitSupportTicket;
 
     loadProfile();
     loadStats();
     refreshDocs();
     loadUploadedDocs();
+    loadSupportTickets();
 </script>
 
 <script src="/js/station-search.js"></script>
