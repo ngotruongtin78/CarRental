@@ -1,7 +1,11 @@
 package CarRental.example.controller;
 
+import CarRental.example.document.RentalRecord;
+import CarRental.example.document.Staff;
 import CarRental.example.document.User;
 import CarRental.example.document.Vehicle;
+import CarRental.example.repository.RentalRecordRepository;
+import CarRental.example.repository.StaffRepository;
 import CarRental.example.repository.UserRepository;
 import CarRental.example.repository.VehicleRepository;
 import CarRental.example.service.RentalRecordService;
@@ -13,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin")
@@ -22,6 +25,12 @@ public class AdminController {
     private final UserRepository userRepository;
     private final RentalRecordService rentalRecordService;
     private final VehicleRepository vehicleRepository;
+
+    @Autowired
+    private RentalRecordRepository rentalRecordRepository;
+
+    @Autowired
+    private StaffRepository staffRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -47,6 +56,8 @@ public class AdminController {
     @ResponseBody
     public ResponseEntity<List<Map<String, Object>>> getAllStaff() {
         List<User> allUsers = userRepository.findAll();
+        List<RentalRecord> allRentals = rentalRecordRepository.findAll();
+
         List<Map<String, Object>> responseList = new ArrayList<>();
         for (User user : allUsers) {
             try {
@@ -56,6 +67,16 @@ public class AdminController {
                 String role = user.getRole() != null ? user.getRole() : "USER";
                 if (!"ROLE_STAFF".equals(role) && !"ROLE_ADMIN".equals(role)) continue;
 
+                long deliveryCount = allRentals.stream()
+                        .filter(r -> r.getDeliveryStaffId() != null && r.getDeliveryStaffId().equals(user.getId()))
+                        .count();
+
+                long returnCount = allRentals.stream()
+                        .filter(r -> r.getReturnStaffId() != null && r.getReturnStaffId().equals(user.getId()))
+                        .count();
+
+                long totalPerformance = deliveryCount + returnCount;
+
                 Map<String, Object> staffData = new LinkedHashMap<>();
                 staffData.put("id", user.getId());
                 staffData.put("fullName", user.getUsername());
@@ -63,7 +84,10 @@ public class AdminController {
                 staffData.put("role", role);
                 staffData.put("status", user.isEnabled() ? "WORKING" : "RESIGNED");
                 staffData.put("stationId", user.getStationId());
-                staffData.put("performance", 0);
+                staffData.put("deliveryCount", deliveryCount);
+                staffData.put("returnCount", returnCount);
+                staffData.put("performance", totalPerformance);
+
                 responseList.add(staffData);
             } catch (Exception e) {}
         }
@@ -75,19 +99,11 @@ public class AdminController {
     public ResponseEntity<?> updateStaff(@PathVariable("id") String id, @RequestBody Map<String, String> payload) {
         User user = userRepository.findById(id).orElse(null);
         if (user == null) return ResponseEntity.badRequest().body("Không tìm thấy nhân viên");
-
         String newPass = payload.get("password");
-        if (newPass != null && !newPass.trim().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(newPass));
-        }
-
-        user.setStationId(payload.get("stationId")); // Lưu trạm
-
+        if (newPass != null && !newPass.trim().isEmpty()) user.setPassword(passwordEncoder.encode(newPass));
+        user.setStationId(payload.get("stationId"));
         String role = payload.get("role");
-        if (role != null && !role.isEmpty()) {
-            user.setRole(role);
-        }
-
+        if (role != null && !role.isEmpty()) user.setRole(role);
         userRepository.save(user);
         return ResponseEntity.ok("Cập nhật thành công");
     }
@@ -97,17 +113,13 @@ public class AdminController {
     public ResponseEntity<List<Map<String, Object>>> getAllCustomers() {
         List<User> allUsers = userRepository.findAll();
         List<Map<String, Object>> responseList = new ArrayList<>();
-
         for (User user : allUsers) {
             try {
                 if (user == null) continue;
                 String role = user.getRole() != null ? user.getRole() : "USER";
                 if ("ROLE_ADMIN".equals(role) || "ROLE_STAFF".equals(role)) continue;
-
                 String username = user.getUsername() != null ? user.getUsername() : "Unknown";
-
                 Map<String, Object> stats = rentalRecordService.calculateStats(username);
-
                 Map<String, Object> customerData = new LinkedHashMap<>();
                 customerData.put("id", user.getId());
                 customerData.put("fullName", username);
@@ -117,7 +129,6 @@ public class AdminController {
                 customerData.put("risk", user.isRisk());
                 customerData.put("totalTrips", stats.getOrDefault("totalTrips", 0));
                 customerData.put("totalSpent", stats.getOrDefault("totalSpent", 0));
-
                 responseList.add(customerData);
             } catch (Exception e) {}
         }
@@ -128,20 +139,16 @@ public class AdminController {
     @ResponseBody
     public ResponseEntity<String> toggleCustomerStatus(@PathVariable("id") String id) {
         User user = userRepository.findById(id).orElse(null);
-        if (user == null) return ResponseEntity.badRequest().body("User not found");
-        user.setEnabled(!user.isEnabled());
-        userRepository.save(user);
-        return ResponseEntity.ok(user.isEnabled() ? "ACTIVATED" : "DISABLED");
+        if (user != null) { user.setEnabled(!user.isEnabled()); userRepository.save(user); }
+        return ResponseEntity.ok("OK");
     }
 
     @PostMapping("/customers/toggle-risk/{id}")
     @ResponseBody
     public ResponseEntity<String> toggleCustomerRisk(@PathVariable("id") String id) {
         User user = userRepository.findById(id).orElse(null);
-        if (user == null) return ResponseEntity.badRequest().body("User not found");
-        user.setRisk(!user.isRisk());
-        userRepository.save(user);
-        return ResponseEntity.ok(user.isRisk() ? "RISK_MARKED" : "RISK_REMOVED");
+        if (user != null) { user.setRisk(!user.isRisk()); userRepository.save(user); }
+        return ResponseEntity.ok("OK");
     }
 
     @GetMapping("/customers/view/{id}")
@@ -167,28 +174,31 @@ public class AdminController {
     @GetMapping("/cleanup-vehicles")
     @ResponseBody
     public ResponseEntity<String> cleanupDuplicateVehicles() {
-        List<Vehicle> allVehicles = vehicleRepository.findAll();
-        Map<String, List<Vehicle>> grouped = allVehicles.stream()
-                .filter(v -> v.getPlate() != null)
-                .collect(Collectors.groupingBy(Vehicle::getPlate));
+        return ResponseEntity.ok("OK");
+    }
 
-        int deletedCount = 0;
-        for (Map.Entry<String, List<Vehicle>> entry : grouped.entrySet()) {
-            List<Vehicle> group = entry.getValue();
-            if (group.size() > 1) {
-                group.sort((v1, v2) -> {
-                    boolean s1 = v1.getBookingStatus() != null;
-                    boolean s2 = v2.getBookingStatus() != null;
-                    if (s1 && !s2) return -1;
-                    if (!s1 && s2) return 1;
-                    return v2.getId().compareTo(v1.getId());
-                });
-                for (int i = 1; i < group.size(); i++) {
-                    vehicleRepository.delete(group.get(i));
-                    deletedCount++;
-                }
+    // --- HÀM FIX DỮ LIỆU CŨ ---
+    @GetMapping("/fix-staff-data")
+    @ResponseBody
+    public ResponseEntity<String> fixStaffData() {
+        Staff targetStaff = staffRepository.findByUsername("staff");
+        if (targetStaff == null) return ResponseEntity.badRequest().body("Không tìm thấy user 'staff'");
+
+        String staffId = targetStaff.getId();
+        List<RentalRecord> allRecords = rentalRecordRepository.findAll();
+        int count = 0;
+        for (RentalRecord r : allRecords) {
+            boolean updated = false;
+            String status = r.getStatus() != null ? r.getStatus() : "";
+
+            if (status != null && !status.equals("PENDING") && !status.equals("CANCELLED") && !status.equals("EXPIRED")) {
+                if (r.getDeliveryStaffId() == null) { r.setDeliveryStaffId(staffId); updated = true; }
             }
+            if (status != null && (status.equals("COMPLETED") || status.equals("RETURNED"))) {
+                if (r.getReturnStaffId() == null) { r.setReturnStaffId(staffId); updated = true; }
+            }
+            if (updated) { rentalRecordRepository.save(r); count++; }
         }
-        return ResponseEntity.ok("Đã dọn dẹp xong. Tổng xe xóa: " + deletedCount);
+        return ResponseEntity.ok("Đã cập nhật dữ liệu cho " + count + " đơn hàng.");
     }
 }

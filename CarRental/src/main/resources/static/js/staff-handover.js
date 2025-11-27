@@ -132,7 +132,7 @@ function displayContractDetail(data) {
     // Định dạng trạng thái thanh toán
     const paymentStatus = data.paymentStatus || 'N/A';
     const statusText = paymentStatus.toUpperCase() === 'PAID' ? 'Đã thanh toán' :
-                      paymentStatus.toUpperCase() === 'PAY_AT_STATION' ? 'Thanh toán tại trạm' : paymentStatus;
+                      paymentStatus.toUpperCase() === 'DEPOSIT_PENDING' ? 'Thanh toán tại trạm' : paymentStatus;
     document.getElementById('modal-payment-status').textContent = statusText;
 
     document.getElementById('modal-notes').textContent = data.checkinNotes || 'Không có ghi chú';
@@ -200,7 +200,7 @@ function getStatusLabel(status) {
     if (!status) return 'Không rõ';
     const s = status.trim().toUpperCase();
     if (s === 'PAID') return 'Đã thanh toán';
-    if (s === 'PAY_AT_STATION') return 'Thanh toán tại trạm';
+    if (s === 'DEPOSIT_PENDING') return 'Thanh toán tại trạm';
     return status;
 }
 
@@ -209,7 +209,7 @@ function getStatusClass(status) {
     if (!status) return '';
     const s = status.trim().toUpperCase();
     if (s === 'PAID') return 'status-paid';
-    if (s === 'PAY_AT_STATION') return 'status-pay-at-station';
+    if (s === 'DEPOSIT_PENDING') return 'status-pay-at-station';
     return '';
 }
 

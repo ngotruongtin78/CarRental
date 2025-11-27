@@ -8,11 +8,12 @@
         <h2>EV Station</h2>
     </div>
     <ul class="sidebar-nav">
-        <li><a th:href="@{/admin/vehicles}"
-               th:class="${activePage == 'vehicles'} ? 'active'">Quản lý xe</a></li>
+        <li><a th:href="@{/admin/vehicles}" th:class="${activePage == 'vehicles'} ? 'active'">Quản lý xe</a></li>
+        <li><a th:href="@{/admin/stations}" th:class="${activePage == 'stations'} ? 'active'">Quản lý điểm thuê</a></li>
+        <li><a th:href="@{/admin/history}" th:class="${activePage == 'history'} ? 'active'">Lịch sử thuê</a></li>
+        <li><a th:href="@{/admin/vehicle-reports}" th:class="${activePage == 'vehicle-reports'} ? 'active'">Sự cố & Bảo trì</a></li>
 
-        <li><a th:href="@{/admin/stations}"
-               th:class="${activePage == 'stations'} ? 'active'">Quản lý điểm thuê</a></li>
+        <li><a th:href="@{/admin/support}" th:class="${activePage == 'support'} ? 'active'">Hỗ trợ & Khiếu nại</a></li>
 
         <li><a th:href="@{/admin/history}"
                th:class="${activePage == 'history'} ? 'active'">Lịch sử thuê</a></li>
