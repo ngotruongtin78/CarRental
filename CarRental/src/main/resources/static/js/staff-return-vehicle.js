@@ -266,10 +266,7 @@ function confirmReturn() {
             // ✅ Gửi ảnh nếu có (await để đảm bảo hoàn thành)
             const photoBase64 = window.currentReturnPhotoBase64;
             if (photoBase64) {
-                console.log('🔵 [RETURN] Có ảnh, đang lưu...');
                 saveReturnPhoto(currentRentalId, photoBase64);
-            } else {
-                console.log('🔵 [RETURN] Không có ảnh chụp');
             }
 
             // ✅ Hiển thị chi tiết trả xe thành công
@@ -489,26 +486,18 @@ function resetReturnPhoto() {
  */
 async function saveReturnPhoto(rentalId, photoBase64) {
     try {
-        console.log('🔵 [RETURN] Bắt đầu lưu ảnh nhận xe...');
-        console.log('RentalId:', rentalId);
-        console.log('Kích thước ảnh:', photoBase64.length, 'bytes');
-
         if (!photoBase64 || photoBase64.length < 100) {
-            console.warn('⚠️ [RETURN] Ảnh không hợp lệ');
             return;
         }
 
         // Convert base64 to binary
-        console.log('🔵 [RETURN] Đang convert base64 to binary...');
         const binaryString = atob(photoBase64.split(',')[1]);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
         }
-        console.log('✅ [RETURN] Binary size:', bytes.length, 'bytes');
 
         // Gửi binary data lên server
-        console.log('🔵 [RETURN] Gửi request PUT /api/staff/return/' + rentalId + '/receive-photo');
         const response = await fetch(`/api/staff/return/${rentalId}/receive-photo`, {
             method: 'PUT',
             headers: {
@@ -518,19 +507,10 @@ async function saveReturnPhoto(rentalId, photoBase64) {
             body: bytes.buffer
         });
 
-        console.log('🔵 [RETURN] Response status:', response.status);
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log('✅ [RETURN] Ảnh nhận xe đã được lưu thành công!');
-            console.log('✅ [RETURN] Response:', result);
-        } else {
-            const errorData = await response.text();
-            console.error('❌ [RETURN] Lỗi khi lưu ảnh (status ' + response.status + ')');
-            console.error('❌ [RETURN] Error:', errorData);
+        if (!response.ok) {
+            console.error('❌ Lỗi khi lưu ảnh');
         }
     } catch (error) {
-        console.error('❌ [RETURN] Lỗi xử lý ảnh:', error);
-        console.error('❌ [RETURN] Stack:', error.stack);
+        console.error('❌ Lỗi xử lý ảnh:', error);
     }
 }

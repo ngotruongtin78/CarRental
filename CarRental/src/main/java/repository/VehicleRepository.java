@@ -8,8 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface VehicleRepository
-        extends MongoRepository<Vehicle, String>, VehicleRepositoryCustom {
+public interface VehicleRepository extends MongoRepository<Vehicle, String> {
 
     long countByStationIdAndAvailable(String stationId, boolean available);
     List<Vehicle> findByStationId(String stationId);

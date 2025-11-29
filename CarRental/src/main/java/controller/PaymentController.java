@@ -53,22 +53,6 @@ public class PaymentController {
         this.bankName = bankName;
     }
 
-    private boolean expireRentalIfNeeded(RentalRecord record) {
-        if (record == null) return false;
-
-        boolean pending = "PENDING_PAYMENT".equalsIgnoreCase(record.getStatus());
-        boolean expired = record.getHoldExpiresAt() != null && LocalDateTime.now().isAfter(record.getHoldExpiresAt());
-        if (pending && expired) {
-            record.setStatus("CANCELLED");
-            record.setPaymentStatus("EXPIRED");
-            record.setHoldExpiresAt(null);
-            rentalRepo.save(record);
-            vehicleService.releaseHold(record.getVehicleId(), record.getId());
-            return true;
-        }
-        return false;
-    }
-
     @PostMapping("/create-order")
     public ResponseEntity<?> createOrder(@RequestBody(required = false) Map<String, Object> req,
                                          @RequestParam(value = "rentalId", required = false) String rentalIdParam,
@@ -94,11 +78,6 @@ public class PaymentController {
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy chuyến thuê");
-        }
-
-        if (expireRentalIfNeeded(record)) {
-            return ResponseEntity.status(HttpStatus.GONE)
-                    .body("Đơn đặt đã hết hạn thanh toán. Vui lòng đặt xe lại.");
         }
 
         Vehicle vehicle = vehicleRepository.findById(record.getVehicleId()).orElse(null);
@@ -230,12 +209,6 @@ public class PaymentController {
 
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record != null) {
-            if (expireRentalIfNeeded(record)) {
-                RedirectView redirectView = new RedirectView("/thanhtoan?rentalId=" + rentalId + "&cancel=1");
-                redirectView.setExposeModelAttributes(false);
-                return redirectView;
-            }
-
             double paidAmount = 0;
             if (amount != null) {
                 try {

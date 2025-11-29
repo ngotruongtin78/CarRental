@@ -14,8 +14,6 @@ document.addEventListener("DOMContentLoaded", function() {
             const data = await response.json();
             allReports = data.reports || [];
 
-            console.log('Báo cáo được tải:', allReports);
-
             updateStatistics();
             renderReports(allReports);
         } catch (error) {

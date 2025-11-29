@@ -6,24 +6,8 @@ let currentRentalId = null;
 // Signature pad instance
 let signaturePad = null;
 
-// Debug mode
-const DEBUG = true;
-
-function log(message, data = null) {
-    if (DEBUG) {
-        if (data) {
-            console.log(`🔵 [DELIVER] ${message}`, data);
-        } else {
-            console.log(`🔵 [DELIVER] ${message}`);
-        }
-    }
-}
-
 // Tải danh sách xe sẵn sàng giao khi trang load
 document.addEventListener('DOMContentLoaded', function() {
-    log('🎯 DOMContentLoaded - Trang đã load xong');
-    log('SignaturePad library:', typeof SignaturePad !== 'undefined' ? 'CÓ ✓' : 'KHÔNG ✗');
-
     loadDeliveryVehicles();
 });
 
@@ -236,10 +220,7 @@ function handleDeliverVehicle(rentalId, plate, customerName) {
  * Khởi tạo Signature Pad (gọi khi modal mở)
  */
 function initializeSignaturePad() {
-    log('🔴 initializeSignaturePad() CALLED');
-
     const canvas = document.getElementById('signaturePad');
-    log('Canvas element found:', canvas ? 'CÓ ✓' : 'KHÔNG ✗', canvas);
 
     if (!canvas) {
         console.error('❌ Canvas signaturePad không tìm thấy');
@@ -248,7 +229,6 @@ function initializeSignaturePad() {
 
     // Hủy instance cũ nếu có
     if (signaturePad) {
-        log('Clearing old SignaturePad instance');
         signaturePad.clear();
     }
 
@@ -270,21 +250,11 @@ function initializeSignaturePad() {
             minDistance: 5
         });
 
-        log('✅ Signature Pad initialized successfully:', {
-            type: signaturePad.constructor.name,
-            penColor: 'rgb(255, 68, 68)',
-            canvasSize: `${canvas.width}x${canvas.height}`
-        });
-
         // Resize canvas để phù hợp với container
         resizeSignaturePad();
 
-        // Test: vẽ một đường test
-        log('Canvas ready for drawing');
-
     } catch (error) {
         console.error('❌ Lỗi khi khởi tạo SignaturePad:', error);
-        log('Error details:', error.message);
     }
 }
 
@@ -647,18 +617,15 @@ function filterTable() {
 function resizeSignaturePad() {
     const canvas = document.getElementById('signaturePad');
     if (!canvas) {
-        log('❌ Canvas không tìm thấy');
         return;
     }
 
     if (!signaturePad) {
-        log('⚠️ SignaturePad instance không tồn tại');
         return;
     }
 
     const container = canvas.parentElement;
     if (!container) {
-        log('❌ Container không tồn tại');
         return;
     }
 
@@ -667,8 +634,6 @@ function resizeSignaturePad() {
     // Lấy kích thước thực tế của container
     const width = container.offsetWidth;
     const height = 200;
-
-    log('Resizing canvas:', { width, height, ratio });
 
     // Set canvas size
     canvas.width = width * ratio;
@@ -681,8 +646,6 @@ function resizeSignaturePad() {
     canvas.style.width = width + 'px';
     canvas.style.height = height + 'px';
 
-    log('✅ Canvas resized to:', `${width}x${height} (ratio: ${ratio})`);
-
     // Vẽ background trắng
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = 'rgb(255, 255, 255)';
@@ -690,7 +653,6 @@ function resizeSignaturePad() {
 
     // Khôi phục chữ ký nếu có
     if (window.currentDeliverySignatureData) {
-        log('Restoring previous signature data');
         signaturePad.fromData(window.currentDeliverySignatureData);
     }
 }
@@ -704,15 +666,12 @@ function clearSignature() {
         window.currentDeliverySignatureData = null;
         window.currentDeliverySignatureBase64 = null;
         updateSignatureStatus('Chữ ký đã bị xóa');
-        console.log('✓ Signature cleared');
         setTimeout(() => {
             const statusEl = document.getElementById('signatureStatus');
             if (statusEl) {
                 statusEl.textContent = '';
             }
         }, 2000);
-    } else {
-        console.warn('⚠️ SignaturePad instance không tồn tại');
     }
 }
 
@@ -732,12 +691,10 @@ function updateSignatureStatus(message) {
  */
 function getSignatureData() {
     if (!signaturePad) {
-        console.warn('⚠️ SignaturePad instance không tồn tại');
         return null;
     }
 
     if (signaturePad.isEmpty()) {
-        console.warn('⚠️ Canvas chữ ký trống - không có chữ ký nào');
         return null;
     }
 
@@ -749,11 +706,6 @@ function getSignatureData() {
         // Lấy ảnh base64
         const imageData = signaturePad.toDataURL('image/png');
         window.currentDeliverySignatureBase64 = imageData;
-
-        console.log('✓ Signature data captured:', {
-            dataPoints: signatureData.length,
-            imageSize: imageData.length
-        });
 
         return {
             data: signatureData,
