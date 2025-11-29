@@ -207,6 +207,7 @@ function handleReturnVehicle(rentalId, plate, customerName) {
             document.getElementById('returnRetakeControls').style.display = 'none';
             window.currentReturnPhotoBase64 = null;
             window.currentReturnPhotoFileName = null;
+            window.currentReturnPhotoTimestamp = null;
 
             // Mở modal
             document.getElementById('returnModal').style.display = 'block';
@@ -422,12 +423,24 @@ function captureReturnPhoto() {
     const photoFileName = document.getElementById('returnPhotoFileName');
 
     previewImg.src = imageData;
-    photoFileName.textContent = 'Ảnh trả xe - ' + new Date().toLocaleTimeString('vi-VN');
+    
+    // Lưu timestamp khi chụp ảnh để hiển thị và lưu cùng ảnh
+    const captureTimestamp = new Date();
+    const formattedDateTime = captureTimestamp.toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+    photoFileName.textContent = 'Ảnh trả xe - ' + formattedDateTime;
     preview.style.display = 'block';
 
-    // Lưu ảnh base64
+    // Lưu ảnh base64 và timestamp
     window.currentReturnPhotoBase64 = imageData;
-    window.currentReturnPhotoFileName = 'return-photo-' + Date.now() + '.jpg';
+    window.currentReturnPhotoFileName = 'return-photo-' + captureTimestamp.getTime() + '.jpg';
+    window.currentReturnPhotoTimestamp = captureTimestamp.getTime();
 
     // Ẩn video và hiển thị button chụp lại
     video.style.display = 'none';
@@ -463,6 +476,7 @@ function resetReturnPhoto() {
     // Reset state
     window.currentReturnPhotoBase64 = null;
     window.currentReturnPhotoFileName = null;
+    window.currentReturnPhotoTimestamp = null;
 
     // Hiển thị button mở camera
     document.getElementById('returnCameraControls').style.display = 'block';
