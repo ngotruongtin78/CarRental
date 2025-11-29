@@ -440,7 +440,8 @@ function captureReturnPhoto() {
     // Lưu ảnh base64 và timestamp
     window.currentReturnPhotoBase64 = imageData;
     window.currentReturnPhotoFileName = 'return-photo-' + captureTimestamp.getTime() + '.jpg';
-    window.currentReturnPhotoTimestamp = captureTimestamp.getTime();
+    // Lưu timestamp vào biến toàn cục để gửi lên server (ISO format)
+    window.currentReturnPhotoTimestamp = captureTimestamp.toISOString();
 
     // Ẩn video và hiển thị button chụp lại
     video.style.display = 'none';
