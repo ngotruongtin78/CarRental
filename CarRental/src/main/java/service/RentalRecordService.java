@@ -348,12 +348,12 @@ public class RentalRecordService {
             String stationName = stationRepository.findById(stationId).map(s -> s.getName()).orElse(stationId);
             long currentVehicles = vehicleRepository.findByStationIdAndBookingStatusNot(stationId, "MAINTENANCE").size();
             if (currentVehicles > 0 && (count / currentVehicles) >= 5) {
-                suggestions.add("🔥 <strong>Nhu cầu cao tại " + stationName + ":</strong> AI khuyến nghị bổ sung thêm xe.");
+                suggestions.add("<strong>Nhu cầu cao tại " + stationName + ":</strong> AI khuyến nghị bổ sung thêm xe.");
             } else if (currentVehicles > 5 && count < currentVehicles) {
-                suggestions.add("⚠️ <strong>Dư thừa tại " + stationName + ":</strong> Cần điều chuyển bớt xe.");
+                suggestions.add("CẢNH BÁO: <strong>Dư thừa tại " + stationName + ":</strong> Cần điều chuyển bớt xe.");
             }
         });
-        if (suggestions.isEmpty()) suggestions.add("ℹ️ <strong>Hệ thống:</strong> Dữ liệu ổn định.");
+        if (suggestions.isEmpty()) suggestions.add("<strong>Hệ thống:</strong> Dữ liệu ổn định.");
         return suggestions;
     }
 

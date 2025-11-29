@@ -143,9 +143,10 @@ public class RentalController {
         record.setEndDate(endDate);
         record.setRentalDays(rentalDays);
         record.setDistanceKm(distanceKm != null ? distanceKm : 0);
-        LocalDateTime actualStartTime = LocalDateTime.now();
-        record.setStartTime(actualStartTime);
-        record.setEndTime(actualStartTime.plusDays(rentalDays));
+        LocalDateTime startTime = startDate.atStartOfDay();
+        LocalDateTime endTime = endDate.atTime(23, 59, 59);
+        record.setStartTime(startTime);
+        record.setEndTime(endTime);
         double totalAmount = vehicle.getPrice() * rentalDays;
         record.setTotal(totalAmount);
         record.setStatus("PENDING_PAYMENT");

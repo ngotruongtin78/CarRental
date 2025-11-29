@@ -19,6 +19,7 @@ public interface RentalRecordRepository extends MongoRepository<RentalRecord, St
     @Query("{ 'holdExpiresAt': { $lt: ?0, $ne: null }, " +
            "'checkinPhotoData': null, " +
            "'checkinTime': null, " +
-           "'status': { $nin: ['CANCELLED', 'EXPIRED', 'COMPLETED', 'RETURNED', 'IN_PROGRESS'] } }")
+           "'status': { $nin: ['CANCELLED', 'EXPIRED', 'COMPLETED', 'RETURNED', 'IN_PROGRESS'] }, " +
+           "'paymentStatus': { $nin: ['PAID'] } }")
     List<RentalRecord> findExpiredRentalsNotCheckedIn(LocalDateTime now);
 }

@@ -23,37 +23,47 @@ public class RentalExpirationScheduler {
         this.vehicleRepo = vehicleRepo;
     }
     
-    @Scheduled(fixedRate = 300000) // 5 phút
+    @Scheduled(fixedRate = 300000)
     public void checkExpiredRentals() {
         LocalDateTime now = LocalDateTime.now();
-        
-        // Use database query for better performance instead of findAll().filter()
         List<RentalRecord> expiredRentals = rentalRepo.findExpiredRentalsNotCheckedIn(now);
         
         expiredRentals.forEach(this::expireRental);
         if (!expiredRentals.isEmpty()) {
-            log.info("✅ Đã xử lý {} đơn hết hạn", expiredRentals.size());
+            log.info("Đã xử lý {} đơn hết hạn", expiredRentals.size());
         }
     }
     
     private void expireRental(RentalRecord record) {
         try {
+            // Kiểm tra an toàn - Không xử lý nếu đã PAID
+            String paymentStatus = record.getPaymentStatus() != null ? record.getPaymentStatus().toUpperCase() : "";
+            String status = record.getStatus() != null ? record.getStatus().toUpperCase() : "";
+            
+            if ("PAID".equals(paymentStatus) || "PAID".equals(status)) {
+                log.warn("CẢNH BÁO: Đơn {} có paymentStatus/status=PAID nhưng vẫn trong danh sách expired - BỎ QUA", record.getId());
+                return;
+            }
+            
+            if (record.getCheckinPhotoData() != null || record.getCheckinTime() != null) {
+                log.warn("Đơn {} đã check-in nhưng vẫn trong danh sách expired - BỎ QUA", record.getId());
+                return;
+            }
+            
             String paymentMethod = record.getPaymentMethod() != null ? record.getPaymentMethod().toLowerCase() : "";
             double depositPaid = record.getDepositPaidAmount() != null ? record.getDepositPaidAmount() : 0;
             double totalAmount = record.getTotal();
             
             String refundNote;
             
-            if (depositPaid == 0) {
-                // ===== Case 1: Chưa thanh toán gì =====
+            if (depositPaid == 0 && !"PAID".equals(paymentStatus)) {
                 refundNote = "Đơn đã bị hủy do không thanh toán trong thời gian quy định.";
-                log.info("📝 Đơn {} hủy - Chưa thanh toán", record.getId());
+                log.info("Đơn {} hủy - Chưa thanh toán", record.getId());
                 
-            } else if ("cash".equals(paymentMethod)) {
-                // ===== Case 2: TIỀN MẶT - Đã đặt cọc =====
-                // KHÔNG HOÀN TIỀN (giữ 100% tiền cọc)
+            } else if ("cash".equals(paymentMethod) && depositPaid > 0) {
+                // Tiền mặt đã đặt cọc - Không hoàn tiền
                 refundNote = String.format(
-                    "⚠️ KHÔNG HOÀN TIỀN ĐẶT CỌC\n\n" +
+                    "KHÔNG HOÀN TIỀN ĐẶT CỌC\n\n" +
                     "Tiền đặt cọc: %,.0fđ sẽ KHÔNG được hoàn lại do bạn không đến nhận xe trong thời gian quy định.\n\n" +
                     "Khi chọn phương thức 'Thanh toán tiền mặt tại trạm', bạn đã cam kết:\n" +
                     "• Chuyển khoản đặt cọc 30%% để giữ xe\n" +
@@ -62,16 +72,15 @@ public class RentalExpirationScheduler {
                     "Nếu có vấn đề phát sinh, vui lòng liên hệ bộ phận hỗ trợ trong vòng 24h kể từ khi nhận thông báo này.",
                     depositPaid
                 );
-                log.warn("❌ Đơn {} - TIỀN MẶT: Giữ toàn bộ {}đ, KHÔNG hoàn", record.getId(), depositPaid);
+                log.warn("Đơn {} - TIỀN MẶT: Giữ toàn bộ {}đ, không hoàn", record.getId(), depositPaid);
                 
             } else if ("bank_transfer".equals(paymentMethod) && depositPaid >= totalAmount) {
-                // ===== Case 3: CHUYỂN KHOẢN - Đã thanh toán 100% =====
-                // PHẠT 30% (= số tiền đặt cọc)
+                // Chuyển khoản 100% - Phạt 30%
                 double penalty = Math.round(totalAmount * 0.3 * 100.0) / 100.0;
                 double refund = totalAmount - penalty;
                 
                 refundNote = String.format(
-                    "📋 CHÍNH SÁCH HỦY MUỘN\n\n" +
+                    "CHÍNH SÁCH HỦY MUỘN\n\n" +
                     "Tổng tiền đã thanh toán: %,.0fđ\n" +
                     "Phí phạt không đến nhận xe: %,.0fđ (30%% tổng tiền)\n" +
                     "Số tiền được hoàn lại: %,.0fđ (70%% tổng tiền)\n\n" +
@@ -85,14 +94,13 @@ public class RentalExpirationScheduler {
                     "Thời gian xử lý: 3-5 ngày làm việc.",
                     totalAmount, penalty, refund, refund, record.getId()
                 );
-                log.warn("⚠️ Đơn {} - CHUYỂN KHOẢN: Phạt {}đ (30%), hoàn {}đ", 
+                log.warn("Đơn {} - CHUYỂN KHOẢN: Phạt {}đ (30%), hoàn {}đ", 
                          record.getId(), penalty, refund);
                 
             } else {
-                // ===== Edge case =====
+                log.error("Đơn {} - EDGE CASE: method={}, depositPaid={}, total={}, paymentStatus={}, status={}", 
+                         record.getId(), paymentMethod, depositPaid, totalAmount, paymentStatus, status);
                 refundNote = "Đơn đã hết hạn. Vui lòng liên hệ bộ phận hỗ trợ để được tư vấn chi tiết.";
-                log.warn("⚠️ Đơn {} hết hạn - Edge case: method={}, paid={}", 
-                         record.getId(), paymentMethod, depositPaid);
             }
             
             // Cập nhật trạng thái đơn
@@ -109,11 +117,11 @@ public class RentalExpirationScheduler {
                 vehicle.setBookingStatus("AVAILABLE");
                 vehicle.setPendingRentalId(null);
                 vehicleRepo.save(vehicle);
-                log.info("✅ Xe {} đã được giải phóng", vehicle.getPlate());
+                log.info("Xe {} đã được giải phóng", vehicle.getPlate());
             }
             
         } catch (Exception e) {
-            log.error("❌ Lỗi xử lý đơn hết hạn {}: {}", record.getId(), e.getMessage());
+            log.error("Lỗi xử lý đơn hết hạn {}: {}", record.getId(), e.getMessage());
         }
     }
 }
