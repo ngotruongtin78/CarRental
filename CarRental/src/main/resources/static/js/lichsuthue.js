@@ -161,7 +161,13 @@ function formatPaymentStatus(status, record) {
         "CANCELLED": "Đã hủy",
         "EXPIRED": "Đã hết hạn",
         "CHUA_THANH_TOAN": "Chưa thanh toán",
-        "PENDING_PAYMENT": "Chờ thanh toán"
+        "PENDING_PAYMENT": "Chờ thanh toán",
+        // Các trạng thái hoàn tiền mới
+        "REFUND_PENDING": "Chờ hoàn tiền",
+        "REFUND_PROCESSING": "Đang xử lý hoàn tiền",
+        "REFUND_COMPLETED": "Đã hoàn tiền",
+        "NO_REFUND": "Không hoàn tiền",
+        "NO_SHOW": "Không đến nhận xe"
     };
     
     return map[normalized] || status;
@@ -238,7 +244,9 @@ function isExpiredRental(record) {
     if (!record) return false;
     const status = (record.status || "").toUpperCase();
     const paymentStatus = (record.paymentStatus || "").toUpperCase();
-    return status === "EXPIRED" || paymentStatus === "NO_SHOW";
+    return status === "EXPIRED" || paymentStatus === "NO_SHOW" || 
+           paymentStatus === "REFUND_PENDING" || paymentStatus === "REFUND_PROCESSING" ||
+           paymentStatus === "REFUND_COMPLETED" || paymentStatus === "NO_REFUND";
 }
 
 function canModifyReservation(record) {
@@ -782,56 +790,116 @@ function renderHistoryItem(item) {
 
     container.appendChild(actions);
 
-    // Add notice for expired rentals
-    if (isExpiredRental(record) && record.additionalFeeNote) {
-        const notice = document.createElement("div");
+    // ===== BADGE ĐỎ CHO ĐƠN HẾT HẠN =====
+    if (record.status === "EXPIRED") {
+        const paymentStatus = (record.paymentStatus || "").toUpperCase();
+        let expiredBadge = "";
         
-        // Phân biệt tiền mặt vs chuyển khoản
-        const isCash = record.paymentMethod && record.paymentMethod.toLowerCase() === "cash";
-        const bgColor = isCash ? "#ffebee" : "#fff3e0";
-        const borderColor = isCash ? "#c62828" : "#f57c00";
-        
-        notice.style.cssText = `
-            background: linear-gradient(135deg, ${bgColor} 0%, #fafafa 100%);
-            border-left: 5px solid ${borderColor};
-            padding: 20px;
-            margin: 16px 0;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-        `;
-        
-        notice.innerHTML = `
-            <div style="display: flex; gap: 16px;">
-                <i class="fas fa-exclamation-circle" style="color: ${borderColor}; font-size: 36px; margin-top: 4px;"></i>
-                <div style="flex: 1;">
-                    <h4 style="color: ${borderColor}; margin: 0 0 16px 0; font-size: 20px; font-weight: 700;">
-                        ${isCash ? '❌ Không hoàn tiền đặt cọc' : '⚠️ Đơn đã hết hạn'}
-                    </h4>
-                    <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px; line-height: 1.8; white-space: pre-line; font-size: 14px; color: #424242;">
-                        ${record.additionalFeeNote}
+        if (paymentStatus === "REFUND_PENDING") {
+            // Chờ hoàn tiền - Badge đỏ cảnh báo
+            expiredBadge = `
+                <div class="expired-warning" style="background: linear-gradient(135deg, #fff3e0, #ffecb3); border: 3px solid #ff9800; padding: 16px; border-radius: 8px; margin-top: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 32px; color: #ff6f00;"></i>
+                        <div>
+                            <h4 style="margin: 0 0 8px 0; color: #e65100;">⏰ Đơn hết hạn - Cần hoàn tiền</h4>
+                            <p style="margin: 0; font-size: 14px;">Vui lòng vào mục <strong>Hỗ trợ</strong> để gửi yêu cầu hoàn tiền.</p>
+                            ${record.additionalFeeNote ? `<div style="background: white; padding: 12px; border-radius: 6px; margin-top: 12px; white-space: pre-line; font-size: 13px; line-height: 1.6;">${record.additionalFeeNote}</div>` : ''}
+                            <a href="/profile#support" 
+                               style="display: inline-flex; align-items: center; gap: 8px; 
+                                      margin-top: 12px; padding: 10px 20px; background: linear-gradient(135deg, #ff6b6b, #d32f2f); 
+                                      color: white; text-decoration: none; border-radius: 8px; 
+                                      font-weight: 600; font-size: 14px;">
+                                <i class="fas fa-headset"></i>
+                                Yêu cầu hoàn tiền
+                            </a>
+                        </div>
                     </div>
-                    ${!isCash ? `
-                    <a href="/profile#support" 
-                       style="display: inline-flex; align-items: center; gap: 10px; 
-                              padding: 12px 24px; background: linear-gradient(135deg, #ff6b6b, #d32f2f); 
-                              color: white; text-decoration: none; border-radius: 10px; 
-                              font-weight: 700; font-size: 15px; box-shadow: 0 4px 12px rgba(211,47,47,0.3);
-                              transition: transform 0.2s;">
-                        <i class="fas fa-headset"></i>
-                        Yêu cầu hoàn tiền
-                    </a>
-                    ` : `
-                    <div style="padding: 12px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #f57c00;">
-                        <i class="fas fa-info-circle" style="color: #f57c00;"></i>
-                        <strong style="color: #e65100;">Lưu ý:</strong> 
-                        Tiền đặt cọc không được hoàn lại theo chính sách thanh toán tiền mặt.
-                    </div>
-                    `}
                 </div>
-            </div>
-        `;
+            `;
+        } else if (paymentStatus === "REFUND_PROCESSING") {
+            // Đang xử lý - Badge vàng
+            expiredBadge = `
+                <div class="refund-processing" style="background: #e3f2fd; border: 2px solid #2196f3; padding: 12px; border-radius: 8px; margin-top: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-clock" style="color: #1976d2; font-size: 24px;"></i>
+                        <div>
+                            <strong style="color: #1565c0;">Đang xử lý hoàn tiền</strong>
+                            <p style="margin: 4px 0 0 0; font-size: 13px; color: #424242;">Vui lòng chờ 3-5 ngày làm việc.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (paymentStatus === "REFUND_COMPLETED") {
+            // Đã hoàn tiền - Badge xanh
+            expiredBadge = `
+                <div class="refund-completed" style="background: #e8f5e9; border: 2px solid #4caf50; padding: 12px; border-radius: 8px; margin-top: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-check-circle" style="color: #2e7d32; font-size: 24px;"></i>
+                        <strong style="color: #2e7d32;">✓ Đã hoàn tiền thành công</strong>
+                    </div>
+                </div>
+            `;
+        } else if (paymentStatus === "NO_REFUND") {
+            // Không hoàn tiền - Badge đỏ đậm
+            expiredBadge = `
+                <div class="no-refund" style="background: #ffebee; border: 3px solid #c62828; padding: 16px; border-radius: 8px; margin-top: 12px;">
+                    <div style="display: flex; align-items: flex-start; gap: 12px;">
+                        <i class="fas fa-times-circle" style="font-size: 32px; color: #b71c1c;"></i>
+                        <div>
+                            <strong style="color: #b71c1c; font-size: 16px;">❌ Không hoàn tiền đặt cọc</strong>
+                            <p style="margin: 8px 0 0 0; font-size: 14px; color: #424242;">Tiền cọc không được hoàn do không đến nhận xe.</p>
+                            ${record.additionalFeeNote ? `<div style="background: white; padding: 12px; border-radius: 6px; margin-top: 12px; white-space: pre-line; font-size: 13px; line-height: 1.6;">${record.additionalFeeNote}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (record.additionalFeeNote) {
+            // Fallback cho các trường hợp cũ (NO_SHOW hoặc chưa có paymentStatus mới)
+            const isCash = record.paymentMethod && record.paymentMethod.toLowerCase() === "cash";
+            const bgColor = isCash ? "#ffebee" : "#fff3e0";
+            const borderColor = isCash ? "#c62828" : "#f57c00";
+            
+            expiredBadge = `
+                <div style="background: linear-gradient(135deg, ${bgColor} 0%, #fafafa 100%); border-left: 5px solid ${borderColor}; padding: 20px; margin-top: 12px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+                    <div style="display: flex; gap: 16px;">
+                        <i class="fas fa-exclamation-circle" style="color: ${borderColor}; font-size: 36px; margin-top: 4px;"></i>
+                        <div style="flex: 1;">
+                            <h4 style="color: ${borderColor}; margin: 0 0 16px 0; font-size: 20px; font-weight: 700;">
+                                ${isCash ? '❌ Không hoàn tiền đặt cọc' : '⚠️ Đơn đã hết hạn'}
+                            </h4>
+                            <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px; line-height: 1.8; white-space: pre-line; font-size: 14px; color: #424242;">
+                                ${record.additionalFeeNote}
+                            </div>
+                            ${!isCash ? `
+                            <a href="/profile#support" 
+                               style="display: inline-flex; align-items: center; gap: 10px; 
+                                      padding: 12px 24px; background: linear-gradient(135deg, #ff6b6b, #d32f2f); 
+                                      color: white; text-decoration: none; border-radius: 10px; 
+                                      font-weight: 700; font-size: 15px; box-shadow: 0 4px 12px rgba(211,47,47,0.3);
+                                      transition: transform 0.2s;">
+                                <i class="fas fa-headset"></i>
+                                Yêu cầu hoàn tiền
+                            </a>
+                            ` : `
+                            <div style="padding: 12px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #f57c00;">
+                                <i class="fas fa-info-circle" style="color: #f57c00;"></i>
+                                <strong style="color: #e65100;">Lưu ý:</strong> 
+                                Tiền đặt cọc không được hoàn lại theo chính sách thanh toán tiền mặt.
+                            </div>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
         
-        container.appendChild(notice);
+        // Thêm badge vào container
+        if (expiredBadge) {
+            const badgeDiv = document.createElement("div");
+            badgeDiv.innerHTML = expiredBadge;
+            container.appendChild(badgeDiv.firstElementChild);
+        }
     }
 
     // Add review button for completed bookings
@@ -1382,36 +1450,83 @@ function openRentalModal(item) {
     }
 
     // Add notice for expired rentals in modal
-    if (isExpiredRental(record) && record.additionalFeeNote) {
+    if (record.status === "EXPIRED") {
         const section = document.createElement("div");
+        const paymentStatus = (record.paymentStatus || "").toUpperCase();
         
-        // Phân biệt tiền mặt vs chuyển khoản
-        const isCash = record.paymentMethod && record.paymentMethod.toLowerCase() === "cash";
-        const bgColor = isCash ? "#ffebee" : "#fff8e1";
-        const borderColor = isCash ? "#c62828" : "#ff9800";
-        const iconColor = isCash ? "#c62828" : "#ff6f00";
-        
-        section.innerHTML = `
-            <div style="background: linear-gradient(135deg, ${bgColor}, ${isCash ? '#fce4ec' : '#ffecb3'}); border: 3px solid ${borderColor}; padding: 24px; border-radius: 12px; text-align: center;">
-                <i class="fas ${isCash ? 'fa-times-circle' : 'fa-clock'}" style="font-size: 56px; color: ${iconColor}; margin-bottom: 16px;"></i>
-                <h3 style="color: ${isCash ? '#b71c1c' : '#e65100'}; margin: 0 0 16px 0; font-size: 22px;">
-                    ${isCash ? '❌ Không hoàn tiền đặt cọc' : 'Đơn đã hết hạn giữ chỗ'}
-                </h3>
-                <p style="margin: 0 0 20px 0; white-space: pre-line; line-height: 1.9; text-align: left; background: white; padding: 16px; border-radius: 8px;">${record.additionalFeeNote}</p>
-                ${!isCash ? `
-                <a href="/profile#support" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; background: linear-gradient(135deg, #ff6b6b, #d32f2f); color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">
-                    <i class="fas fa-headset"></i> Liên hệ hỗ trợ để hoàn tiền
-                </a>
-                ` : `
-                <div style="padding: 12px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #f57c00; text-align: left; margin-top: 16px;">
-                    <i class="fas fa-info-circle" style="color: #f57c00;"></i>
-                    <strong style="color: #e65100;">Lưu ý:</strong> 
-                    Tiền đặt cọc không được hoàn lại theo chính sách thanh toán tiền mặt.
+        if (paymentStatus === "REFUND_PENDING") {
+            section.innerHTML = `
+                <div style="background: linear-gradient(135deg, #fff3e0, #ffecb3); border: 3px solid #ff9800; padding: 24px; border-radius: 12px; text-align: center;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 56px; color: #ff6f00; margin-bottom: 16px;"></i>
+                    <h3 style="color: #e65100; margin: 0 0 16px 0; font-size: 22px;">⏰ Đơn hết hạn - Cần hoàn tiền</h3>
+                    ${record.additionalFeeNote ? `<p style="margin: 0 0 20px 0; white-space: pre-line; line-height: 1.9; text-align: left; background: white; padding: 16px; border-radius: 8px;">${record.additionalFeeNote}</p>` : ''}
+                    <a href="/profile#support" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; background: linear-gradient(135deg, #ff6b6b, #d32f2f); color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">
+                        <i class="fas fa-headset"></i> Yêu cầu hoàn tiền
+                    </a>
                 </div>
-                `}
-            </div>
-        `;
-        rentalModal.body.appendChild(section);
+            `;
+            rentalModal.body.appendChild(section);
+        } else if (paymentStatus === "REFUND_PROCESSING") {
+            section.innerHTML = `
+                <div style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); border: 3px solid #2196f3; padding: 24px; border-radius: 12px; text-align: center;">
+                    <i class="fas fa-clock" style="font-size: 56px; color: #1976d2; margin-bottom: 16px;"></i>
+                    <h3 style="color: #1565c0; margin: 0 0 16px 0; font-size: 22px;">Đang xử lý hoàn tiền</h3>
+                    <p style="margin: 0; font-size: 16px; color: #424242;">Vui lòng chờ 3-5 ngày làm việc để nhận hoàn tiền.</p>
+                </div>
+            `;
+            rentalModal.body.appendChild(section);
+        } else if (paymentStatus === "REFUND_COMPLETED") {
+            section.innerHTML = `
+                <div style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9); border: 3px solid #4caf50; padding: 24px; border-radius: 12px; text-align: center;">
+                    <i class="fas fa-check-circle" style="font-size: 56px; color: #2e7d32; margin-bottom: 16px;"></i>
+                    <h3 style="color: #2e7d32; margin: 0 0 8px 0; font-size: 22px;">✓ Đã hoàn tiền thành công</h3>
+                    <p style="margin: 0; font-size: 16px; color: #424242;">Số tiền đã được chuyển về tài khoản của bạn.</p>
+                </div>
+            `;
+            rentalModal.body.appendChild(section);
+        } else if (paymentStatus === "NO_REFUND") {
+            section.innerHTML = `
+                <div style="background: linear-gradient(135deg, #ffebee, #fce4ec); border: 3px solid #c62828; padding: 24px; border-radius: 12px; text-align: center;">
+                    <i class="fas fa-times-circle" style="font-size: 56px; color: #b71c1c; margin-bottom: 16px;"></i>
+                    <h3 style="color: #b71c1c; margin: 0 0 16px 0; font-size: 22px;">❌ Không hoàn tiền đặt cọc</h3>
+                    ${record.additionalFeeNote ? `<p style="margin: 0 0 20px 0; white-space: pre-line; line-height: 1.9; text-align: left; background: white; padding: 16px; border-radius: 8px;">${record.additionalFeeNote}</p>` : ''}
+                    <div style="padding: 12px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #f57c00; text-align: left; margin-top: 16px;">
+                        <i class="fas fa-info-circle" style="color: #f57c00;"></i>
+                        <strong style="color: #e65100;">Lưu ý:</strong> 
+                        Tiền đặt cọc không được hoàn lại theo chính sách thanh toán tiền mặt.
+                    </div>
+                </div>
+            `;
+            rentalModal.body.appendChild(section);
+        } else if (record.additionalFeeNote) {
+            // Fallback cho các trường hợp cũ
+            const isCash = record.paymentMethod && record.paymentMethod.toLowerCase() === "cash";
+            const bgColor = isCash ? "#ffebee" : "#fff8e1";
+            const borderColor = isCash ? "#c62828" : "#ff9800";
+            const iconColor = isCash ? "#c62828" : "#ff6f00";
+            
+            section.innerHTML = `
+                <div style="background: linear-gradient(135deg, ${bgColor}, ${isCash ? '#fce4ec' : '#ffecb3'}); border: 3px solid ${borderColor}; padding: 24px; border-radius: 12px; text-align: center;">
+                    <i class="fas ${isCash ? 'fa-times-circle' : 'fa-clock'}" style="font-size: 56px; color: ${iconColor}; margin-bottom: 16px;"></i>
+                    <h3 style="color: ${isCash ? '#b71c1c' : '#e65100'}; margin: 0 0 16px 0; font-size: 22px;">
+                        ${isCash ? '❌ Không hoàn tiền đặt cọc' : 'Đơn đã hết hạn giữ chỗ'}
+                    </h3>
+                    <p style="margin: 0 0 20px 0; white-space: pre-line; line-height: 1.9; text-align: left; background: white; padding: 16px; border-radius: 8px;">${record.additionalFeeNote}</p>
+                    ${!isCash ? `
+                    <a href="/profile#support" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; background: linear-gradient(135deg, #ff6b6b, #d32f2f); color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">
+                        <i class="fas fa-headset"></i> Liên hệ hỗ trợ để hoàn tiền
+                    </a>
+                    ` : `
+                    <div style="padding: 12px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #f57c00; text-align: left; margin-top: 16px;">
+                        <i class="fas fa-info-circle" style="color: #f57c00;"></i>
+                        <strong style="color: #e65100;">Lưu ý:</strong> 
+                        Tiền đặt cọc không được hoàn lại theo chính sách thanh toán tiền mặt.
+                    </div>
+                    `}
+                </div>
+            `;
+            rentalModal.body.appendChild(section);
+        }
     }
 
     rentalModal.el.classList.add("show");

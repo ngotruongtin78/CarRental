@@ -399,9 +399,23 @@ public class RentalRecordService {
 
     private boolean isVisibleInHistory(RentalRecord record) {
         if (record == null) return false;
+        
         String status = Optional.ofNullable(record.getStatus()).orElse("").toUpperCase();
         String paymentStatus = Optional.ofNullable(record.getPaymentStatus()).orElse("").toUpperCase();
-        return !status.equals("CANCELLED") && !status.equals("EXPIRED") && !paymentStatus.equals("CANCELLED") && !paymentStatus.equals("EXPIRED");
+        double depositPaid = record.getDepositPaidAmount() != null ? record.getDepositPaidAmount() : 0;
+        
+        // ẨN nếu: CANCELLED
+        if (status.equals("CANCELLED") || paymentStatus.equals("CANCELLED")) {
+            return false;
+        }
+        
+        // ẨN nếu: EXPIRED nhưng CHƯA THANH TOÁN (case này không tồn tại vì đã bị xóa)
+        if (status.equals("EXPIRED") && depositPaid == 0) {
+            return false;
+        }
+        
+        // HIỆN tất cả đơn còn lại (bao gồm EXPIRED đã thanh toán)
+        return true;
     }
 
     private StatusView resolveStatus(RentalRecord record) {
@@ -411,6 +425,16 @@ public class RentalRecordService {
 
         if (status.equals("RETURNED") || status.equals("COMPLETED")) return new StatusView("Đã trả xe", "returned");
         if (status.equals("WAITING_INSPECTION")) return new StatusView("Chờ xác nhận trả", "returned");
+        
+        // Xử lý các trạng thái EXPIRED
+        if (status.equals("EXPIRED")) {
+            if (paymentStatus.equals("REFUND_PENDING")) return new StatusView("Hết hạn - Chờ hoàn tiền", "expired");
+            if (paymentStatus.equals("REFUND_PROCESSING")) return new StatusView("Hết hạn - Đang hoàn tiền", "expired");
+            if (paymentStatus.equals("REFUND_COMPLETED")) return new StatusView("Hết hạn - Đã hoàn tiền", "expired");
+            if (paymentStatus.equals("NO_REFUND")) return new StatusView("Hết hạn - Không hoàn tiền", "expired");
+            return new StatusView("Đã hết hạn", "expired");
+        }
+        
         if (paymentStatus.equals("PAID") || status.equals("PAID") || status.equals("IN_PROGRESS") || status.equals("CONTRACT_SIGNED")) return new StatusView("Đang thuê", "active");
         if (paymentMethod.equals("cash") || paymentStatus.equals("PAY_AT_STATION") || status.equals("PENDING_PAYMENT")) return new StatusView("Đang chờ thanh toán", "rented");
 
