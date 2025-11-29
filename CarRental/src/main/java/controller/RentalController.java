@@ -28,6 +28,8 @@ import java.util.*;
 @RequestMapping("/api/rental")
 public class RentalController {
 
+    private static final long MAX_PHOTO_SIZE = 10 * 1024 * 1024; // 10MB
+
     private final RentalRecordRepository rentalRepo;
     private final VehicleRepository vehicleRepo;
     private final StationRepository stationRepository;
@@ -54,6 +56,20 @@ public class RentalController {
     private String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null ? auth.getName() : null;
+    }
+
+    private String validatePhoto(MultipartFile photo) {
+        if (photo == null || photo.isEmpty()) {
+            return null; // Valid - no photo provided
+        }
+        if (photo.getSize() > MAX_PHOTO_SIZE) {
+            return "Ảnh quá lớn. Kích thước tối đa là 10MB.";
+        }
+        String contentType = photo.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            return "File phải là ảnh (JPEG, PNG, etc.).";
+        }
+        return null; // Valid
     }
 
     // Kiểm tra và hủy đơn nếu hết hạn giữ xe
@@ -328,17 +344,13 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
         }
 
+        String validationError = validatePhoto(photo);
+        if (validationError != null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(validationError);
+        }
+
         byte[] photoData = null;
         if (photo != null && !photo.isEmpty()) {
-            // Validate file size (max 10MB)
-            if (photo.getSize() > 10 * 1024 * 1024) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ảnh quá lớn. Kích thước tối đa là 10MB.");
-            }
-            // Validate content type
-            String contentType = photo.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("File phải là ảnh (JPEG, PNG, etc.).");
-            }
             try {
                 photoData = photo.getBytes();
             } catch (IOException e) {
@@ -357,7 +369,6 @@ public class RentalController {
         response.put("status", record.getStatus());
         response.put("checkinNotes", record.getCheckinNotes());
         response.put("startTime", record.getStartTime());
-        response.put("checkinTime", record.getStartTime());
         response.put("message", "Check-in thành công");
         return ResponseEntity.ok(response);
     }
@@ -375,17 +386,13 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
         }
 
+        String validationError = validatePhoto(photo);
+        if (validationError != null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(validationError);
+        }
+
         byte[] photoData = null;
         if (photo != null && !photo.isEmpty()) {
-            // Validate file size (max 10MB)
-            if (photo.getSize() > 10 * 1024 * 1024) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ảnh quá lớn. Kích thước tối đa là 10MB.");
-            }
-            // Validate content type
-            String contentType = photo.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("File phải là ảnh (JPEG, PNG, etc.).");
-            }
             try {
                 photoData = photo.getBytes();
             } catch (IOException e) {
