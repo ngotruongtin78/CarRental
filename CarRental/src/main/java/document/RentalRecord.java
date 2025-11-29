@@ -23,6 +23,7 @@ public class RentalRecord {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private LocalDateTime holdExpiresAt;
+    private LocalDateTime checkinTime;  // Thời gian check-in thực tế
 
     private LocalDateTime createdAt;
 
@@ -128,6 +129,8 @@ public class RentalRecord {
     public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
     public LocalDateTime getHoldExpiresAt() { return holdExpiresAt; }
     public void setHoldExpiresAt(LocalDateTime holdExpiresAt) { this.holdExpiresAt = holdExpiresAt; }
+    public LocalDateTime getCheckinTime() { return checkinTime; }
+    public void setCheckinTime(LocalDateTime checkinTime) { this.checkinTime = checkinTime; }
     public double getTotal() { return total; }
     public void setTotal(double total) { this.total = total; }
 

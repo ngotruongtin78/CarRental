@@ -1167,7 +1167,7 @@ function buildPhotoCard(label, base64, timestamp, latitude, longitude, notes) {
 function buildPhotoSection(record) {
     if (!record) return "";
     const photos = [
-        buildPhotoCard("Check-in", record.checkinPhotoData, record.startTime, record.checkinLatitude, record.checkinLongitude, record.checkinNotes),
+        buildPhotoCard("Check-in", record.checkinPhotoData, record.checkinTime || record.startTime, record.checkinLatitude, record.checkinLongitude, record.checkinNotes),
         buildPhotoCard("Trả xe", record.returnPhotoData, record.endTime, record.returnLatitude, record.returnLongitude, record.returnNotes),
     ];
 
@@ -1211,9 +1211,18 @@ function openRentalModal(item) {
     rentalModal.title.textContent = vehicle.brand ? `${vehicle.brand} (${vehicle.plate || ""})` : `Chuyến #${record.id}`;
     renderBadges(item);
 
+    // Kiểm tra nếu đã check-in → hiển thị cả giờ
+    const hasCheckedInRecord = record.checkinTime || record.checkinPhotoData;
+    const startDisplay = hasCheckedInRecord 
+        ? formatDateTime(record.startTime) 
+        : formatDate(record.startDate || record.startTime);
+    const endDisplay = record.endTime 
+        ? (hasCheckedInRecord ? formatDateTime(record.endTime) : formatDate(record.endDate || record.endTime))
+        : "Chưa trả";
+
     const rentalRows = [
         { label: "Mã chuyến", value: `#${record.id || ""}` },
-        { label: "Thời gian thuê", value: `${formatDate(record.startDate || record.startTime)} - ${formatDate(record.endDate || record.endTime) || "Chưa trả"}` },
+        { label: "Thời gian thuê", value: `${startDisplay} - ${endDisplay}` },
         { label: "Số ngày", value: record.rentalDays ? `${record.rentalDays} ngày` : "---" },
         { label: "Tổng phí", value: formatMoney(record.total) },
         { label: "Trạng thái", value: item.displayStatus || record.status || "" },

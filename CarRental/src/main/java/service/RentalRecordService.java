@@ -240,7 +240,12 @@ public class RentalRecordService {
     public RentalRecord checkIn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
+        // startTime should already be set by bookRental(), this is a fallback for older records
         if (record.getStartTime() == null) record.setStartTime(LocalDateTime.now());
+        // Lưu thời gian check-in thực tế vào field riêng (khác với startTime là thời điểm đặt xe)
+        if (record.getCheckinTime() == null) {
+            record.setCheckinTime(LocalDateTime.now());
+        }
         record.setCheckinNotes(notes);
         if (photoData != null) {
             record.setCheckinPhotoData(photoData);
