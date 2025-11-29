@@ -187,9 +187,20 @@ public class SepayWebhookHandler {
                 java.time.LocalDateTime endTime = record.getEndTime();
                 if (endTime == null) {
                     java.time.LocalDate endDate = record.getEndDate();
-                    endTime = (endDate != null) 
-                        ? endDate.atTime(23, 59, 59) 
-                        : now.plusHours(8);
+                    java.time.LocalDate startDate = record.getStartDate();
+                    
+                    if (endDate != null) {
+                        // Lấy giờ từ startTime nếu có
+                        if (record.getStartTime() != null) {
+                            int hour = record.getStartTime().getHour();
+                            int minute = record.getStartTime().getMinute();
+                            endTime = endDate.atTime(hour, minute);
+                        } else {
+                            endTime = endDate.atTime(23, 59, 59);
+                        }
+                    } else {
+                        endTime = now.plusHours(24);
+                    }
                 }
                 
                 holdExpiry = endTime;
@@ -207,10 +218,20 @@ public class SepayWebhookHandler {
             }
 
             if (newPaid >= depositRequired) {
-                // Đặt cọc đủ 30% - Giữ 8 tiếng từ lúc chuyển tiền
+                // Đặt cọc đủ 30% - Giữ đến startTime (đầu ngày thuê)
                 record.setPaymentStatus("PAY_AT_STATION");
                 record.setStatus("PENDING_PAYMENT");
-                holdExpiry = java.time.LocalDateTime.now().plusHours(8);
+                
+                // Giữ đến đầu ngày thuê
+                java.time.LocalDateTime startTime = record.getStartTime();
+                if (startTime == null && record.getStartDate() != null) {
+                    startTime = record.getStartDate().atStartOfDay();
+                }
+                if (startTime == null) {
+                    startTime = now.plusHours(8);
+                }
+                
+                holdExpiry = startTime;
                 record.setHoldExpiresAt(holdExpiry);
                 rentalRepo.save(record);
                 
@@ -220,18 +241,18 @@ public class SepayWebhookHandler {
                     log.error("Lỗi cập nhật xe sau đặt cọc: {}", e.getMessage());
                 }
                 
-                log.info("Đơn {} đã đặt cọc {}/{}, giữ 8 tiếng đến {}", 
+                log.info("Đơn {} đã đặt cọc {}/{}, giữ đến startTime {}", 
                          rentalId, newPaid, depositRequired, holdExpiry);
                 return ResponseEntity.ok("OK");
             }
 
-            // Chưa đủ cọc - Giữ 5 phút
+            // Chưa đủ cọc - Giữ 8 tiếng (cho phép user tiếp tục chuyển)
             record.setPaymentStatus("DEPOSIT_PENDING");
             record.setStatus("PENDING_PAYMENT");
-            holdExpiry = java.time.LocalDateTime.now().plusMinutes(5);
+            holdExpiry = java.time.LocalDateTime.now().plusHours(8);
             record.setHoldExpiresAt(holdExpiry);
             rentalRepo.save(record);
-            log.warn("CẢNH BÁO: Đơn {} chưa đủ cọc {}/{}, giữ 5 phút", 
+            log.warn("CẢNH BÁO: Đơn {} chưa đủ cọc {}/{}, giữ 8 tiếng", 
                      rentalId, newPaid, depositRequired);
             return ResponseEntity.ok("OK");
         }
@@ -253,9 +274,18 @@ public class SepayWebhookHandler {
         java.time.LocalDateTime endTime = record.getEndTime();
         if (endTime == null) {
             java.time.LocalDate endDate = record.getEndDate();
-            endTime = (endDate != null) 
-                ? endDate.atTime(23, 59, 59) 
-                : now.plusDays(1).with(java.time.LocalTime.of(23, 59, 59));
+            if (endDate != null) {
+                // Lấy giờ từ startTime nếu có
+                if (record.getStartTime() != null) {
+                    int hour = record.getStartTime().getHour();
+                    int minute = record.getStartTime().getMinute();
+                    endTime = endDate.atTime(hour, minute);
+                } else {
+                    endTime = endDate.atTime(23, 59, 59);
+                }
+            } else {
+                endTime = now.plusDays(1).with(java.time.LocalTime.of(23, 59, 59));
+            }
         }
 
         java.time.LocalDateTime holdExpiry = endTime;

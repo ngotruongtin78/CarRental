@@ -129,19 +129,29 @@ public class PaymentController {
         double amountToCollect;
         double depositRemaining = 0.0;
         boolean isDepositOrder = false;
+        
+        // ===== TÍNH LẠI THỜI GIỮ CHỖ KHI VÀO LẠI =====
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime newHoldExpiry;
+
         if (cashFlow && depositRequested && depositPaid < depositRequired) {
+            // Đặt cọc 30% → Giữ 8 tiếng từ BÂY GIỜ
             record.setPaymentStatus("DEPOSIT_PENDING");
             record.setStatus("PENDING_PAYMENT");
-            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(15));
+            newHoldExpiry = now.plusHours(8);
+            record.setHoldExpiresAt(newHoldExpiry);
+            
             amountToCollect = depositRequired - depositPaid;
             record.setDepositRequiredAmount(depositRequired);
             depositRemaining = amountToCollect;
             isDepositOrder = true;
         } else {
+            // Chuyển khoản 100% → Giữ 24 tiếng từ BÂY GIỜ
             amountToCollect = Math.max(0, amount - depositPaid);
             record.setPaymentStatus("PENDING");
             record.setStatus("PENDING_PAYMENT");
-            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
+            newHoldExpiry = now.plusHours(24);
+            record.setHoldExpiresAt(newHoldExpiry);
         }
 
         if (amountToCollect <= 0) {
