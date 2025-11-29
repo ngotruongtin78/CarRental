@@ -472,20 +472,18 @@ public class RentalController {
             rentalRepo.save(record);
             
             Map<String, Object> response = new LinkedHashMap<>();
-            response.put("success", true);
+            response.put("id", record.getId());
+            response.put("startDate", record.getStartDate());
+            response.put("endDate", record.getEndDate());
+            response.put("rentalDays", record.getRentalDays());
+            response.put("total", record.getTotal());
+            response.put("depositRequiredAmount", record.getDepositRequiredAmount());
+            response.put("depositPaidAmount", record.getDepositPaidAmount());
+            response.put("additionalFeeAmount", record.getAdditionalFeeAmount());
+            response.put("additionalFeeNote", record.getAdditionalFeeNote());
+            response.put("paymentStatus", record.getPaymentStatus());
+            response.put("status", record.getStatus());
             response.put("message", message);
-            
-            Map<String, Object> rentalData = new LinkedHashMap<>();
-            rentalData.put("id", record.getId());
-            rentalData.put("startDate", record.getStartDate());
-            rentalData.put("endDate", record.getEndDate());
-            rentalData.put("rentalDays", record.getRentalDays());
-            rentalData.put("total", record.getTotal());
-            rentalData.put("depositRequiredAmount", record.getDepositRequiredAmount());
-            rentalData.put("depositPaidAmount", record.getDepositPaidAmount());
-            rentalData.put("paymentStatus", record.getPaymentStatus());
-            rentalData.put("status", record.getStatus());
-            response.put("rental", rentalData);
             
             return ResponseEntity.ok(response);
         }
@@ -497,7 +495,7 @@ public class RentalController {
             if (newExtraFee < oldExtraFee) {
                 // Giảm phí phát sinh
                 record.setAdditionalFeeAmount(newExtraFee);
-                record.setAdditionalFeePaidAmount(0.0);
+                record.setAdditionalFeePaidAmount(null);
                 record.setAdditionalFeeNote(String.format(
                     "Phí phát sinh do thay đổi ngày thuê.\n" +
                     "Tổng tiền mới: %,.0fđ\n" +
