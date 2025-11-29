@@ -249,6 +249,20 @@ function isExpiredRental(record) {
            paymentStatus === "REFUND_COMPLETED" || paymentStatus === "NO_REFUND";
 }
 
+/**
+ * Kiểm tra xem có nên hiển thị thông tin giải thích cách tính thời gian thuê hay không.
+ * Chỉ hiện khi: chưa check-in, chưa hủy, chưa hoàn thành, chưa hết hạn
+ */
+function shouldShowRentalTimeInfo(record) {
+    if (!record) return false;
+    const checkedIn = record.checkinTime || record.checkinPhotoData;
+    if (checkedIn) return false;
+    if (isCancelled(record)) return false;
+    if (isCompleted(record)) return false;
+    if (isExpiredRental(record)) return false;
+    return true;
+}
+
 function canModifyReservation(record) {
     if (!record || isCancelled(record) || isCompleted(record)) return false;
     const status = (record.status || "").toUpperCase();
@@ -643,10 +657,11 @@ function renderHistoryItem(item) {
         ? (record.endTime ? formatDateTime(record.endTime) : "Chưa trả")
         : (formatDate(record.endDate || record.endTime) || "Chưa trả");
     
-    // Tooltip giải thích cách tính thời gian
-    const timeTooltip = !hasCheckedInRecord 
-        ? 'title="Thời gian chính xác sẽ được tính từ lúc check-in (1 ngày = 24 tiếng)"' 
-        : `title="1 ngày = 24 tiếng từ lúc check-in"`;
+    // Tooltip giải thích cách tính thời gian (1 ngày = 24 tiếng)
+    const rentalTimeExplanation = "1 ngày = 24 tiếng từ lúc check-in";
+    const timeTooltip = hasCheckedInRecord 
+        ? `title="${rentalTimeExplanation}"`
+        : `title="Thời gian chính xác sẽ được tính từ lúc check-in (${rentalTimeExplanation})"`;
     
     const vehicleLabel = vehicle ? `${vehicle.brand ?? vehicle.type} (${vehicle.plate})` : record.vehicleId;
     const stationLabel = station ? `${station.name} - ${station.address ?? ""}` : (record.stationId || "");
@@ -920,7 +935,7 @@ function renderHistoryItem(item) {
     }
 
     // Hiển thị thông tin về cách tính thời gian thuê nếu chưa check-in
-    if (!hasCheckedInRecord && !isCancelled(record) && !isCompleted(record) && !isExpiredRental(record)) {
+    if (shouldShowRentalTimeInfo(record)) {
         const infoBox = document.createElement("div");
         infoBox.className = "rental-time-info";
         infoBox.innerHTML = `
