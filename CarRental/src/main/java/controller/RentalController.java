@@ -325,6 +325,12 @@ public class RentalController {
     /**
      * Update rental dates (startDate, endDate)
      * Chỉ được phép khi chuyến chưa bắt đầu và chưa check-in
+     * 
+     * Smart payment logic:
+     * - Case A: Đã thanh toán 100% cho số ngày cũ, tăng ngày → PENDING_EXTRA
+     * - Case B: Đặt cọc tiền mặt (cash), tăng ngày → kiểm tra cọc đủ 30%
+     * - Case C: Chuyển khoản nhưng chưa đủ → PENDING_EXTRA
+     * - Giảm ngày → ghi chú hoàn tiền
      */
     @PostMapping("/{rentalId}/dates")
     public ResponseEntity<?> updateRentalDates(
@@ -401,10 +407,20 @@ public class RentalController {
                     .body("Không tìm thấy thông tin xe");
         }
         
+        // Lưu lại giá cũ để so sánh
+        double oldTotal = record.getTotal();
+        int oldRentalDays = record.getRentalDays();
+        
         double newTotal = vehicle.getPrice() * newRentalDays;
         double newDepositRequired = Math.round(newTotal * 0.3 * 100.0) / 100.0;
         
-        // Update record
+        // Lấy thông tin thanh toán hiện tại
+        String paymentStatus = record.getPaymentStatus() != null ? record.getPaymentStatus().toUpperCase() : "";
+        String paymentMethod = record.getPaymentMethod() != null ? record.getPaymentMethod().toLowerCase() : "";
+        double depositPaid = record.getDepositPaidAmount() != null ? record.getDepositPaidAmount() : 0;
+        double paidAmount = "PAID".equals(paymentStatus) ? oldTotal : depositPaid;
+        
+        // Update record with new dates
         record.setStartDate(newStartDate);
         record.setEndDate(newEndDate);
         record.setRentalDays(newRentalDays);
@@ -417,13 +433,75 @@ public class RentalController {
         record.setStartTime(newStartTime);
         record.setEndTime(newEndTime);
         
-        // Nếu đã thanh toán, cần reset về pending
-        String paymentStatus = record.getPaymentStatus() != null ? record.getPaymentStatus().toUpperCase() : "";
-        if ("PAID".equals(paymentStatus)) {
-            // Nếu đã thanh toán 100% nhưng thay đổi ngày -> cần thanh toán lại
-            record.setPaymentStatus("PENDING");
-            record.setStatus("PENDING_PAYMENT");
-            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
+        // Message để trả về cho user
+        String message = "Đã cập nhật ngày thuê thành công";
+        
+        // Smart payment logic
+        if (newTotal > oldTotal) {
+            // TĂNG NGÀY THUÊ
+            double difference = newTotal - oldTotal;
+            
+            if ("PAID".equals(paymentStatus)) {
+                // Case A: Đã thanh toán 100% cho số ngày cũ → cần thanh toán thêm
+                record.setAdditionalFeeAmount(difference);
+                record.setAdditionalFeeNote("Phí phát sinh do tăng từ " + oldRentalDays + " ngày lên " + newRentalDays + " ngày");
+                record.setPaymentStatus("PENDING_EXTRA");
+                record.setStatus("PENDING_PAYMENT");
+                record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(30));
+                message = String.format("Cần thanh toán thêm %,.0fđ do tăng số ngày thuê", difference);
+            } else if ("cash".equals(paymentMethod)) {
+                // Case B: Đặt cọc tiền mặt
+                if (depositPaid < newDepositRequired) {
+                    // Cọc hiện tại < 30% tổng mới → cần cọc thêm
+                    double additionalDeposit = newDepositRequired - depositPaid;
+                    record.setPaymentStatus("DEPOSIT_PENDING");
+                    record.setStatus("PENDING_PAYMENT");
+                    record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(30));
+                    message = String.format("Cần chuyển thêm %,.0fđ tiền cọc (30%% của tổng %,.0fđ)", additionalDeposit, newTotal);
+                } else {
+                    // Đã đủ cọc → PAY_AT_STATION
+                    record.setPaymentStatus("PAY_AT_STATION");
+                    message = "Đã cập nhật ngày thuê. Bạn đã đủ tiền cọc, thanh toán phần còn lại tại trạm.";
+                }
+            } else if ("bank_transfer".equals(paymentMethod)) {
+                // Case C: Chuyển khoản nhưng chưa đủ
+                if (paidAmount < newTotal) {
+                    double additionalAmount = newTotal - paidAmount;
+                    record.setAdditionalFeeAmount(additionalAmount);
+                    record.setAdditionalFeeNote("Phí phát sinh do tăng từ " + oldRentalDays + " ngày lên " + newRentalDays + " ngày");
+                    record.setPaymentStatus("PENDING_EXTRA");
+                    record.setStatus("PENDING_PAYMENT");
+                    record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(30));
+                    message = String.format("Cần thanh toán thêm %,.0fđ", additionalAmount);
+                }
+            } else {
+                // Chưa chọn phương thức thanh toán
+                record.setPaymentStatus("PENDING");
+                record.setStatus("PENDING_PAYMENT");
+                record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
+            }
+        } else if (newTotal < oldTotal) {
+            // GIẢM NGÀY THUÊ
+            double refundAmount = oldTotal - newTotal;
+            
+            if ("PAID".equals(paymentStatus)) {
+                // Đã thanh toán 100% → ghi chú hoàn tiền, cập nhật về PAID
+                record.setAdditionalFeeNote(String.format("Hoàn lại %,.0fđ do giảm từ %d ngày xuống %d ngày. Vui lòng liên hệ bộ phận hỗ trợ để nhận tiền hoàn.", 
+                    refundAmount, oldRentalDays, newRentalDays));
+                record.setPaymentStatus("PAID");
+                message = String.format("Đã cập nhật ngày thuê. Bạn sẽ được hoàn lại %,.0fđ. Vui lòng liên hệ bộ phận hỗ trợ.", refundAmount);
+            } else if (depositPaid > newDepositRequired) {
+                // Cọc đã đủ cho số ngày mới
+                if ("cash".equals(paymentMethod)) {
+                    record.setPaymentStatus("PAY_AT_STATION");
+                    message = "Đã cập nhật ngày thuê. Tiền cọc đã đủ cho số ngày mới.";
+                }
+            }
+            // Clear additional fee if any
+            record.setAdditionalFeeAmount(null);
+        } else {
+            // KHÔNG ĐỔI TỔNG TIỀN (chỉ đổi ngày)
+            message = "Đã cập nhật ngày thuê thành công";
         }
         
         rentalRepo.save(record);
@@ -436,9 +514,11 @@ public class RentalController {
         response.put("rentalDays", record.getRentalDays());
         response.put("total", record.getTotal());
         response.put("depositRequiredAmount", record.getDepositRequiredAmount());
+        response.put("additionalFeeAmount", record.getAdditionalFeeAmount());
+        response.put("additionalFeeNote", record.getAdditionalFeeNote());
         response.put("paymentStatus", record.getPaymentStatus());
         response.put("status", record.getStatus());
-        response.put("message", "Đã cập nhật ngày thuê thành công");
+        response.put("message", message);
         
         return ResponseEntity.ok(response);
     }
@@ -470,7 +550,13 @@ public class RentalController {
             }
         }
 
-        RentalRecord record = rentalRecordService.checkIn(rentalId, username, notes != null ? notes : "", photoData, latitude, longitude);
+        RentalRecord record;
+        try {
+            record = rentalRecordService.checkIn(rentalId, username, notes != null ? notes : "", photoData, latitude, longitude);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+        
         if (record == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found or unauthorized");
         }

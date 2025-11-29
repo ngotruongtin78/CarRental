@@ -240,6 +240,10 @@ public class RentalRecordService {
     public RentalRecord checkIn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
+        
+        // Validate payment conditions before check-in
+        validatePaymentForCheckIn(record);
+        
         // startTime should already be set by bookRental(), this is a fallback for older records
         if (record.getStartTime() == null) record.setStartTime(LocalDateTime.now());
         // Lưu thời gian check-in thực tế vào field riêng (khác với startTime là thời điểm đặt xe)
@@ -259,6 +263,47 @@ public class RentalRecordService {
         record.setStatus("IN_PROGRESS");
         ensureCreatedAt(record);
         return repo.save(record);
+    }
+    
+    /**
+     * Validate payment conditions before allowing check-in
+     * @throws IllegalStateException if payment conditions are not met
+     */
+    private void validatePaymentForCheckIn(RentalRecord record) {
+        String paymentStatus = Optional.ofNullable(record.getPaymentStatus()).orElse("").toUpperCase();
+        String paymentMethod = Optional.ofNullable(record.getPaymentMethod()).orElse("").toLowerCase();
+        
+        // Check if there are unpaid additional fees
+        Double additionalFeeAmount = record.getAdditionalFeeAmount();
+        Double additionalFeePaidAmount = record.getAdditionalFeePaidAmount();
+        if (additionalFeeAmount != null && additionalFeeAmount > 0) {
+            double paid = additionalFeePaidAmount != null ? additionalFeePaidAmount : 0;
+            if (paid < additionalFeeAmount) {
+                throw new IllegalStateException("Vui lòng thanh toán phí phát sinh trước khi check-in");
+            }
+        }
+        
+        // Check payment status
+        if ("PENDING_EXTRA".equals(paymentStatus)) {
+            throw new IllegalStateException("Vui lòng thanh toán phí phát sinh trước khi check-in");
+        }
+        
+        if ("DEPOSIT_PENDING".equals(paymentStatus)) {
+            // Check if deposit is sufficient (30% of total)
+            double total = record.getTotal();
+            double depositRequired = record.getDepositRequiredAmount() != null ? record.getDepositRequiredAmount() : total * 0.3;
+            double depositPaid = record.getDepositPaidAmount() != null ? record.getDepositPaidAmount() : 0;
+            
+            if (depositPaid < depositRequired) {
+                double remaining = depositRequired - depositPaid;
+                throw new IllegalStateException(String.format("Vui lòng chuyển thêm %,.0fđ tiền cọc trước khi check-in", remaining));
+            }
+        }
+        
+        // For bank transfer, check if full payment is made
+        if ("bank_transfer".equals(paymentMethod) && !"PAID".equals(paymentStatus) && !"PAY_AT_STATION".equals(paymentStatus)) {
+            throw new IllegalStateException("Vui lòng hoàn tất thanh toán chuyển khoản trước khi check-in");
+        }
     }
 
     public RentalRecord requestReturn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
