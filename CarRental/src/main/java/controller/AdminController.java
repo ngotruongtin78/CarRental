@@ -109,6 +109,61 @@ public class AdminController {
         return ResponseEntity.ok("Cập nhật thành công");
     }
 
+    @PostMapping("/staff/create")
+    @ResponseBody
+    public ResponseEntity<?> createStaff(@RequestBody Map<String, String> payload) {
+        String username = payload.get("username");
+        String password = payload.get("password");
+        String fullName = payload.get("fullName");
+        String stationId = payload.get("stationId");
+        String role = payload.get("role");
+
+        // Validate required fields
+        if (username == null || username.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Tên đăng nhập không được để trống");
+        }
+        if (password == null || password.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Mật khẩu không được để trống");
+        }
+        if (fullName == null || fullName.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Họ tên không được để trống");
+        }
+        if (stationId == null || stationId.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Điểm làm việc không được để trống");
+        }
+        if (role == null || role.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Vai trò không được để trống");
+        }
+
+        // Check for duplicate username
+        User existingUser = userRepository.findByUsername(username.trim());
+        if (existingUser != null) {
+            return ResponseEntity.badRequest().body("Tên đăng nhập đã tồn tại");
+        }
+
+        // Create new staff user
+        User newStaff = new User();
+        newStaff.setUsername(username.trim());
+        newStaff.setPassword(passwordEncoder.encode(password));
+        newStaff.setStationId(stationId.trim());
+        newStaff.setRole(role.trim());
+        newStaff.setEnabled(true);
+        newStaff.setUpdatedAt(new Date());
+
+        userRepository.save(newStaff);
+
+        // Return success response with created staff info (without password)
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("id", newStaff.getId());
+        response.put("username", newStaff.getUsername());
+        response.put("fullName", fullName);
+        response.put("stationId", newStaff.getStationId());
+        response.put("role", newStaff.getRole());
+        response.put("status", "WORKING");
+
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/customers/all")
     @ResponseBody
     public ResponseEntity<List<Map<String, Object>>> getAllCustomers() {
