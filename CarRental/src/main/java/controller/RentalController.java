@@ -16,7 +16,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -25,6 +27,8 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/rental")
 public class RentalController {
+
+    private static final long MAX_PHOTO_SIZE = 10 * 1024 * 1024; // 10MB
 
     private final RentalRecordRepository rentalRepo;
     private final VehicleRepository vehicleRepo;
@@ -52,6 +56,20 @@ public class RentalController {
     private String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null ? auth.getName() : null;
+    }
+
+    private String validatePhoto(MultipartFile photo) {
+        if (photo == null || photo.isEmpty()) {
+            return null; // Valid - no photo provided
+        }
+        if (photo.getSize() > MAX_PHOTO_SIZE) {
+            return "Ảnh quá lớn. Kích thước tối đa là 10MB.";
+        }
+        String contentType = photo.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            return "File phải là ảnh (JPEG, PNG, etc.).";
+        }
+        return null; // Valid
     }
 
     // Kiểm tra và hủy đơn nếu hết hạn giữ xe
@@ -313,35 +331,86 @@ public class RentalController {
         return Map.of("status", "SIGNED", "contractSigned", true);
     }
 
-    @PostMapping("/{rentalId}/check-in")
-    public Map<String, Object> checkIn(@PathVariable("rentalId") String rentalId, @RequestBody(required = false) Map<String, String> body) {
+    @PostMapping(value = "/{rentalId}/check-in", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> checkIn(
+            @PathVariable("rentalId") String rentalId,
+            @RequestParam(value = "photo", required = false) MultipartFile photo,
+            @RequestParam(value = "notes", required = false) String notes,
+            @RequestParam(value = "latitude", required = false) Double latitude,
+            @RequestParam(value = "longitude", required = false) Double longitude
+    ) {
         String username = getCurrentUsername();
-        String notes = body != null ? body.getOrDefault("notes", "") : "";
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
 
-        RentalRecord record = rentalRecordService.checkIn(rentalId, username, notes);
-        if (record == null) return Map.of("error", "Rental not found or unauthorized");
+        String validationError = validatePhoto(photo);
+        if (validationError != null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(validationError);
+        }
+
+        byte[] photoData = null;
+        if (photo != null && !photo.isEmpty()) {
+            try {
+                photoData = photo.getBytes();
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Không thể đọc file ảnh.");
+            }
+        }
+
+        RentalRecord record = rentalRecordService.checkIn(rentalId, username, notes != null ? notes : "", photoData, latitude, longitude);
+        if (record == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found or unauthorized");
+        }
 
         vehicleService.updateAvailable(record.getVehicleId(), false);
-        return Map.of(
-                "status", record.getStatus(),
-                "checkinNotes", record.getCheckinNotes(),
-                "startTime", record.getStartTime()
-        );
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", record.getStatus());
+        response.put("checkinNotes", record.getCheckinNotes());
+        response.put("startTime", record.getStartTime());
+        response.put("message", "Check-in thành công");
+        return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{rentalId}/return")
-    public Map<String, Object> requestReturn(@PathVariable("rentalId") String rentalId, @RequestBody(required = false) Map<String, String> body) {
+    @PostMapping(value = "/{rentalId}/return", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> requestReturn(
+            @PathVariable("rentalId") String rentalId,
+            @RequestParam(value = "photo", required = false) MultipartFile photo,
+            @RequestParam(value = "notes", required = false) String notes,
+            @RequestParam(value = "latitude", required = false) Double latitude,
+            @RequestParam(value = "longitude", required = false) Double longitude
+    ) {
         String username = getCurrentUsername();
-        String notes = body != null ? body.getOrDefault("notes", "") : "";
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
 
-        RentalRecord record = rentalRecordService.requestReturn(rentalId, username, notes);
-        if (record == null) return Map.of("error", "Rental not found or unauthorized");
+        String validationError = validatePhoto(photo);
+        if (validationError != null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(validationError);
+        }
 
-        return Map.of(
-                "status", record.getStatus(),
-                "returnNotes", record.getReturnNotes(),
-                "endTime", record.getEndTime()
-        );
+        byte[] photoData = null;
+        if (photo != null && !photo.isEmpty()) {
+            try {
+                photoData = photo.getBytes();
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Không thể đọc file ảnh.");
+            }
+        }
+
+        RentalRecord record = rentalRecordService.requestReturn(rentalId, username, notes != null ? notes : "", photoData, latitude, longitude);
+        if (record == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found or unauthorized");
+        }
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", record.getStatus());
+        response.put("returnNotes", record.getReturnNotes());
+        response.put("endTime", record.getEndTime());
+        response.put("message", "Yêu cầu trả xe thành công");
+        return ResponseEntity.ok(response);
     }
 
     // API dành cho Admin: Lấy danh sách lịch sử chi tiết
