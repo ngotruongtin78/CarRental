@@ -129,8 +129,14 @@ function displayContractDetail(data) {
 function formatDateTime(value) {
     if (!value) return '';
     const dt = new Date(value);
-    if (isNaN(dt)) return '';
-    return `${dt.toLocaleDateString()} ${dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    if (isNaN(dt.getTime())) return '';
+    
+    const day = String(dt.getDate()).padStart(2, '0');
+    const month = String(dt.getMonth() + 1).padStart(2, '0');
+    const year = dt.getFullYear();
+    const hours = String(dt.getHours()).padStart(2, '0');
+    const minutes = String(dt.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
 function formatLocation(lat, lng) {

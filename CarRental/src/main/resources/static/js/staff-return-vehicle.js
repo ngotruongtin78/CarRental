@@ -127,10 +127,16 @@ function formatPaymentStatus(status) {
 }
 
 function formatDateTime(value) {
-    if (!value) return '';
-    const date = new Date(value);
-    if (isNaN(date)) return '';
-    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    if (!value) return 'N/A';
+    const dt = new Date(value);
+    if (isNaN(dt.getTime())) return 'N/A';
+    
+    const day = String(dt.getDate()).padStart(2, '0');
+    const month = String(dt.getMonth() + 1).padStart(2, '0');
+    const year = dt.getFullYear();
+    const hours = String(dt.getHours()).padStart(2, '0');
+    const minutes = String(dt.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
 function formatLocation(lat, lng) {

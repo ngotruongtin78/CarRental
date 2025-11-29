@@ -244,12 +244,21 @@ public class RentalRecordService {
         // Validate payment conditions before check-in
         validatePaymentForCheckIn(record);
         
-        // startTime should already be set by bookRental(), this is a fallback for older records
-        if (record.getStartTime() == null) record.setStartTime(LocalDateTime.now());
-        // Lưu thời gian check-in thực tế vào field riêng (khác với startTime là thời điểm đặt xe)
+        // Lưu thời gian check-in thực tế (sử dụng checkinTime đã có nếu đã set)
+        LocalDateTime checkinTime = record.getCheckinTime() != null ? record.getCheckinTime() : LocalDateTime.now();
         if (record.getCheckinTime() == null) {
-            record.setCheckinTime(LocalDateTime.now());
+            record.setCheckinTime(checkinTime);
         }
+        
+        // Cập nhật startTime = checkinTime để thời gian bắt đầu chính xác
+        record.setStartTime(checkinTime);
+        
+        // Tính endTime = checkinTime + số ngày thuê
+        // Ví dụ: check-in 13:10 ngày 29/11, thuê 1 ngày → endTime = 13:10 ngày 30/11
+        int rentalDays = record.getRentalDays() > 0 ? record.getRentalDays() : 1;
+        LocalDateTime calculatedEndTime = checkinTime.plusDays(rentalDays);
+        record.setEndTime(calculatedEndTime);
+        
         record.setCheckinNotes(notes);
         if (photoData != null) {
             record.setCheckinPhotoData(photoData);
