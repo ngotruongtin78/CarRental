@@ -439,19 +439,29 @@ function confirmDeliver() {
         }
         return response.json();
     })
-    .then(data => {
+    .then(async data => {
         if (data.error) {
             alert('Lỗi: ' + data.error);
         } else {
-            // ✅ Gửi ảnh nếu có
+            // ✅ Tạo mảng promises để chờ tất cả request hoàn tất
+            const savePromises = [];
+
+            // Gửi ảnh nếu có
             if (photoBase64) {
-                saveDeliveryPhoto(currentRentalId, photoBase64);
+                savePromises.push(saveDeliveryPhoto(currentRentalId, photoBase64));
             }
 
-            // ✅ Gửi chữ ký nếu có
+            // Gửi chữ ký nếu có
             const signatureData = getSignatureData();
             if (signatureData) {
-                saveDeliverySignature(currentRentalId, signatureData.imageData);
+                savePromises.push(saveDeliverySignature(currentRentalId, signatureData.imageData));
+            }
+
+            // Chờ tất cả request hoàn tất
+            try {
+                await Promise.all(savePromises);
+            } catch (error) {
+                console.warn('Cảnh báo: Một số tệp không được lưu thành công:', error);
             }
 
             // ✅ Hiển thị chi tiết giao xe thành công
@@ -476,72 +486,98 @@ function confirmDeliver() {
  * Lưu ảnh giao xe vào RentalRecord
  */
 function saveDeliveryPhoto(rentalId, photoBase64) {
-    try {
-        // Convert base64 to binary
-        const binaryString = atob(photoBase64.split(',')[1]);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        // Gửi binary data lên server
-        fetch(`/api/staff/deliver/${rentalId}/photo`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/octet-stream',
-                'X-Photo-Name': window.currentDeliveryPhotoFileName || 'delivery-photo'
-            },
-            body: bytes.buffer
-        })
-        .then(response => {
-            if (response.ok) {
-                console.log('Ảnh giao xe đã được lưu thành công');
-            } else {
-                console.warn('Cảnh báo: Lỗi khi lưu ảnh, nhưng hợp đồng đã được cập nhật');
+    return new Promise((resolve, reject) => {
+        try {
+            // Convert base64 to binary
+            const binaryString = atob(photoBase64.split(',')[1]);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
             }
-        })
-        .catch(error => {
-            console.warn('Cảnh báo: Lỗi khi lưu ảnh:', error);
-        });
-    } catch (error) {
-        console.warn('Cảnh báo: Lỗi xử lý ảnh:', error);
-    }
+
+            // Gửi binary data lên server
+            fetch(`/api/staff/deliver/${rentalId}/photo`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/octet-stream',
+                    'X-Photo-Name': window.currentDeliveryPhotoFileName || 'delivery-photo'
+                },
+                body: bytes.buffer
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('✅ Ảnh giao xe đã được lưu thành công');
+                    resolve('Photo saved');
+                } else {
+                    console.warn('⚠️ Cảnh báo: Lỗi khi lưu ảnh, nhưng hợp đồng đã được cập nhật');
+                    resolve('Photo save warning');
+                }
+            })
+            .catch(error => {
+                console.warn('⚠️ Cảnh báo: Lỗi khi lưu ảnh:', error);
+                resolve('Photo save error - continuing');
+            });
+        } catch (error) {
+            console.warn('⚠️ Cảnh báo: Lỗi xử lý ảnh:', error);
+            resolve('Photo process error - continuing');
+        }
+    });
 }
 
 /**
  * Lưu chữ ký giao xe vào RentalRecord
  */
 function saveDeliverySignature(rentalId, signatureBase64) {
-    try {
-        // Convert base64 to binary
-        const binaryString = atob(signatureBase64.split(',')[1]);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        // Gửi binary data lên server
-        fetch(`/api/staff/deliver/${rentalId}/signature`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/octet-stream',
-                'X-Signature-Name': 'delivery-signature'
-            },
-            body: bytes.buffer
-        })
-        .then(response => {
-            if (response.ok) {
-                console.log('Chữ ký giao xe đã được lưu thành công');
-            } else {
-                console.warn('Cảnh báo: Lỗi khi lưu chữ ký, nhưng hợp đồng đã được cập nhật');
+    return new Promise((resolve, reject) => {
+        try {
+            if (!signatureBase64 || signatureBase64.trim() === '') {
+                console.warn('⚠️ Chữ ký trống, bỏ qua');
+                resolve('Empty signature');
+                return;
             }
-        })
-        .catch(error => {
-            console.warn('Cảnh báo: Lỗi khi lưu chữ ký:', error);
-        });
-    } catch (error) {
-        console.warn('Cảnh báo: Lỗi xử lý chữ ký:', error);
-    }
+
+            // Convert base64 to binary
+            // Xử lý cả trường hợp có "data:image/png;base64," và không có
+            let base64String = signatureBase64;
+            if (signatureBase64.includes(',')) {
+                base64String = signatureBase64.split(',')[1];
+            }
+
+            const binaryString = atob(base64String);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            console.log('📝 Gửi chữ ký, kích thước:', bytes.length, 'bytes');
+
+            // Gửi binary data lên server
+            fetch(`/api/staff/deliver/${rentalId}/signature`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/octet-stream',
+                    'X-Signature-Name': 'delivery-signature'
+                },
+                body: bytes.buffer
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('✅ Chữ ký giao xe đã được lưu thành công');
+                    resolve('Signature saved');
+                } else {
+                    console.warn('⚠️ Cảnh báo: Lỗi khi lưu chữ ký (HTTP ' + response.status + '), nhưng hợp đồng đã được cập nhật');
+                    resolve('Signature save warning');
+                }
+            })
+            .catch(error => {
+                console.warn('⚠️ Cảnh báo: Lỗi khi lưu chữ ký:', error);
+                resolve('Signature save error - continuing');
+            });
+        } catch (error) {
+            console.warn('⚠️ Cảnh báo: Lỗi xử lý chữ ký:', error);
+            resolve('Signature process error - continuing');
+        }
+    });
 }
 
 /**

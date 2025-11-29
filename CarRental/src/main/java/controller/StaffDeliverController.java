@@ -38,7 +38,7 @@ public class StaffDeliverController {
 
             String staffStationId = staff.getStationId();
             List<RentalRecord> readyRecords = rentalRecordRepository.findAll().stream()
-                    .filter(record -> "ACTIVE".equals(record.getStatus()) &&
+                    .filter(record -> "IN_PROGRESS".equals(record.getStatus()) &&
                             ("PAID".equals(record.getPaymentStatus()) || "PAY_AT_STATION".equals(record.getPaymentStatus())) &&
                             staffStationId.equals(record.getStationId()))
                     .toList();
@@ -100,7 +100,14 @@ public class StaffDeliverController {
                 vehicleRepository.save(vehicle);
             }
 
-            return ResponseEntity.ok(Map.of("message", "Giao xe thành công", "rentalId", rentalId));
+            // Trả về thông tin chi tiết
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("message", "Giao xe thành công");
+            response.put("rentalId", rentalId);
+            response.put("rentalStatus", record.getStatus());
+            response.put("paymentStatus", record.getPaymentStatus());
+            response.put("vehicleStatus", vehicle != null ? vehicle.getBookingStatus() : "RENTED");
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
