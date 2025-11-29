@@ -78,9 +78,13 @@ public class AdminController {
 
                 long totalPerformance = deliveryCount + returnCount;
 
+                // Use fullName if available, otherwise fallback to username for backward compatibility
+                String displayName = user.getFullName() != null && !user.getFullName().isEmpty() 
+                        ? user.getFullName() : user.getUsername();
+
                 Map<String, Object> staffData = new LinkedHashMap<>();
                 staffData.put("id", user.getId());
-                staffData.put("fullName", user.getUsername());
+                staffData.put("fullName", displayName);
                 staffData.put("username", user.getUsername());
                 staffData.put("role", role);
                 staffData.put("status", user.isEnabled() ? "WORKING" : "RESIGNED");
@@ -145,6 +149,7 @@ public class AdminController {
         User newStaff = new User();
         newStaff.setUsername(username.trim());
         newStaff.setPassword(passwordEncoder.encode(password));
+        newStaff.setFullName(fullName.trim());
         newStaff.setStationId(stationId.trim());
         newStaff.setRole(role.trim());
         newStaff.setEnabled(true);
@@ -156,10 +161,10 @@ public class AdminController {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("id", newStaff.getId());
         response.put("username", newStaff.getUsername());
-        response.put("fullName", fullName);
+        response.put("fullName", newStaff.getFullName());
         response.put("stationId", newStaff.getStationId());
         response.put("role", newStaff.getRole());
-        response.put("status", "WORKING");
+        response.put("status", newStaff.isEnabled() ? "WORKING" : "RESIGNED");
 
         return ResponseEntity.ok(response);
     }
