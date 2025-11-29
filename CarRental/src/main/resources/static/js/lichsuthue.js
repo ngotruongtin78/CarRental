@@ -249,6 +249,20 @@ function isExpiredRental(record) {
            paymentStatus === "REFUND_COMPLETED" || paymentStatus === "NO_REFUND";
 }
 
+/**
+ * Kiểm tra xem có nên hiển thị thông tin giải thích cách tính thời gian thuê hay không.
+ * Chỉ hiện khi: chưa check-in, chưa hủy, chưa hoàn thành, chưa hết hạn
+ */
+function shouldShowRentalTimeInfo(record) {
+    if (!record) return false;
+    const checkedIn = record.checkinTime || record.checkinPhotoData;
+    if (checkedIn) return false;
+    if (isCancelled(record)) return false;
+    if (isCompleted(record)) return false;
+    if (isExpiredRental(record)) return false;
+    return true;
+}
+
 function canModifyReservation(record) {
     if (!record || isCancelled(record) || isCompleted(record)) return false;
     const status = (record.status || "").toUpperCase();
@@ -634,8 +648,21 @@ function renderHistoryItem(item) {
     const container = document.createElement("div");
     container.classList.add("history-item");
 
-    const start = formatDate(record.startDate || record.startTime);
-    const end = formatDate(record.endDate || record.endTime) || "Chưa trả";
+    // Kiểm tra nếu đã check-in → hiển thị cả giờ phút
+    const hasCheckedInRecord = record.checkinTime || record.checkinPhotoData;
+    const start = hasCheckedInRecord 
+        ? formatDateTime(record.startTime) 
+        : formatDate(record.startDate || record.startTime);
+    const end = hasCheckedInRecord 
+        ? (record.endTime ? formatDateTime(record.endTime) : "Chưa trả")
+        : (formatDate(record.endDate || record.endTime) || "Chưa trả");
+    
+    // Tooltip giải thích cách tính thời gian (1 ngày = 24 tiếng)
+    const rentalTimeExplanation = "1 ngày = 24 tiếng từ lúc check-in";
+    const timeTooltip = hasCheckedInRecord 
+        ? `title="${rentalTimeExplanation}"`
+        : `title="Thời gian chính xác sẽ được tính từ lúc check-in (${rentalTimeExplanation})"`;
+    
     const vehicleLabel = vehicle ? `${vehicle.brand ?? vehicle.type} (${vehicle.plate})` : record.vehicleId;
     const stationLabel = station ? `${station.name} - ${station.address ?? ""}` : (record.stationId || "");
     const total = record.total ? Number(record.total).toLocaleString("vi-VN") + " VNĐ" : "0";
@@ -645,7 +672,7 @@ function renderHistoryItem(item) {
     container.innerHTML = `
         <div class="item-header">
             <span class="trip-id">#${record.id}</span>
-            <span class="trip-date">${start}${end ? " - " + end : ""}</span>
+            <span class="trip-date" ${timeTooltip}>${start}${end ? " - " + end : ""}</span>
         </div>
         <div class="item-details">
             <div class="detail-group">
@@ -905,6 +932,20 @@ function renderHistoryItem(item) {
     // Add review button for completed bookings
     if (isCompleted(record) && typeof addReviewButton === 'function') {
         addReviewButton(container, record, vehicle, station);
+    }
+
+    // Hiển thị thông tin về cách tính thời gian thuê nếu chưa check-in
+    if (shouldShowRentalTimeInfo(record)) {
+        const infoBox = document.createElement("div");
+        infoBox.className = "rental-time-info";
+        infoBox.innerHTML = `
+            <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; margin: 8px 0; font-size: 13px;">
+                <i class="fas fa-info-circle" style="color: #1976d2; margin-right: 6px;"></i>
+                <strong>Lưu ý:</strong> Thời gian thuê sẽ được tính chính xác từ lúc bạn check-in. 
+                <br><span style="color: #555;">Ví dụ: Check-in lúc 13:10 ngày 29/11, thuê 1 ngày → Trả xe lúc 13:10 ngày 30/11.</span>
+            </div>
+        `;
+        container.appendChild(infoBox);
     }
 
     if (record.checkinNotes) {
