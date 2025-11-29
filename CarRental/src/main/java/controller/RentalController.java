@@ -58,6 +58,11 @@ public class RentalController {
         return auth != null ? auth.getName() : null;
     }
 
+    /**
+     * Ensures the record has a createdAt timestamp.
+     * This method is duplicated from RentalRecordService because this controller
+     * directly calls rentalRepo.save() in some places for immediate persistence.
+     */
     private void ensureCreatedAt(RentalRecord record) {
         if (record != null && record.getCreatedAt() == null) {
             record.setCreatedAt(LocalDateTime.now());
