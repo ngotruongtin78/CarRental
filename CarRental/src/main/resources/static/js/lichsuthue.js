@@ -790,13 +790,13 @@ function renderHistoryItem(item) {
 
     container.appendChild(actions);
 
-    // ===== BADGE ĐỎ CHO ĐƠN HẾT HẠN =====
+    // ===== BADGE CHO ĐƠN HẾT HẠN (nhiều màu theo trạng thái hoàn tiền) =====
     if (record.status === "EXPIRED") {
         const paymentStatus = (record.paymentStatus || "").toUpperCase();
         let expiredBadge = "";
         
         if (paymentStatus === "REFUND_PENDING") {
-            // Chờ hoàn tiền - Badge đỏ cảnh báo
+            // Chờ hoàn tiền - Badge cam cảnh báo
             expiredBadge = `
                 <div class="expired-warning" style="background: linear-gradient(135deg, #fff3e0, #ffecb3); border: 3px solid #ff9800; padding: 16px; border-radius: 8px; margin-top: 12px;">
                     <div style="display: flex; align-items: center; gap: 12px;">
