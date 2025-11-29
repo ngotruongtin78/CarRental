@@ -420,6 +420,10 @@ public class RentalController {
         double depositPaid = record.getDepositPaidAmount() != null ? record.getDepositPaidAmount() : 0;
         double paidAmount = "PAID".equals(paymentStatus) ? oldTotal : depositPaid;
         
+        // Kiểm tra nếu có phí phát sinh từ lần update trước
+        boolean hadExtraFee = record.getAdditionalFeeAmount() != null && record.getAdditionalFeeAmount() > 0;
+        double oldExtraFee = hadExtraFee ? record.getAdditionalFeeAmount() : 0;
+        
         // Update record with new dates
         record.setStartDate(newStartDate);
         record.setEndDate(newEndDate);
@@ -435,6 +439,91 @@ public class RentalController {
         
         // Message để trả về cho user
         String message = "Đã cập nhật ngày thuê thành công";
+        
+        // Logic xử lý reset khi có phí phát sinh từ trước và đổi về số tiền <= đã thanh toán
+        if (hadExtraFee && "PENDING_EXTRA".equals(paymentStatus) && newTotal <= depositPaid) {
+            // User đã đổi về ngày ít hơn hoặc bằng ban đầu - XÓA phí phát sinh
+            record.setAdditionalFeeAmount(null);
+            record.setAdditionalFeePaidAmount(null);
+            record.setAdditionalFeeNote(null);
+            
+            // Reset paymentStatus về trạng thái phù hợp
+            if (depositPaid >= newTotal) {
+                // Đã thanh toán đủ cho số ngày mới
+                record.setPaymentStatus("PAID");
+                record.setStatus("PAID");
+                record.setHoldExpiresAt(newEndTime);
+                message = "Đã cập nhật lại ngày thuê. Phí phát sinh đã được xóa.";
+            } else if ("cash".equals(paymentMethod) && depositPaid >= newDepositRequired) {
+                // Đủ cọc cho số ngày mới
+                record.setPaymentStatus("PAY_AT_STATION");
+                record.setStatus("PENDING_PAYMENT");
+                message = "Đã cập nhật lại ngày thuê. Phí phát sinh đã được xóa. Vui lòng thanh toán phần còn lại tại trạm.";
+            } else if ("cash".equals(paymentMethod)) {
+                // Vẫn thiếu cọc
+                record.setPaymentStatus("DEPOSIT_PENDING");
+                record.setStatus("PENDING_PAYMENT");
+                record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(15));
+                message = String.format("Đã cập nhật ngày thuê. Vui lòng chuyển thêm %,.0fđ tiền cọc.", 
+                    newDepositRequired - depositPaid);
+            }
+            
+            // Lưu và return sớm
+            rentalRepo.save(record);
+            
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("id", record.getId());
+            response.put("startDate", record.getStartDate());
+            response.put("endDate", record.getEndDate());
+            response.put("rentalDays", record.getRentalDays());
+            response.put("total", record.getTotal());
+            response.put("depositRequiredAmount", record.getDepositRequiredAmount());
+            response.put("depositPaidAmount", record.getDepositPaidAmount());
+            response.put("additionalFeeAmount", record.getAdditionalFeeAmount());
+            response.put("additionalFeeNote", record.getAdditionalFeeNote());
+            response.put("paymentStatus", record.getPaymentStatus());
+            response.put("status", record.getStatus());
+            response.put("message", message);
+            
+            return ResponseEntity.ok(response);
+        }
+        
+        // Logic cập nhật phí phát sinh khi giảm nhưng vẫn còn phí (newTotal > depositPaid)
+        if (hadExtraFee && "PENDING_EXTRA".equals(paymentStatus) && newTotal > depositPaid && newTotal < oldTotal) {
+            double newExtraFee = newTotal - depositPaid;
+            
+            if (newExtraFee < oldExtraFee) {
+                // Giảm phí phát sinh
+                record.setAdditionalFeeAmount(newExtraFee);
+                record.setAdditionalFeePaidAmount(null);
+                record.setAdditionalFeeNote(String.format(
+                    "Phí phát sinh do thay đổi ngày thuê.\n" +
+                    "Tổng tiền mới: %,.0fđ\n" +
+                    "Đã thanh toán: %,.0fđ\n" +
+                    "Cần thanh toán thêm: %,.0fđ",
+                    newTotal, depositPaid, newExtraFee
+                ));
+                message = String.format("Đã cập nhật ngày thuê. Phí phát sinh giảm xuống còn %,.0fđ", newExtraFee);
+                
+                // Lưu và return
+                rentalRepo.save(record);
+                
+                Map<String, Object> response = new LinkedHashMap<>();
+                response.put("id", record.getId());
+                response.put("startDate", record.getStartDate());
+                response.put("endDate", record.getEndDate());
+                response.put("rentalDays", record.getRentalDays());
+                response.put("total", record.getTotal());
+                response.put("depositRequiredAmount", record.getDepositRequiredAmount());
+                response.put("additionalFeeAmount", record.getAdditionalFeeAmount());
+                response.put("additionalFeeNote", record.getAdditionalFeeNote());
+                response.put("paymentStatus", record.getPaymentStatus());
+                response.put("status", record.getStatus());
+                response.put("message", message);
+                
+                return ResponseEntity.ok(response);
+            }
+        }
         
         // Smart payment logic
         if (newTotal > oldTotal) {
