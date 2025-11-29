@@ -56,7 +56,7 @@ public class RentalExpirationScheduler {
             
             String refundNote;
             
-            if (depositPaid == 0 && !"PAID".equals(paymentStatus)) {
+            if (depositPaid == 0) {
                 refundNote = "Đơn đã bị hủy do không thanh toán trong thời gian quy định.";
                 log.info("Đơn {} hủy - Chưa thanh toán", record.getId());
                 
