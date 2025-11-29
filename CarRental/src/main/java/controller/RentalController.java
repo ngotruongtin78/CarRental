@@ -273,16 +273,22 @@ public class RentalController {
         double depositRequired = Math.round(calculatedTotal * 0.3 * 100.0) / 100.0;
         record.setDepositRequiredAmount(depositRequired);
 
+        // ===== LOGIC GIỮ CHỖ ĐÚNG =====
+        LocalDateTime holdExpiresAt;
+        LocalDateTime now = LocalDateTime.now();
+
         if ("cash".equals(paymentMethod)) {
-            // Tiền mặt: Chờ chuyển khoản đặt cọc 30%
+            // Tiền mặt: Đặt cọc 30% → Giữ 8 tiếng từ bây giờ
             record.setPaymentStatus("DEPOSIT_PENDING");
             record.setStatus("PENDING_PAYMENT");
-            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5)); // Giữ 5 phút cho đến khi chuyển cọc
+            holdExpiresAt = now.plusHours(8);
+            record.setHoldExpiresAt(holdExpiresAt);
         } else {
-            // Chuyển khoản: Chờ thanh toán
+            // Chuyển khoản: Thanh toán 100% → Giữ 24 tiếng từ bây giờ
             record.setPaymentStatus("BANK_TRANSFER");
             record.setStatus("PENDING_PAYMENT");
-            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5)); // Giữ 5 phút cho đến khi chuyển tiền
+            holdExpiresAt = now.plusHours(24);
+            record.setHoldExpiresAt(holdExpiresAt);
         }
 
         rentalRepo.save(record);
@@ -293,6 +299,7 @@ public class RentalController {
         response.put("total", calculatedTotal);
         response.put("rentalDays", rentalDays);
         response.put("paymentMethod", paymentMethod);
+        response.put("holdExpiresAt", holdExpiresAt); // Trả về để frontend hiển thị
         return ResponseEntity.ok(response);
     }
 
