@@ -16,6 +16,9 @@ import java.util.stream.Collectors;
 @Service
 public class RentalRecordService {
 
+    // Multiplier for numeric IDs to ensure they produce timestamps larger than ObjectId timestamps
+    private static final long NUMERIC_ID_MULTIPLIER = 1_000_000L;
+
     private final RentalRecordRepository repo;
     private final VehicleRepository vehicleRepository;
     private final StationRepository stationRepository;
@@ -125,11 +128,12 @@ public class RentalRecordService {
                 // ID không phải ObjectId, tiếp tục xuống dưới
             }
 
-            // Fallback 2: Parse số từ ID (rental206 → 206)
+            // Fallback 2: Parse số từ ID (rental205 → 205)
             String digits = id.replaceAll("[^0-9]", "");
             if (!digits.isEmpty()) {
                 try {
-                    return Long.parseLong(digits);
+                    // Higher ID = newer rental = larger timestamp
+                    return Long.parseLong(digits) * NUMERIC_ID_MULTIPLIER;
                 } catch (NumberFormatException ignored) {
                     // Fallback to 0 below
                 }
