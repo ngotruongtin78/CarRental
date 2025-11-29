@@ -160,10 +160,8 @@ public class RentalController {
         record.setEndDate(endDate);
         record.setRentalDays(rentalDays);
         record.setDistanceKm(distanceKm != null ? distanceKm : 0);
-        // Lưu thời gian đặt xe thực tế
         LocalDateTime actualStartTime = LocalDateTime.now();
         record.setStartTime(actualStartTime);
-        // Tính hạn trả = thời gian đặt + số ngày thuê (đúng 24h/ngày)
         record.setEndTime(actualStartTime.plusDays(rentalDays));
         record.setTotal(vehicle.getPrice() * rentalDays);
         record.setStatus("PENDING_PAYMENT");
