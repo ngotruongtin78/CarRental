@@ -4,20 +4,14 @@ let currentContractData = null;
 
 // Hàm lấy danh sách xe giao
 function loadHandovers() {
-    console.log('Bắt đầu tải danh sách từ API...');
     fetch('/api/staff/handover/list')
         .then(response => {
-            console.log('API Response Status:', response.status);
             if (!response.ok) {
                 throw new Error(`HTTP Error: ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
-            console.log('Dữ liệu từ API:', data);
-            if (!data || data.length === 0) {
-                console.warn('API trả về dữ liệu rỗng hoặc null');
-            }
             allHandovers = data || [];
             displayHandovers(allHandovers);
         })
@@ -73,7 +67,6 @@ function displayHandovers(handovers) {
 
 // Hàm mở modal chi tiết hợp đồng
 function viewContractDetail(rentalId) {
-    console.log('Đang tải chi tiết hợp đồng cho ID:', rentalId);
     currentRentalId = rentalId;
 
     // Hiển thị modal với loading state
@@ -82,27 +75,18 @@ function viewContractDetail(rentalId) {
 
     // Tải dữ liệu chi tiết
     const apiUrl = `/api/staff/handover/${rentalId}`;
-    console.log('Fetching from URL:', apiUrl);
 
     fetch(apiUrl)
         .then(response => {
-            console.log('Chi tiết API Status:', response.status);
-            console.log('Content-Type:', response.headers.get('content-type'));
-
             if (!response.ok) {
-                console.error('Response not ok. Status:', response.status);
                 return response.text().then(text => {
-                    console.error('Response text:', text);
                     throw new Error(`HTTP Error: ${response.status}`);
                 });
             }
             return response.json();
         })
         .then(data => {
-            console.log('Dữ liệu chi tiết nhận được:', data);
-
             if (data.error) {
-                console.error('API trả về lỗi:', data.error);
                 alert('Lỗi: ' + data.error);
                 closeContractModal();
                 return;
@@ -113,7 +97,6 @@ function viewContractDetail(rentalId) {
         })
         .catch(error => {
             console.error('Lỗi fetch:', error);
-            console.error('Error stack:', error.stack);
             alert('Lỗi: ' + error.message);
             closeContractModal();
         });
@@ -179,7 +162,6 @@ function confirmHandover() {
         })
         .then(response => response.json())
         .then(data => {
-            console.log('Kết quả xác nhận:', data);
             if (data.success) {
                 alert('✓ Xác nhận giao xe thành công!');
                 closeContractModal();
@@ -247,7 +229,6 @@ function showError(message) {
 
 // Tải danh sách khi trang load
 window.addEventListener('DOMContentLoaded', function() {
-    console.log('Trang đã load, bắt đầu tải danh sách giao xe...');
     loadHandovers();
 });
 

@@ -72,23 +72,6 @@ public class RentalController {
         return null; // Valid
     }
 
-    // Kiểm tra và hủy đơn nếu hết hạn giữ xe
-    private boolean expireIfNeeded(RentalRecord record) {
-        if (record == null) return false;
-
-        boolean pending = "PENDING_PAYMENT".equalsIgnoreCase(record.getStatus());
-        boolean expired = record.getHoldExpiresAt() != null && LocalDateTime.now().isAfter(record.getHoldExpiresAt());
-        if (pending && expired) {
-            record.setStatus("CANCELLED");
-            record.setPaymentStatus("EXPIRED");
-            record.setHoldExpiresAt(null);
-            rentalRepo.save(record);
-            vehicleService.releaseHold(record.getVehicleId(), record.getId());
-            return true;
-        }
-        return false;
-    }
-
     @PostMapping("/checkout")
     public Map<String, Object> checkout(@RequestBody Map<String, Object> req) {
         String vehicleId = (String) req.get("vehicleId");
@@ -211,11 +194,6 @@ public class RentalController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
             }
 
-            if (expireIfNeeded(record)) {
-                return ResponseEntity.status(HttpStatus.GONE)
-                        .body("Đơn đặt đã hết hạn thanh toán. Vui lòng đặt xe lại.");
-            }
-
             Vehicle vehicle = null;
             if (record.getVehicleId() != null) {
                 vehicle = vehicleRepo.findById(record.getVehicleId()).orElse(null);
@@ -269,11 +247,6 @@ public class RentalController {
         RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Rental not found");
-        }
-
-        if (expireIfNeeded(record)) {
-            return ResponseEntity.status(HttpStatus.GONE)
-                    .body("Đơn đặt đã hết hạn thanh toán. Vui lòng đặt lại.");
         }
 
         Vehicle vehicle = vehicleRepo.findById(record.getVehicleId()).orElse(null);
