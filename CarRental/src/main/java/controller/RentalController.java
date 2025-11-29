@@ -139,7 +139,14 @@ public class RentalController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid date format");
         }
 
-        final long daySpan = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        final long daySpan = ChronoUnit.DAYS.between(startDate, endDate);
+        
+        // Validation: Không cho phép chọn cùng ngày (ngày kết thúc phải sau ngày bắt đầu)
+        if (daySpan < 1) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Ngày kết thúc phải sau ngày bắt đầu ít nhất 1 ngày. Ví dụ: Thuê ngày 29 → Trả ngày 30.");
+        }
+        
         int rentalDays = (int) Math.max(1, daySpan);
 
         long seq = sequence.getNextSequence("rentalCounter");
@@ -411,13 +418,15 @@ public class RentalController {
                     .body("Ngày bắt đầu phải từ hôm nay trở đi");
         }
         
-        if (newEndDate.isBefore(newStartDate)) {
+        // Tính số ngày thuê mới - XÓA "+1"
+        long daySpan = ChronoUnit.DAYS.between(newStartDate, newEndDate);
+        
+        // Validation: Ngày kết thúc phải sau ngày bắt đầu ít nhất 1 ngày
+        if (daySpan < 1) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
+                    .body("Ngày kết thúc phải sau ngày bắt đầu ít nhất 1 ngày");
         }
         
-        // Tính số ngày thuê mới
-        long daySpan = ChronoUnit.DAYS.between(newStartDate, newEndDate) + 1;
         int newRentalDays = (int) Math.max(1, daySpan);
         
         // Lấy giá xe để tính lại tổng tiền

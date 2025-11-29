@@ -20,6 +20,21 @@ function getTodayLocalDate() {
     return local.toISOString().split("T")[0];
 }
 
+// Helper function to format a date to YYYY-MM-DD without timezone issues
+function formatLocalDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Helper function to get next day from a date string (YYYY-MM-DD)
+function getNextDayStr(dateStr) {
+    const date = new Date(dateStr + 'T00:00:00');
+    date.setDate(date.getDate() + 1);
+    return formatLocalDate(date);
+}
+
 function initDates() {
     const today = getTodayLocalDate();
     const startInput = document.getElementById("start-date");
@@ -29,8 +44,10 @@ function initDates() {
         startInput.min = today;
     }
     if (endInput) {
-        endInput.value = today;
-        endInput.min = today;
+        // Ngày kết thúc mặc định là ngày mai (để đảm bảo ít nhất 1 ngày thuê)
+        const tomorrowStr = getNextDayStr(today);
+        endInput.value = tomorrowStr;
+        endInput.min = tomorrowStr;
     }
 }
 
@@ -51,8 +68,9 @@ function getRentalDays() {
     if (!startInput || !endInput) return 1;
     const start = new Date(startInput.value);
     const end = new Date(endInput.value);
+    // Tính số ngày thuê: end - start (không cộng 1)
     const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    return diff > 0 ? diff + 1 : 1;
+    return diff > 0 ? diff : 1;
 }
 
 function renderSelectionDetails() {
@@ -441,9 +459,13 @@ if (startInput) {
             startInput.value = today;
         }
         if (endInput) {
-            endInput.min = startInput.value;
-            if (endInput.value < startInput.value) {
-                endInput.value = startInput.value;
+            // endDate phải sau startDate ít nhất 1 ngày
+            const nextDayStr = getNextDayStr(startInput.value);
+            endInput.min = nextDayStr;
+            
+            // Auto set endDate = startDate + 1 nếu endDate <= startDate
+            if (endInput.value <= startInput.value) {
+                endInput.value = nextDayStr;
             }
         }
         renderSelectionDetails();
@@ -451,8 +473,13 @@ if (startInput) {
 }
 if (endInput) {
     endInput.addEventListener("change", () => {
-        if (startInput && endInput.value < startInput.value) {
-            endInput.value = startInput.value;
+        if (startInput) {
+            // Validation: Ngày kết thúc phải sau ngày bắt đầu ít nhất 1 ngày
+            if (endInput.value <= startInput.value) {
+                alert("Ngày kết thúc phải sau ngày bắt đầu ít nhất 1 ngày.\n\nVí dụ: Thuê ngày 29/11 → Trả ngày 30/11 = 1 ngày");
+                // Reset to next day
+                endInput.value = getNextDayStr(startInput.value);
+            }
         }
         renderSelectionDetails();
     });

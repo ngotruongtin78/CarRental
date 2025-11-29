@@ -486,23 +486,38 @@ body {
 
 .rental-options {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.rental-options .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .rental-options .form-group label {
     display: block;
-    margin-bottom: 6px;
-    font-weight: bold;
+    margin-bottom: 0;
+    font-weight: 600;
     color: #333;
+    font-size: 14px;
+    white-space: nowrap;
 }
 
 .rental-options .form-group input {
     width: 100%;
-    padding: 10px 12px;
+    padding: 12px;
     border: 1px solid #d9e8dc;
     border-radius: 10px;
     font-size: 14px;
+    box-sizing: border-box;
+}
+
+.rental-options .form-group input:focus {
+    outline: none;
+    border-color: #6fa33c;
+    box-shadow: 0 0 0 3px rgba(111, 163, 60, 0.1);
 }
 
 #distance-display {
@@ -512,6 +527,19 @@ body {
     border: 1px solid #d9e8dc;
     font-weight: bold;
     color: #2e7d32;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    box-sizing: border-box;
+}
+
+/* Responsive - Mobile */
+@media (max-width: 768px) {
+    .rental-options {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
 }
 
 .book-now-action {
