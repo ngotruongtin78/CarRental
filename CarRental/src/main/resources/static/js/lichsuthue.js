@@ -774,19 +774,52 @@ function renderHistoryItem(item) {
     // Add notice for expired rentals
     if (isExpiredRental(record) && record.additionalFeeNote) {
         const notice = document.createElement("div");
-        notice.style.cssText = `background: linear-gradient(135deg, #ffebee 0%, #fff3e0 100%); border-left: 5px solid #d32f2f; padding: 16px; margin: 16px 0; border-radius: 10px; box-shadow: 0 4px 12px rgba(211,47,47,0.15);`;
+        
+        // Phân biệt tiền mặt vs chuyển khoản
+        const isCash = record.paymentMethod && record.paymentMethod.toLowerCase() === "cash";
+        const bgColor = isCash ? "#ffebee" : "#fff3e0";
+        const borderColor = isCash ? "#c62828" : "#f57c00";
+        
+        notice.style.cssText = `
+            background: linear-gradient(135deg, ${bgColor} 0%, #fafafa 100%);
+            border-left: 5px solid ${borderColor};
+            padding: 20px;
+            margin: 16px 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        `;
+        
         notice.innerHTML = `
             <div style="display: flex; gap: 16px;">
-                <i class="fas fa-exclamation-circle" style="color: #d32f2f; font-size: 32px;"></i>
+                <i class="fas fa-exclamation-circle" style="color: ${borderColor}; font-size: 36px; margin-top: 4px;"></i>
                 <div style="flex: 1;">
-                    <h4 style="color: #d32f2f; margin: 0 0 12px 0; font-size: 18px;">❌ Đơn đã hết hạn giữ chỗ</h4>
-                    <p style="margin: 0 0 16px 0; white-space: pre-line; font-size: 14px; line-height: 1.8;">${record.additionalFeeNote}</p>
-                    <a href="/profile#support" style="display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; background: linear-gradient(135deg, #ff6b6b, #d32f2f); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                        <i class="fas fa-headset"></i> Yêu cầu hỗ trợ hoàn tiền
+                    <h4 style="color: ${borderColor}; margin: 0 0 16px 0; font-size: 20px; font-weight: 700;">
+                        ${isCash ? '❌ Không hoàn tiền đặt cọc' : '⚠️ Đơn đã hết hạn'}
+                    </h4>
+                    <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px; line-height: 1.8; white-space: pre-line; font-size: 14px; color: #424242;">
+                        ${record.additionalFeeNote}
+                    </div>
+                    ${!isCash ? `
+                    <a href="/profile#support" 
+                       style="display: inline-flex; align-items: center; gap: 10px; 
+                              padding: 12px 24px; background: linear-gradient(135deg, #ff6b6b, #d32f2f); 
+                              color: white; text-decoration: none; border-radius: 10px; 
+                              font-weight: 700; font-size: 15px; box-shadow: 0 4px 12px rgba(211,47,47,0.3);
+                              transition: transform 0.2s;">
+                        <i class="fas fa-headset"></i>
+                        Yêu cầu hoàn tiền
                     </a>
+                    ` : `
+                    <div style="padding: 12px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #f57c00;">
+                        <i class="fas fa-info-circle" style="color: #f57c00;"></i>
+                        <strong style="color: #e65100;">Lưu ý:</strong> 
+                        Tiền đặt cọc không được hoàn lại theo chính sách thanh toán tiền mặt.
+                    </div>
+                    `}
                 </div>
             </div>
         `;
+        
         container.appendChild(notice);
     }
 
@@ -1340,14 +1373,31 @@ function openRentalModal(item) {
     // Add notice for expired rentals in modal
     if (isExpiredRental(record) && record.additionalFeeNote) {
         const section = document.createElement("div");
+        
+        // Phân biệt tiền mặt vs chuyển khoản
+        const isCash = record.paymentMethod && record.paymentMethod.toLowerCase() === "cash";
+        const bgColor = isCash ? "#ffebee" : "#fff8e1";
+        const borderColor = isCash ? "#c62828" : "#ff9800";
+        const iconColor = isCash ? "#c62828" : "#ff6f00";
+        
         section.innerHTML = `
-            <div style="background: linear-gradient(135deg, #fff8e1, #ffecb3); border: 3px solid #ff9800; padding: 24px; border-radius: 12px; text-align: center;">
-                <i class="fas fa-clock" style="font-size: 56px; color: #ff6f00; margin-bottom: 16px;"></i>
-                <h3 style="color: #e65100; margin: 0 0 16px 0; font-size: 22px;">Đơn đã hết hạn giữ chỗ</h3>
-                <p style="margin: 0 0 20px 0; white-space: pre-line; line-height: 1.9;">${record.additionalFeeNote}</p>
+            <div style="background: linear-gradient(135deg, ${bgColor}, ${isCash ? '#fce4ec' : '#ffecb3'}); border: 3px solid ${borderColor}; padding: 24px; border-radius: 12px; text-align: center;">
+                <i class="fas ${isCash ? 'fa-times-circle' : 'fa-clock'}" style="font-size: 56px; color: ${iconColor}; margin-bottom: 16px;"></i>
+                <h3 style="color: ${isCash ? '#b71c1c' : '#e65100'}; margin: 0 0 16px 0; font-size: 22px;">
+                    ${isCash ? '❌ Không hoàn tiền đặt cọc' : 'Đơn đã hết hạn giữ chỗ'}
+                </h3>
+                <p style="margin: 0 0 20px 0; white-space: pre-line; line-height: 1.9; text-align: left; background: white; padding: 16px; border-radius: 8px;">${record.additionalFeeNote}</p>
+                ${!isCash ? `
                 <a href="/profile#support" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; background: linear-gradient(135deg, #ff6b6b, #d32f2f); color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">
                     <i class="fas fa-headset"></i> Liên hệ hỗ trợ để hoàn tiền
                 </a>
+                ` : `
+                <div style="padding: 12px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #f57c00; text-align: left; margin-top: 16px;">
+                    <i class="fas fa-info-circle" style="color: #f57c00;"></i>
+                    <strong style="color: #e65100;">Lưu ý:</strong> 
+                    Tiền đặt cọc không được hoàn lại theo chính sách thanh toán tiền mặt.
+                </div>
+                `}
             </div>
         `;
         rentalModal.body.appendChild(section);

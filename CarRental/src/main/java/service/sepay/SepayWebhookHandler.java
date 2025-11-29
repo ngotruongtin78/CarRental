@@ -173,45 +173,56 @@ public class SepayWebhookHandler {
             record.setWalletReference(data.getTranId());
             record.setDepositRequiredAmount(depositRequired);
 
-            if (newPaid >= record.getTotal()) {
+            // ===== LOGIC GIỮ CHỖ THÔNG MINH =====
+            java.time.LocalDateTime holdExpiry;
+            double totalAmount = record.getTotal();
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+
+            if (newPaid >= totalAmount) {
+                // Case 1: Đã thanh toán 100% → Giữ đến thời gian thuê
                 record.setPaymentStatus("PAID");
                 record.setStatus("PAID");
-                record.setPaidAt(java.time.LocalDateTime.now());
-                record.setHoldExpiresAt(null);
+                record.setPaidAt(now);
+                // Giữ đến giờ thuê, nhưng đảm bảo ít nhất 8 tiếng
+                java.time.LocalDateTime startTime = record.getStartTime();
+                java.time.LocalDateTime minHold = now.plusHours(8);
+                holdExpiry = (startTime != null && startTime.isAfter(minHold)) ? startTime : minHold;
+                record.setHoldExpiresAt(holdExpiry);
                 rentalRepo.save(record);
                 try {
                     vehicleService.markRented(record.getVehicleId(), rentalId);
                 } catch (Exception e) {
                     log.error("Lỗi cập nhật xe: {}", e.getMessage());
                 }
-                log.info("Đơn {} đã thanh toán đủ qua chuyển khoản", rentalId);
+                log.info("✅ Đơn {} đã thanh toán 100%, giữ đến {}", rentalId, holdExpiry);
                 return ResponseEntity.ok("OK");
             }
 
             if (newPaid >= depositRequired) {
+                // Case 2: Đã đặt cọc đủ ≥30% → Giữ 8 tiếng
                 record.setPaymentStatus("PAY_AT_STATION");
-                record.setStatus("ACTIVE");
-                java.time.LocalDate holdStart = record.getStartDate() != null
-                        ? record.getStartDate()
-                        : java.time.LocalDate.now();
-                java.time.LocalDateTime holdUntil = holdStart.atStartOfDay().plusDays(1);
-                if (holdUntil.isBefore(java.time.LocalDateTime.now())) {
-                    holdUntil = java.time.LocalDateTime.now().plusDays(1);
-                }
-                record.setHoldExpiresAt(holdUntil);
+                record.setStatus("PENDING_PAYMENT");
+                holdExpiry = java.time.LocalDateTime.now().plusHours(8);
+                record.setHoldExpiresAt(holdExpiry);
                 rentalRepo.save(record);
                 try {
                     vehicleService.markDeposited(record.getVehicleId(), rentalId);
                 } catch (Exception e) {
                     log.error("Lỗi cập nhật xe sau đặt cọc: {}", e.getMessage());
                 }
-                log.info("Đơn {} đã đặt cọc đủ, chuyển sang PAY_AT_STATION", rentalId);
+                log.info("✅ Đơn {} đã đặt cọc {}/{}, giữ 8 tiếng đến {}", 
+                         rentalId, newPaid, depositRequired, holdExpiry);
                 return ResponseEntity.ok("OK");
             }
 
+            // Case 3: Chưa đủ cọc → Vẫn giữ 5 phút
             record.setPaymentStatus("DEPOSIT_PENDING");
+            record.setStatus("PENDING_PAYMENT");
+            holdExpiry = java.time.LocalDateTime.now().plusMinutes(5);
+            record.setHoldExpiresAt(holdExpiry);
             rentalRepo.save(record);
-            log.info("Đơn {} đã ghi nhận đặt cọc {} qua chuyển khoản", rentalId, incomingAmount);
+            log.warn("⚠️ Đơn {} chưa đủ cọc {}/{}, giữ 5 phút", 
+                     rentalId, newPaid, depositRequired);
             return ResponseEntity.ok("OK");
         }
 
@@ -220,10 +231,19 @@ public class SepayWebhookHandler {
             return ResponseEntity.ok("ALREADY_PAID");
         }
 
+        // ===== Bank transfer: Thanh toán 100% → Giữ đến thời gian thuê =====
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
         record.setPaymentStatus("PAID");
         record.setStatus("PAID");
-        record.setPaidAt(java.time.LocalDateTime.now());
+        record.setPaidAt(now);
         record.setWalletReference(data.getTranId());
+        record.setDepositPaidAmount(record.getTotal()); // Ghi nhận đã thanh toán 100%
+        record.setDepositPaidAt(now);
+        // Giữ đến giờ thuê, nhưng đảm bảo ít nhất 8 tiếng
+        java.time.LocalDateTime startTime = record.getStartTime();
+        java.time.LocalDateTime minHold = now.plusHours(8);
+        java.time.LocalDateTime holdExpiry = (startTime != null && startTime.isAfter(minHold)) ? startTime : minHold;
+        record.setHoldExpiresAt(holdExpiry);
         rentalRepo.save(record);
 
         try {
@@ -232,7 +252,7 @@ public class SepayWebhookHandler {
             log.error("Lỗi cập nhật xe: {}", e.getMessage());
         }
 
-        log.info("Đơn {} đã được cập nhật PAID!", rentalId);
+        log.info("✅ Đơn {} đã được cập nhật PAID (bank transfer), giữ đến {}", rentalId, holdExpiry);
         return ResponseEntity.ok("OK");
     }
 }

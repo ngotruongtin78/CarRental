@@ -294,11 +294,23 @@ public class RentalController {
 
         record.setTotal(calculatedTotal);
         record.setPaymentMethod(paymentMethod);
-        record.setPaymentStatus(paymentMethod.equals("cash") ? "PAY_AT_STATION" : "BANK_TRANSFER");
 
-        // Dù là tiền mặt hay chuyển khoản, đều giữ trạng thái PENDING_PAYMENT cho đến khi hoàn tất
-        record.setStatus("PENDING_PAYMENT");
-        record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
+        // Tính đặt cọc yêu cầu (30%)
+        double depositRequired = Math.round(calculatedTotal * 0.3 * 100.0) / 100.0;
+        record.setDepositRequiredAmount(depositRequired);
+
+        if ("cash".equals(paymentMethod)) {
+            // Tiền mặt: Chờ chuyển khoản đặt cọc 30%
+            record.setPaymentStatus("DEPOSIT_PENDING");
+            record.setStatus("PENDING_PAYMENT");
+            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5)); // Giữ 5 phút cho đến khi chuyển cọc
+        } else {
+            // Chuyển khoản: Chờ thanh toán
+            record.setPaymentStatus("BANK_TRANSFER");
+            record.setStatus("PENDING_PAYMENT");
+            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5)); // Giữ 5 phút cho đến khi chuyển tiền
+        }
+
         rentalRepo.save(record);
         vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
 
