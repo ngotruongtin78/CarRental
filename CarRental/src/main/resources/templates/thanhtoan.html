@@ -122,6 +122,13 @@
     <div style="background:white; padding:25px; border-radius:12px; width:380px; text-align:center;">
         <h2 style="margin-bottom:10px;">Quét mã để thanh toán</h2>
 
+        <div id="transferWarning" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 10px 0; text-align: left;">
+            <strong>⚠️ Lưu ý quan trọng:</strong>
+            <p style="margin: 5px 0 0 0; color: #856404; font-size: 13px;">
+                Vui lòng chuyển khoản <strong>ĐÚNG NỘI DUNG</strong> bên dưới để hệ thống tự động xác nhận đơn hàng của bạn.
+            </p>
+        </div>
+
         <p id="depositNote" style="display:none; margin:6px 0 12px; color:#c62828; font-weight:600; font-size:14px;"></p>
 
         <img id="qrImage" src="" style="width:250px; border:1px solid #ddd; margin-bottom:15px">
@@ -129,7 +136,7 @@
         <p><b>Số tiền:</b> <span id="qrAmount"></span> VNĐ</p>
         <p><b>Chủ TK:</b> <span id="qrAccountName"></span></p>
         <p><b>Số TK:</b> <span id="qrAccountNumber"></span></p>
-        <p><b>Mã đơn:</b> <span id="qrOrder"></span></p>
+        <p style="background: #e8f5e9; padding: 8px; border-radius: 6px; margin: 10px 0;"><b>Nội dung chuyển khoản:</b> <span id="qrOrder" style="color: #2e7d32; font-weight: bold;"></span></p>
 
         <button onclick="checkPaymentStatus()"
                 style="margin-top:15px; padding:10px 18px; border:none; background:#388e3c; color:white; border-radius:6px;">

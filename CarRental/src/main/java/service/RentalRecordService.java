@@ -241,6 +241,10 @@ public class RentalRecordService {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
         if (record.getStartTime() == null) record.setStartTime(LocalDateTime.now());
+        // Lưu thời gian check-in thực tế vào field riêng
+        if (record.getCheckinTime() == null) {
+            record.setCheckinTime(LocalDateTime.now());
+        }
         record.setCheckinNotes(notes);
         if (photoData != null) {
             record.setCheckinPhotoData(photoData);
