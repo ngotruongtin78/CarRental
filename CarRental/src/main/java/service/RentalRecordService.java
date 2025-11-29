@@ -111,7 +111,7 @@ public class RentalRecordService {
      * Trích xuất số từ mã đơn
      * Ví dụ: "rental210" → 210
      */
-    private int extractRentalNumber(String rentalId) {
+    private long extractRentalNumber(String rentalId) {
         if (rentalId == null || rentalId.isEmpty()) {
             return 0;
         }
@@ -124,7 +124,7 @@ public class RentalRecordService {
         }
         
         try {
-            return Integer.parseInt(digits);
+            return Long.parseLong(digits);
         } catch (NumberFormatException e) {
             return 0;
         }
@@ -133,9 +133,9 @@ public class RentalRecordService {
     private Comparator<RentalRecord> buildHistoryComparator() {
         // Sort đơn giản theo mã đơn: số lớn hơn (mới hơn) lên đầu
         return (a, b) -> {
-            int idA = extractRentalNumber(a.getId());
-            int idB = extractRentalNumber(b.getId());
-            return Integer.compare(idB, idA); // DESC: lớn nhất lên đầu
+            long idA = extractRentalNumber(a.getId());
+            long idB = extractRentalNumber(b.getId());
+            return Long.compare(idB, idA); // DESC: lớn nhất lên đầu
         };
     }
 
