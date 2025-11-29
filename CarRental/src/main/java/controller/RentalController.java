@@ -322,6 +322,127 @@ public class RentalController {
         return Map.of("status", "SIGNED", "contractSigned", true);
     }
 
+    /**
+     * Update rental dates (startDate, endDate)
+     * Chỉ được phép khi chuyến chưa bắt đầu và chưa check-in
+     */
+    @PostMapping("/{rentalId}/dates")
+    public ResponseEntity<?> updateRentalDates(
+            @PathVariable("rentalId") String rentalId,
+            @RequestBody Map<String, String> body) {
+        
+        String username = getCurrentUsername();
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+        
+        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        if (record == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy đơn thuê");
+        }
+        
+        if (!Objects.equals(record.getUsername(), username)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền chỉnh sửa đơn này");
+        }
+        
+        // Kiểm tra trạng thái - Chỉ cho phép update khi chưa bắt đầu
+        String status = record.getStatus() != null ? record.getStatus().toUpperCase() : "";
+        if (List.of("CANCELLED", "EXPIRED", "COMPLETED", "RETURNED", "IN_PROGRESS").contains(status)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Không thể chỉnh sửa ngày thuê khi chuyến đã " + status.toLowerCase());
+        }
+        
+        // Kiểm tra đã check-in chưa
+        if (record.getCheckinPhotoData() != null || record.getCheckinTime() != null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Không thể chỉnh sửa ngày thuê khi đã check-in");
+        }
+        
+        // Parse ngày mới
+        String startDateStr = body.get("startDate");
+        String endDateStr = body.get("endDate");
+        
+        if (startDateStr == null || startDateStr.isBlank() || 
+            endDateStr == null || endDateStr.isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Vui lòng cung cấp đủ startDate và endDate");
+        }
+        
+        LocalDate newStartDate;
+        LocalDate newEndDate;
+        try {
+            newStartDate = LocalDate.parse(startDateStr);
+            newEndDate = LocalDate.parse(endDateStr);
+        } catch (java.time.format.DateTimeParseException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Định dạng ngày không hợp lệ. Vui lòng dùng YYYY-MM-DD");
+        }
+        
+        // Validation dates
+        LocalDate today = LocalDate.now();
+        if (newStartDate.isBefore(today)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Ngày bắt đầu phải từ hôm nay trở đi");
+        }
+        
+        if (newEndDate.isBefore(newStartDate)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
+        }
+        
+        // Tính số ngày thuê mới
+        long daySpan = ChronoUnit.DAYS.between(newStartDate, newEndDate) + 1;
+        int newRentalDays = (int) Math.max(1, daySpan);
+        
+        // Lấy giá xe để tính lại tổng tiền
+        Vehicle vehicle = vehicleRepo.findById(record.getVehicleId()).orElse(null);
+        if (vehicle == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Không tìm thấy thông tin xe");
+        }
+        
+        double newTotal = vehicle.getPrice() * newRentalDays;
+        double newDepositRequired = Math.round(newTotal * 0.3 * 100.0) / 100.0;
+        
+        // Update record
+        record.setStartDate(newStartDate);
+        record.setEndDate(newEndDate);
+        record.setRentalDays(newRentalDays);
+        record.setTotal(newTotal);
+        record.setDepositRequiredAmount(newDepositRequired);
+        
+        // Update startTime và endTime
+        LocalDateTime newStartTime = newStartDate.atStartOfDay();
+        LocalDateTime newEndTime = newEndDate.atTime(23, 59, 59);
+        record.setStartTime(newStartTime);
+        record.setEndTime(newEndTime);
+        
+        // Nếu đã thanh toán, cần reset về pending
+        String paymentStatus = record.getPaymentStatus() != null ? record.getPaymentStatus().toUpperCase() : "";
+        if ("PAID".equals(paymentStatus)) {
+            // Nếu đã thanh toán 100% nhưng thay đổi ngày -> cần thanh toán lại
+            record.setPaymentStatus("PENDING");
+            record.setStatus("PENDING_PAYMENT");
+            record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
+        }
+        
+        rentalRepo.save(record);
+        
+        // Trả về record đã update
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("id", record.getId());
+        response.put("startDate", record.getStartDate());
+        response.put("endDate", record.getEndDate());
+        response.put("rentalDays", record.getRentalDays());
+        response.put("total", record.getTotal());
+        response.put("depositRequiredAmount", record.getDepositRequiredAmount());
+        response.put("paymentStatus", record.getPaymentStatus());
+        response.put("status", record.getStatus());
+        response.put("message", "Đã cập nhật ngày thuê thành công");
+        
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping(value = "/{rentalId}/check-in", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> checkIn(
             @PathVariable("rentalId") String rentalId,
