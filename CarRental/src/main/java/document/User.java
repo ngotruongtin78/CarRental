@@ -15,6 +15,7 @@ public class User {
     private String password;
     private String role;
     private boolean enabled = true;
+    private String fullName;
 
     private String stationId;
 
@@ -51,4 +52,6 @@ public class User {
     public void setRisk(boolean risk) { this.risk = risk; }
     public Date getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Date updatedAt) { this.updatedAt = updatedAt; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
 }

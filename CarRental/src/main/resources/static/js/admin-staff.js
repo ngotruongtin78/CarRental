@@ -147,7 +147,34 @@ document.addEventListener("DOMContentLoaded", function() {
     addStaffBtn.onclick = () => { addStaffForm.reset(); addModal.style.display = "block"; }
     addCloseButton.onclick = () => addModal.style.display = "none";
     editCloseButton.onclick = () => editModal.style.display = "none";
-    addStaffForm.addEventListener('submit', e => { e.preventDefault(); alert('Tính năng thêm nhân viên cần API create user.'); addModal.style.display = "none"; });
+    addStaffForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const payload = {
+            fullName: document.getElementById('fullName').value,
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value,
+            stationId: document.getElementById('modalStationId').value,
+            role: document.getElementById('role').value
+        };
+        try {
+            const response = await fetch('/admin/staff/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (response.ok) {
+                alert('Thêm nhân viên thành công!');
+                addModal.style.display = 'none';
+                addStaffForm.reset();
+                loadStaff();
+            } else {
+                const errorText = await response.text();
+                alert('Lỗi: ' + errorText);
+            }
+        } catch (error) {
+            alert('Lỗi kết nối.');
+        }
+    });
 
     staffTableBody.addEventListener('click', function(event) {
         if (event.target.classList.contains('action-button')) {
