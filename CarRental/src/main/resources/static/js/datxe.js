@@ -29,8 +29,12 @@ function initDates() {
         startInput.min = today;
     }
     if (endInput) {
-        endInput.value = today;
-        endInput.min = today;
+        // Ngày kết thúc mặc định là ngày mai (để đảm bảo ít nhất 1 ngày thuê)
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split("T")[0];
+        endInput.value = tomorrowStr;
+        endInput.min = tomorrowStr;
     }
 }
 
@@ -51,8 +55,9 @@ function getRentalDays() {
     if (!startInput || !endInput) return 1;
     const start = new Date(startInput.value);
     const end = new Date(endInput.value);
+    // Tính số ngày thuê: end - start (không cộng 1)
     const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    return diff > 0 ? diff + 1 : 1;
+    return diff > 0 ? diff : 1;
 }
 
 function renderSelectionDetails() {
@@ -441,9 +446,15 @@ if (startInput) {
             startInput.value = today;
         }
         if (endInput) {
-            endInput.min = startInput.value;
-            if (endInput.value < startInput.value) {
-                endInput.value = startInput.value;
+            // endDate phải sau startDate ít nhất 1 ngày
+            const nextDay = new Date(startInput.value);
+            nextDay.setDate(nextDay.getDate() + 1);
+            const nextDayStr = nextDay.toISOString().split('T')[0];
+            endInput.min = nextDayStr;
+            
+            // Auto set endDate = startDate + 1 nếu endDate <= startDate
+            if (endInput.value <= startInput.value) {
+                endInput.value = nextDayStr;
             }
         }
         renderSelectionDetails();
@@ -451,8 +462,18 @@ if (startInput) {
 }
 if (endInput) {
     endInput.addEventListener("change", () => {
-        if (startInput && endInput.value < startInput.value) {
-            endInput.value = startInput.value;
+        if (startInput) {
+            const start = new Date(startInput.value);
+            const end = new Date(endInput.value);
+            
+            // Validation: Ngày kết thúc phải sau ngày bắt đầu ít nhất 1 ngày
+            if (end <= start) {
+                alert("Ngày kết thúc phải sau ngày bắt đầu ít nhất 1 ngày.\n\nVí dụ: Thuê ngày 29/11 → Trả ngày 30/11 = 1 ngày");
+                // Reset to next day
+                const nextDay = new Date(startInput.value);
+                nextDay.setDate(nextDay.getDate() + 1);
+                endInput.value = nextDay.toISOString().split('T')[0];
+            }
         }
         renderSelectionDetails();
     });

@@ -889,8 +889,10 @@ body {
     padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     height: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .upload-label {
@@ -925,30 +927,50 @@ body {
     width: 100%;
     padding: 10px;
     border-radius: 10px;
-    border: 1px solid #dcdcdc;
-    background: #fff;
+    border: 2px dashed #cddccd;
+    background: #f9f9f9;
+    box-sizing: border-box;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#checkin-photo:hover,
+#return-photo:hover {
+    border-color: #6fa33c;
+    background: #f0f7e8;
 }
 
 #checkin-notes,
 #return-notes {
     width: 100%;
+    min-height: 150px;
     border-radius: 10px;
     border: 1px solid #dcdcdc;
-    padding: 10px 12px;
+    padding: 12px;
     resize: vertical;
     font-family: inherit;
+    font-size: 14px;
     box-sizing: border-box;
 }
 
+#checkin-notes:focus,
+#return-notes:focus {
+    outline: none;
+    border-color: #6fa33c;
+    box-shadow: 0 0 0 3px rgba(111, 163, 60, 0.1);
+}
+
 .preview {
-    min-height: 120px;
-    border: 1px dashed #cddccd;
+    min-height: 180px;
+    border: 2px dashed #cddccd;
     border-radius: 10px;
-    display: grid;
-    place-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: #6b806b;
-    background: #fff;
+    background: #fafafa;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 .preview img {
