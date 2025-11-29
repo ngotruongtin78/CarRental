@@ -16,9 +16,6 @@ import java.util.stream.Collectors;
 @Service
 public class RentalRecordService {
 
-    // Multiplier for numeric IDs to ensure they produce timestamps larger than ObjectId timestamps
-    private static final long NUMERIC_ID_MULTIPLIER = 1_000_000L;
-
     private final RentalRecordRepository repo;
     private final VehicleRepository vehicleRepository;
     private final StationRepository stationRepository;
@@ -110,73 +107,36 @@ public class RentalRecordService {
         return response;
     }
 
-    private long getSortTimestamp(RentalRecord record) {
-        if (record == null) return 0;
-
-        // Ưu tiên 1: createdAt (thời điểm tạo đơn)
-        LocalDateTime createdAt = record.getCreatedAt();
-        if (createdAt != null) {
-            return createdAt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+    /**
+     * Trích xuất số từ mã đơn
+     * Ví dụ: "rental210" → 210
+     */
+    private long extractRentalNumber(String rentalId) {
+        if (rentalId == null || rentalId.isEmpty()) {
+            return 0;
         }
-
-        // Fallback 1: Thời điểm tạo từ ObjectId
-        String id = record.getId();
-        if (id != null) {
-            try {
-                return new org.bson.types.ObjectId(id).getTimestamp() * 1000L;
-            } catch (IllegalArgumentException ignored) {
-                // ID không phải ObjectId, tiếp tục xuống dưới
-            }
-
-            // Fallback 2: Parse số từ ID (rental205 → 205)
-            String digits = id.replaceAll("[^0-9]", "");
-            if (!digits.isEmpty()) {
-                try {
-                    // Higher ID = newer rental = larger timestamp
-                    return Long.parseLong(digits) * NUMERIC_ID_MULTIPLIER;
-                } catch (NumberFormatException ignored) {
-                    // Fallback to 0 below
-                }
-            }
+        
+        // Lấy tất cả các chữ số
+        String digits = rentalId.replaceAll("[^0-9]", "");
+        
+        if (digits.isEmpty()) {
+            return 0;
         }
-
-        return 0;
-    }
-
-    private Long getCreatedMillis(RentalRecord record) {
-        if (record == null) return null;
-        LocalDateTime created = record.getCreatedAt();
-        if (created == null) return null;
-        return created.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
-    }
-
-    private Long getObjectIdTimestamp(RentalRecord record) {
-        if (record == null || record.getId() == null) return null;
+        
         try {
-            return new org.bson.types.ObjectId(record.getId()).getTimestamp() * 1000L;
-        } catch (IllegalArgumentException ignored) {
-            return null;
-        }
-    }
-
-    private Long getNumericIdTimestamp(RentalRecord record) {
-        if (record == null || record.getId() == null) return null;
-        try {
-            String digits = record.getId().replaceAll("[^0-9]", "");
-            if (digits.isEmpty()) return null;
             return Long.parseLong(digits);
-        } catch (NumberFormatException ignored) {
-            return null;
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 
     private Comparator<RentalRecord> buildHistoryComparator() {
-        return Comparator
-                .comparingLong(this::getSortTimestamp).reversed()
-                .thenComparing((RentalRecord r) -> getCreatedMillis(r), Comparator.nullsLast(Comparator.reverseOrder()))
-                .thenComparing((RentalRecord r) -> getObjectIdTimestamp(r), Comparator.nullsLast(Comparator.reverseOrder()))
-                .thenComparing((RentalRecord r) -> getNumericIdTimestamp(r), Comparator.nullsLast(Comparator.reverseOrder()))
-                .thenComparing(RentalRecord::getId, Comparator.nullsLast(Comparator.reverseOrder()));
+        // Sort đơn giản theo mã đơn: số lớn hơn (mới hơn) lên đầu
+        return (a, b) -> {
+            long idA = extractRentalNumber(a.getId());
+            long idB = extractRentalNumber(b.getId());
+            return Long.compare(idB, idA); // DESC: lớn nhất lên đầu
+        };
     }
 
     private LocalDateTime toLocalDateTime(LocalDate date, boolean endOfDay) {
