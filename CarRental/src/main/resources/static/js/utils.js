@@ -39,13 +39,36 @@ function formatCoords(lat, lon) {
 // Convert base64 to Blob (dùng cho upload ảnh)
 function base64ToBlob(base64Data) {
     try {
-        const base64 = base64Data.split(',')[1];
+        if (!base64Data || typeof base64Data !== 'string') {
+            return null;
+        }
+        
+        // Extract MIME type from data URL prefix
+        let mimeType = 'image/png'; // default
+        let base64;
+        
+        if (base64Data.includes(',')) {
+            const parts = base64Data.split(',');
+            base64 = parts[1];
+            // Extract MIME type from "data:image/jpeg;base64" format
+            const mimeMatch = parts[0].match(/data:([^;]+)/);
+            if (mimeMatch) {
+                mimeType = mimeMatch[1];
+            }
+        } else {
+            base64 = base64Data;
+        }
+        
+        if (!base64) {
+            return null;
+        }
+        
         const binaryString = atob(base64);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
         }
-        return new Blob([bytes], { type: 'image/png' });
+        return new Blob([bytes], { type: mimeType });
     } catch (e) {
         console.error('Error converting base64 to blob:', e);
         return null;
