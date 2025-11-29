@@ -223,6 +223,13 @@ function isCompleted(record) {
     return ["COMPLETED", "RETURNED"].includes(status);
 }
 
+function isExpiredRental(record) {
+    if (!record) return false;
+    const status = (record.status || "").toUpperCase();
+    const paymentStatus = (record.paymentStatus || "").toUpperCase();
+    return status === "EXPIRED" || paymentStatus === "NO_SHOW";
+}
+
 function canModifyReservation(record) {
     if (!record || isCancelled(record) || isCompleted(record)) return false;
     const status = (record.status || "").toUpperCase();
@@ -765,10 +772,7 @@ function renderHistoryItem(item) {
     container.appendChild(actions);
 
     // Add notice for expired rentals
-    const isExpired = (record.status || "").toUpperCase() === "EXPIRED" || 
-                      (record.paymentStatus || "").toUpperCase() === "NO_SHOW";
-
-    if (isExpired && record.additionalFeeNote) {
+    if (isExpiredRental(record) && record.additionalFeeNote) {
         const notice = document.createElement("div");
         notice.style.cssText = `background: linear-gradient(135deg, #ffebee 0%, #fff3e0 100%); border-left: 5px solid #d32f2f; padding: 16px; margin: 16px 0; border-radius: 10px; box-shadow: 0 4px 12px rgba(211,47,47,0.15);`;
         notice.innerHTML = `
@@ -1334,10 +1338,7 @@ function openRentalModal(item) {
     }
 
     // Add notice for expired rentals in modal
-    const isExpiredModal = (record.status || "").toUpperCase() === "EXPIRED" || 
-                           (record.paymentStatus || "").toUpperCase() === "NO_SHOW";
-
-    if (isExpiredModal && record.additionalFeeNote) {
+    if (isExpiredRental(record) && record.additionalFeeNote) {
         const section = document.createElement("div");
         section.innerHTML = `
             <div style="background: linear-gradient(135deg, #fff8e1, #ffecb3); border: 3px solid #ff9800; padding: 24px; border-radius: 12px; text-align: center;">

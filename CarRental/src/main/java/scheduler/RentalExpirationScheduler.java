@@ -27,17 +27,8 @@ public class RentalExpirationScheduler {
     public void checkExpiredRentals() {
         LocalDateTime now = LocalDateTime.now();
         
-        List<RentalRecord> expiredRentals = rentalRepo.findAll().stream()
-            .filter(r -> {
-                if (r.getHoldExpiresAt() == null || !now.isAfter(r.getHoldExpiresAt())) return false;
-                boolean notCheckedIn = r.getCheckinPhotoData() == null && r.getCheckinTime() == null;
-                String status = r.getStatus() != null ? r.getStatus().toUpperCase() : "";
-                boolean active = !"CANCELLED".equals(status) && !"EXPIRED".equals(status) 
-                              && !"COMPLETED".equals(status) && !"RETURNED".equals(status) 
-                              && !"IN_PROGRESS".equals(status);
-                return notCheckedIn && active;
-            })
-            .toList();
+        // Use database query for better performance instead of findAll().filter()
+        List<RentalRecord> expiredRentals = rentalRepo.findExpiredRentalsNotCheckedIn(now);
         
         expiredRentals.forEach(this::expireRental);
         if (!expiredRentals.isEmpty()) {
