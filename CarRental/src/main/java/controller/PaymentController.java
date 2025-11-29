@@ -256,19 +256,16 @@ public class PaymentController {
                 if (newPaid >= record.getTotal()) {
                     record.setPaymentStatus("PAID");
                     record.setStatus("PAID");
-                    record.setHoldExpiresAt(null);
+                    // Đã thanh toán 100% → giữ đến thời gian thuê (startTime)
+                    record.setHoldExpiresAt(record.getStartTime());
                     record.setPaidAt(LocalDateTime.now());
                     rentalRepo.save(record);
                     vehicleService.markRented(record.getVehicleId(), rentalId);
                 } else if (newPaid >= depositRequired) {
                     record.setPaymentStatus("PAY_AT_STATION");
                     record.setStatus("ACTIVE");
-                    LocalDate holdStart = Optional.ofNullable(record.getStartDate()).orElse(LocalDate.now());
-                    LocalDateTime holdUntil = holdStart.atStartOfDay().plusDays(1);
-                    if (holdUntil.isBefore(LocalDateTime.now())) {
-                        holdUntil = LocalDateTime.now().plusDays(1);
-                    }
-                    record.setHoldExpiresAt(holdUntil);
+                    // Đã đặt cọc 30% → giữ 8 tiếng
+                    record.setHoldExpiresAt(LocalDateTime.now().plusHours(8));
                     rentalRepo.save(record);
                     vehicleService.markDeposited(record.getVehicleId(), rentalId);
                 } else {
@@ -282,7 +279,8 @@ public class PaymentController {
                 }
                 record.setPaidAt(LocalDateTime.now());
                 record.setStatus("PAID");
-                record.setHoldExpiresAt(null);
+                // Đã thanh toán 100% → giữ đến thời gian thuê (startTime)
+                record.setHoldExpiresAt(record.getStartTime());
                 rentalRepo.save(record);
                 vehicleService.markRented(record.getVehicleId(), rentalId);
             }

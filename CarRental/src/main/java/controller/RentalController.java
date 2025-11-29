@@ -163,11 +163,15 @@ public class RentalController {
         LocalDateTime actualStartTime = LocalDateTime.now();
         record.setStartTime(actualStartTime);
         record.setEndTime(actualStartTime.plusDays(rentalDays));
-        record.setTotal(vehicle.getPrice() * rentalDays);
+        double totalAmount = vehicle.getPrice() * rentalDays;
+        record.setTotal(totalAmount);
         record.setStatus("PENDING_PAYMENT");
         record.setPaymentStatus("PENDING");
         record.setCreatedAt(LocalDateTime.now());
         record.setHoldExpiresAt(LocalDateTime.now().plusMinutes(5));
+        // Tính số tiền đặt cọc cần thiết (30% tổng giá)
+        double depositRequired = Math.round(totalAmount * 0.3 * 100.0) / 100.0;
+        record.setDepositRequiredAmount(depositRequired);
 
         rentalRepo.save(record);
         boolean held = vehicleService.markPendingPayment(vehicleId, rentalId);
