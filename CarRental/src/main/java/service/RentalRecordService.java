@@ -237,20 +237,38 @@ public class RentalRecordService {
         return repo.save(record);
     }
 
-    public RentalRecord checkIn(String rentalId, String username, String notes) {
+    public RentalRecord checkIn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
         if (record.getStartTime() == null) record.setStartTime(LocalDateTime.now());
         record.setCheckinNotes(notes);
+        if (photoData != null) {
+            record.setCheckinPhotoData(photoData);
+        }
+        if (latitude != null) {
+            record.setCheckinLatitude(latitude);
+        }
+        if (longitude != null) {
+            record.setCheckinLongitude(longitude);
+        }
         record.setStatus("IN_PROGRESS");
         ensureCreatedAt(record);
         return repo.save(record);
     }
 
-    public RentalRecord requestReturn(String rentalId, String username, String notes) {
+    public RentalRecord requestReturn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
         record.setReturnNotes(notes);
+        if (photoData != null) {
+            record.setReturnPhotoData(photoData);
+        }
+        if (latitude != null) {
+            record.setReturnLatitude(latitude);
+        }
+        if (longitude != null) {
+            record.setReturnLongitude(longitude);
+        }
         record.setEndTime(LocalDateTime.now());
         record.setStatus("WAITING_INSPECTION");
         ensureCreatedAt(record);
