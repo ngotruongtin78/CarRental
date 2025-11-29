@@ -110,42 +110,28 @@ public class RentalRecordService {
     private long getSortTimestamp(RentalRecord record) {
         if (record == null) return 0;
 
-        List<LocalDateTime> timestamps = new ArrayList<>();
-
-        Optional.ofNullable(record.getEndTime()).ifPresent(timestamps::add);
-        Optional.ofNullable(record.getStartTime()).ifPresent(timestamps::add);
-        Optional.ofNullable(record.getPaidAt()).ifPresent(timestamps::add);
-        Optional.ofNullable(record.getDepositPaidAt()).ifPresent(timestamps::add);
-        Optional.ofNullable(record.getAdditionalFeePaidAt()).ifPresent(timestamps::add);
-        Optional.ofNullable(record.getHoldExpiresAt()).ifPresent(timestamps::add);
-        Optional.ofNullable(record.getCreatedAt()).ifPresent(timestamps::add);
-        Optional.ofNullable(toLocalDateTime(record.getStartDate(), false)).ifPresent(timestamps::add);
-
-        // Ưu tiên thời điểm mới nhất giữa các mốc thanh toán, nhận xe và thời điểm tạo đơn.
-        LocalDateTime newest = timestamps.stream()
-                .filter(Objects::nonNull)
-                .max(LocalDateTime::compareTo)
-                .orElse(null);
-
-        if (newest != null) {
-            return newest.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        // Ưu tiên 1: createdAt (thời điểm tạo đơn)
+        LocalDateTime createdAt = record.getCreatedAt();
+        if (createdAt != null) {
+            return createdAt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
         }
 
-        // Fallback: thời điểm tạo bản ghi dựa trên ObjectId hoặc chuỗi số (ưu tiên hiển thị đơn mới nhất).
+        // Fallback 1: Thời điểm tạo từ ObjectId
         String id = record.getId();
         if (id != null) {
             try {
                 return new org.bson.types.ObjectId(id).getTimestamp() * 1000L;
             } catch (IllegalArgumentException ignored) {
-                // ID không phải ObjectId, tiếp tục xuống dưới.
+                // ID không phải ObjectId, tiếp tục xuống dưới
             }
 
+            // Fallback 2: Parse số từ ID (rental206 → 206)
             String digits = id.replaceAll("[^0-9]", "");
             if (!digits.isEmpty()) {
                 try {
                     return Long.parseLong(digits);
                 } catch (NumberFormatException ignored) {
-                    // Fallback to 0 below.
+                    // Fallback to 0 below
                 }
             }
         }
