@@ -373,7 +373,7 @@ public class RentalController {
         try {
             newStartDate = LocalDate.parse(startDateStr);
             newEndDate = LocalDate.parse(endDateStr);
-        } catch (Exception e) {
+        } catch (java.time.format.DateTimeParseException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Định dạng ngày không hợp lệ. Vui lòng dùng YYYY-MM-DD");
         }
