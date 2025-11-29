@@ -187,7 +187,6 @@ public class SepayWebhookHandler {
                 java.time.LocalDateTime endTime = record.getEndTime();
                 if (endTime == null) {
                     java.time.LocalDate endDate = record.getEndDate();
-                    java.time.LocalDate startDate = record.getStartDate();
                     
                     if (endDate != null) {
                         // Lấy giờ từ startTime nếu có
@@ -199,7 +198,7 @@ public class SepayWebhookHandler {
                             endTime = endDate.atTime(23, 59, 59);
                         }
                     } else {
-                        endTime = now.plusHours(24);
+                        endTime = now.plusDays(1).with(java.time.LocalTime.of(23, 59, 59));
                     }
                 }
                 
@@ -249,7 +248,7 @@ public class SepayWebhookHandler {
             // Chưa đủ cọc - Giữ 8 tiếng (cho phép user tiếp tục chuyển)
             record.setPaymentStatus("DEPOSIT_PENDING");
             record.setStatus("PENDING_PAYMENT");
-            holdExpiry = java.time.LocalDateTime.now().plusHours(8);
+            holdExpiry = now.plusHours(8);
             record.setHoldExpiresAt(holdExpiry);
             rentalRepo.save(record);
             log.warn("CẢNH BÁO: Đơn {} chưa đủ cọc {}/{}, giữ 8 tiếng", 
