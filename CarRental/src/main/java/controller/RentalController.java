@@ -161,7 +161,8 @@ public class RentalController {
         record.setRentalDays(rentalDays);
         record.setDistanceKm(distanceKm != null ? distanceKm : 0);
         record.setStartTime(startDate.atStartOfDay());
-        record.setEndTime(endDate.plusDays(1).atStartOfDay());
+        // Sử dụng cuối ngày của endDate thay vì cộng thêm 1 ngày
+        record.setEndTime(endDate.atTime(23, 59, 59));
         record.setTotal(vehicle.getPrice() * rentalDays);
         record.setStatus("PENDING_PAYMENT");
         record.setPaymentStatus("PENDING");
