@@ -112,7 +112,18 @@ document.addEventListener("DOMContentLoaded", function() {
             const v = data.vehicle || {};
             const s = data.station || {};
 
-            const formatDate = (d) => d ? new Date(d).toLocaleString('vi-VN') : '---';
+            const formatDate = (d) => {
+                if (!d) return '---';
+                const date = new Date(d);
+                if (isNaN(date.getTime())) return '---';
+                
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${day}/${month}/${year} ${hours}:${minutes}`;
+            };
 
             const html = `
                 <div class="section-title">Thông tin chung</div>
