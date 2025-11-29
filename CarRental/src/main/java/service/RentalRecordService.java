@@ -125,11 +125,12 @@ public class RentalRecordService {
                 // ID không phải ObjectId, tiếp tục xuống dưới
             }
 
-            // Fallback 2: Parse số từ ID (rental206 → 206)
+            // Fallback 2: Parse số từ ID (rental205 → 205)
             String digits = id.replaceAll("[^0-9]", "");
             if (!digits.isEmpty()) {
                 try {
-                    return Long.parseLong(digits);
+                    // ĐẢO NGƯỢC: ID càng lớn → timestamp càng lớn
+                    return Long.parseLong(digits) * 1000000L;  // Nhân 1 triệu để đảm bảo > ObjectId timestamp
                 } catch (NumberFormatException ignored) {
                     // Fallback to 0 below
                 }

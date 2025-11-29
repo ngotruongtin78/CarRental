@@ -58,6 +58,12 @@ public class RentalController {
         return auth != null ? auth.getName() : null;
     }
 
+    private void ensureCreatedAt(RentalRecord record) {
+        if (record != null && record.getCreatedAt() == null) {
+            record.setCreatedAt(LocalDateTime.now());
+        }
+    }
+
     private String validatePhoto(MultipartFile photo) {
         if (photo == null || photo.isEmpty()) {
             return null; // Valid - no photo provided
@@ -291,6 +297,7 @@ public class RentalController {
             record.setHoldExpiresAt(holdExpiresAt);
         }
 
+        ensureCreatedAt(record);
         rentalRepo.save(record);
         vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
 
@@ -316,6 +323,7 @@ public class RentalController {
         record.setStatus("CANCELLED");
         record.setPaymentStatus("CANCELLED");
         record.setHoldExpiresAt(null);
+        ensureCreatedAt(record);
         rentalRepo.save(record);
         vehicleService.releaseHold(record.getVehicleId(), rentalId);
         return ResponseEntity.ok(Map.of("status", "CANCELLED"));
@@ -476,6 +484,7 @@ public class RentalController {
             }
             
             // Lưu và return sớm
+            ensureCreatedAt(record);
             rentalRepo.save(record);
             
             Map<String, Object> response = new LinkedHashMap<>();
@@ -513,6 +522,7 @@ public class RentalController {
                 message = String.format("Đã cập nhật ngày thuê. Phí phát sinh giảm xuống còn %,.0fđ", newExtraFee);
                 
                 // Lưu và return
+                ensureCreatedAt(record);
                 rentalRepo.save(record);
                 
                 Map<String, Object> response = new LinkedHashMap<>();
@@ -600,6 +610,7 @@ public class RentalController {
             message = "Đã cập nhật ngày thuê thành công";
         }
         
+        ensureCreatedAt(record);
         rentalRepo.save(record);
         
         // Trả về record đã update
