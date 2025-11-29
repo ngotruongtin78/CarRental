@@ -764,6 +764,28 @@ function renderHistoryItem(item) {
 
     container.appendChild(actions);
 
+    // Add notice for expired rentals
+    const isExpired = (record.status || "").toUpperCase() === "EXPIRED" || 
+                      (record.paymentStatus || "").toUpperCase() === "NO_SHOW";
+
+    if (isExpired && record.additionalFeeNote) {
+        const notice = document.createElement("div");
+        notice.style.cssText = `background: linear-gradient(135deg, #ffebee 0%, #fff3e0 100%); border-left: 5px solid #d32f2f; padding: 16px; margin: 16px 0; border-radius: 10px; box-shadow: 0 4px 12px rgba(211,47,47,0.15);`;
+        notice.innerHTML = `
+            <div style="display: flex; gap: 16px;">
+                <i class="fas fa-exclamation-circle" style="color: #d32f2f; font-size: 32px;"></i>
+                <div style="flex: 1;">
+                    <h4 style="color: #d32f2f; margin: 0 0 12px 0; font-size: 18px;">❌ Đơn đã hết hạn giữ chỗ</h4>
+                    <p style="margin: 0 0 16px 0; white-space: pre-line; font-size: 14px; line-height: 1.8;">${record.additionalFeeNote}</p>
+                    <a href="/profile#support" style="display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; background: linear-gradient(135deg, #ff6b6b, #d32f2f); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                        <i class="fas fa-headset"></i> Yêu cầu hỗ trợ hoàn tiền
+                    </a>
+                </div>
+            </div>
+        `;
+        container.appendChild(notice);
+    }
+
     // Add review button for completed bookings
     if (isCompleted(record) && typeof addReviewButton === 'function') {
         addReviewButton(container, record, vehicle, station);
@@ -1309,6 +1331,25 @@ function openRentalModal(item) {
 
         feeSection.querySelector(".btn-extra-fee")?.addEventListener("click", () => startExtraFeePayment(record));
         rentalModal.body.appendChild(feeSection);
+    }
+
+    // Add notice for expired rentals in modal
+    const isExpiredModal = (record.status || "").toUpperCase() === "EXPIRED" || 
+                           (record.paymentStatus || "").toUpperCase() === "NO_SHOW";
+
+    if (isExpiredModal && record.additionalFeeNote) {
+        const section = document.createElement("div");
+        section.innerHTML = `
+            <div style="background: linear-gradient(135deg, #fff8e1, #ffecb3); border: 3px solid #ff9800; padding: 24px; border-radius: 12px; text-align: center;">
+                <i class="fas fa-clock" style="font-size: 56px; color: #ff6f00; margin-bottom: 16px;"></i>
+                <h3 style="color: #e65100; margin: 0 0 16px 0; font-size: 22px;">Đơn đã hết hạn giữ chỗ</h3>
+                <p style="margin: 0 0 20px 0; white-space: pre-line; line-height: 1.9;">${record.additionalFeeNote}</p>
+                <a href="/profile#support" style="display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; background: linear-gradient(135deg, #ff6b6b, #d32f2f); color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">
+                    <i class="fas fa-headset"></i> Liên hệ hỗ trợ để hoàn tiền
+                </a>
+            </div>
+        `;
+        rentalModal.body.appendChild(section);
     }
 
     rentalModal.el.classList.add("show");
