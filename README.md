@@ -18,7 +18,7 @@ Khi khởi động ứng dụng lần đầu tiên, hệ thống sẽ tự độ
 - **Vai trò**: STAFF
 - **Quyền**: Quản lý xe, trả xe, xác minh khách hàng
 
-> **Lưu ý Bảo mật**: Mật khẩu mặc định chỉ hiển thị trong tài liệu này để hỗ trợ việc thiết lập ban đầu. Hệ thống sẽ KHÔNG in mật khẩu ra console khi khởi động. Hãy lưu giữ thông tin này ở nơi an toàn và đổi mật khẩu ngay sau khi đăng nhập lần đầu.
+> **Lưu ý Bảo mật**: Mật khẩu mặc định chỉ hiển thị trong tài liệu này để hỗ trợ việc thiết lập ban đầu. Hệ thống sẽ KHÔNG in mật khẩu ra console khi khởi động, chỉ in thông báo tạo tài khoản thành công với tên đăng nhập. Hãy lưu giữ thông tin này ở nơi an toàn và đổi mật khẩu ngay sau khi đăng nhập lần đầu.
 
 ### Đổi Mật khẩu Mặc định
 
@@ -42,6 +42,7 @@ VALUES ('admin_new', '$2a$10$YOUR_BCRYPT_HASHED_PASSWORD', 'ADMIN', 'Admin Name'
 
 3. Tạo tài khoản Staff mới:
 ```sql
+-- Lưu ý: Đảm bảo station với id=1 đã tồn tại trong bảng stations trước khi chạy lệnh này
 INSERT INTO users (username, password, role, full_name, enabled, verified, station_id, updated_at)
 VALUES ('staff_new', '$2a$10$YOUR_BCRYPT_HASHED_PASSWORD', 'STAFF', 'Staff Name', 1, 1, 1, NOW());
 ```
@@ -213,7 +214,7 @@ When starting the application for the first time, the system will automatically 
 - **Role**: STAFF
 - **Permissions**: Vehicle management, returns, customer verification
 
-> **Security Note**: Default passwords are only displayed in this documentation to support initial setup. The system will NOT print passwords to the console during startup. Please keep this information secure and change passwords immediately after first login.
+> **Security Note**: Default passwords are only displayed in this documentation to support initial setup. The system will NOT print passwords to the console during startup, only success messages with usernames. Please keep this information secure and change passwords immediately after first login.
 
 ### Change Default Password
 
@@ -237,6 +238,7 @@ VALUES ('admin_new', '$2a$10$YOUR_BCRYPT_HASHED_PASSWORD', 'ADMIN', 'Admin Name'
 
 3. Create new Staff account:
 ```sql
+-- Note: Ensure station with id=1 exists in the stations table before running this command
 INSERT INTO users (username, password, role, full_name, enabled, verified, station_id, updated_at)
 VALUES ('staff_new', '$2a$10$YOUR_BCRYPT_HASHED_PASSWORD', 'STAFF', 'Staff Name', 1, 1, 1, NOW());
 ```
