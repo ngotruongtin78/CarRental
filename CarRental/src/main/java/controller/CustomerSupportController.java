@@ -66,7 +66,7 @@ public class CustomerSupportController {
 
     // 4. Admin phản hồi
     @PostMapping("/admin/reply/{id}")
-    public ResponseEntity<?> replyTicket(@PathVariable("id") String id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<?> replyTicket(@PathVariable("id") Long id, @RequestBody Map<String, String> body) {
         CustomerSupport ticket = supportRepo.findById(id).orElse(null);
         if (ticket == null) return ResponseEntity.notFound().build();
 
