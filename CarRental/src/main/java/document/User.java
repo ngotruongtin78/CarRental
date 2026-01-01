@@ -1,37 +1,51 @@
 package CarRental.example.document;
 
-import org.bson.types.Binary;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.Field;
+import jakarta.persistence.*;
 import java.util.Date;
 
-@Document(collection = "users")
+@Entity
+@Table(name = "users")
 public class User {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(unique = true, nullable = false, length = 50)
     private String username;
+    
+    @Column(nullable = false, length = 100)
     private String password;
+    
+    @Column(length = 20)
     private String role;
     private boolean enabled = true;
+    
+    @Column(length = 100)
     private String fullName;
 
-    private String stationId;
+    private Long stationId;
 
-    @Field("license") private Binary licenseData;
-    @Field("idcard") private Binary idCardData;
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
+    private byte[] licenseData;
+    
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
+    private byte[] idCardData;
 
     private boolean verified = false;
     private boolean verificationRequested = false;
     private boolean risk = false;
+    
+    @Temporal(TemporalType.TIMESTAMP)
     private Date updatedAt = new Date();
 
-    public String getStationId() { return stationId; }
-    public void setStationId(String stationId) { this.stationId = stationId; }
+    public Long getStationId() { return stationId; }
+    public void setStationId(Long stationId) { this.stationId = stationId; }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
     public String getPassword() { return password; }
@@ -40,10 +54,10 @@ public class User {
     public void setRole(String role) { this.role = role; }
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
-    public Binary getLicenseData() { return licenseData; }
-    public void setLicenseData(Binary licenseData) { this.licenseData = licenseData; }
-    public Binary getIdCardData() { return idCardData; }
-    public void setIdCardData(Binary idCardData) { this.idCardData = idCardData; }
+    public byte[] getLicenseData() { return licenseData; }
+    public void setLicenseData(byte[] licenseData) { this.licenseData = licenseData; }
+    public byte[] getIdCardData() { return idCardData; }
+    public void setIdCardData(byte[] idCardData) { this.idCardData = idCardData; }
     public boolean isVerified() { return verified; }
     public void setVerified(boolean verified) { this.verified = verified; }
     public boolean isVerificationRequested() { return verificationRequested; }

@@ -8,7 +8,6 @@ import CarRental.example.repository.StationRepository;
 import CarRental.example.repository.UserRepository;
 import CarRental.example.repository.VehicleRepository;
 import CarRental.example.service.RentalRecordService;
-import CarRental.example.service.SequenceGeneratorService;
 import CarRental.example.service.VehicleService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -33,7 +32,6 @@ public class RentalController {
     private final RentalRecordRepository rentalRepo;
     private final VehicleRepository vehicleRepo;
     private final StationRepository stationRepository;
-    private final SequenceGeneratorService sequence;
     private final VehicleService vehicleService;
     private final RentalRecordService rentalRecordService;
     private final UserRepository userRepository;
@@ -41,13 +39,12 @@ public class RentalController {
     public RentalController(RentalRecordRepository rentalRepo,
                             VehicleRepository vehicleRepo,
                             StationRepository stationRepository,
-                            SequenceGeneratorService sequence, VehicleService vehicleService,
+                            VehicleService vehicleService,
                             RentalRecordService rentalRecordService,
                             UserRepository userRepository) {
         this.rentalRepo = rentalRepo;
         this.vehicleRepo = vehicleRepo;
         this.stationRepository = stationRepository;
-        this.sequence = sequence;
         this.vehicleService = vehicleService;
         this.rentalRecordService = rentalRecordService;
         this.userRepository = userRepository;
@@ -149,11 +146,8 @@ public class RentalController {
         
         int rentalDays = (int) Math.max(1, daySpan);
 
-        long seq = sequence.getNextSequence("rentalCounter");
-        String rentalId = "rental" + seq;
-
         RentalRecord record = new RentalRecord();
-        record.setId(rentalId);
+        // JPA will auto-generate the ID
         record.setUsername(username);
         record.setVehicleId(vehicleId);
         record.setStationId(stationId);

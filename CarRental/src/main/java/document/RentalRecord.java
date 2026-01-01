@@ -1,19 +1,20 @@
 package CarRental.example.document;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Document(collection = "rental_records")
+@Entity
+@Table(name = "rental_records")
 public class RentalRecord {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     private String username;
-    private String userId;
-    private String vehicleId;
-    private String stationId;
+    private Long userId;
+    private Long vehicleId;
+    private Long stationId;
 
     private LocalDate startDate;
     private LocalDate endDate;
@@ -25,6 +26,7 @@ public class RentalRecord {
     private LocalDateTime holdExpiresAt;
     private LocalDateTime checkinTime;  // Thời gian check-in thực tế
 
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     private double total;
@@ -46,7 +48,13 @@ public class RentalRecord {
     private String returnNotes;
     private Double returnLatitude;
     private Double returnLongitude;
+    
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] checkinPhotoData;
+    
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] returnPhotoData;
 
     private Double additionalFeeAmount;
@@ -56,13 +64,21 @@ public class RentalRecord {
 
     private String walletReference;
 
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] deliveryPhotoData;
+    
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] receivePhotoData;
+    
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] signatureData;
 
     // [MỚI - QUAN TRỌNG] Theo dõi hiệu suất nhân viên
-    private String deliveryStaffId;
-    private String returnStaffId;
+    private Long deliveryStaffId;
+    private Long returnStaffId;
 
     // [MỚI] Đánh giá
     private Integer rating;
@@ -71,7 +87,7 @@ public class RentalRecord {
     public RentalRecord() {}
 
     // Constructor cơ bản giữ nguyên...
-    public RentalRecord(String userId, String vehicleId, String stationId, double total) {
+    public RentalRecord(Long userId, Long vehicleId, Long stationId, double total) {
         this.userId = userId;
         this.vehicleId = vehicleId;
         this.stationId = stationId;
@@ -86,15 +102,15 @@ public class RentalRecord {
     // --- GETTERS & SETTERS (Bao gồm các trường cũ và MỚI) ---
     // (Bạn giữ lại các getter/setter cũ, chỉ cần thêm các cái mới dưới đây)
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     // ... (Các getter/setter cũ của bạn) ...
 
-    public String getDeliveryStaffId() { return deliveryStaffId; }
-    public void setDeliveryStaffId(String deliveryStaffId) { this.deliveryStaffId = deliveryStaffId; }
+    public Long getDeliveryStaffId() { return deliveryStaffId; }
+    public void setDeliveryStaffId(Long deliveryStaffId) { this.deliveryStaffId = deliveryStaffId; }
 
-    public String getReturnStaffId() { return returnStaffId; }
-    public void setReturnStaffId(String returnStaffId) { this.returnStaffId = returnStaffId; }
+    public Long getReturnStaffId() { return returnStaffId; }
+    public void setReturnStaffId(Long returnStaffId) { this.returnStaffId = returnStaffId; }
 
     public Integer getRating() { return rating; }
     public void setRating(Integer rating) { this.rating = rating; }
@@ -109,12 +125,12 @@ public class RentalRecord {
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
-    public String getVehicleId() { return vehicleId; }
-    public void setVehicleId(String vehicleId) { this.vehicleId = vehicleId; }
-    public String getStationId() { return stationId; }
-    public void setStationId(String stationId) { this.stationId = stationId; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+    public Long getVehicleId() { return vehicleId; }
+    public void setVehicleId(Long vehicleId) { this.vehicleId = vehicleId; }
+    public Long getStationId() { return stationId; }
+    public void setStationId(Long stationId) { this.stationId = stationId; }
     public LocalDate getStartDate() { return startDate; }
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
     public LocalDate getEndDate() { return endDate; }

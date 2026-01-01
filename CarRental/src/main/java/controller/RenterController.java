@@ -2,8 +2,6 @@ package CarRental.example.controller;
 
 import CarRental.example.document.User;
 import CarRental.example.repository.UserRepository;
-import org.bson.BsonBinarySubType;
-import org.bson.types.Binary;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.ResponseEntity;
@@ -44,9 +42,9 @@ public class RenterController {
         return ResponseEntity.ok(user);
     }
 
-    private String toDataUri(Binary binaryData) {
-        if (binaryData == null || binaryData.getData() == null) return null;
-        String base64 = Base64.getEncoder().encodeToString(binaryData.getData());
+    private String toDataUri(byte[] binaryData) {
+        if (binaryData == null) return null;
+        String base64 = Base64.getEncoder().encodeToString(binaryData);
         return "data:image/png;base64," + base64;
     }
 
@@ -102,9 +100,9 @@ public class RenterController {
 
     @PostMapping("/upload-license")
     public ResponseEntity<?> uploadLicense(@RequestParam("file") MultipartFile file) {
-        Binary licenseBinary;
+        byte[] licenseBinary;
         try {
-            licenseBinary = new Binary(BsonBinarySubType.BINARY, file.getBytes());
+            licenseBinary = file.getBytes();
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Upload thất bại");
         }
@@ -114,9 +112,9 @@ public class RenterController {
 
     @PostMapping("/upload-idcard")
     public ResponseEntity<?> uploadIdCard(@RequestParam("file") MultipartFile file) {
-        Binary idBinary;
+        byte[] idBinary;
         try {
-            idBinary = new Binary(BsonBinarySubType.BINARY, file.getBytes());
+            idBinary = file.getBytes();
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Upload thất bại");
         }

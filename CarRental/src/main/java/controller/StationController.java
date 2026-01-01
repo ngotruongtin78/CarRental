@@ -3,7 +3,6 @@ package CarRental.example.controller;
 import CarRental.example.document.Station;
 import CarRental.example.repository.StationRepository;
 import CarRental.example.repository.VehicleRepository;
-import CarRental.example.service.SequenceGeneratorService;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
@@ -16,14 +15,11 @@ import java.util.*;
 public class StationController {
     private final StationRepository stationRepo;
     private final VehicleRepository vehicleRepo;
-    private final SequenceGeneratorService sequenceGenerator;
 
     public StationController(StationRepository stationRepo,
-                             VehicleRepository vehicleRepo,
-                             SequenceGeneratorService sequenceGenerator) {
+                             VehicleRepository vehicleRepo) {
         this.stationRepo = stationRepo;
         this.vehicleRepo = vehicleRepo;
-        this.sequenceGenerator = sequenceGenerator;
     }
 
     // API cho trang chủ (Khách hàng)
@@ -50,7 +46,7 @@ public class StationController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getStation(@PathVariable("id") String id) {
+    public ResponseEntity<?> getStation(@PathVariable("id") Long id) {
         Optional<Station> station = stationRepo.findById(id);
         return station.<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Station not found"));
@@ -90,26 +86,24 @@ public class StationController {
     }
 
     @GetMapping("/admin/{id}")
-    public Optional<Station> getStationById(@PathVariable("id") String id) {
+    public Optional<Station> getStationById(@PathVariable("id") Long id) {
         return stationRepo.findById(id);
     }
 
     @PostMapping("/admin/add")
     public Station addStation(@RequestBody Station station) {
-        long seq = sequenceGenerator.getNextSequence("stationCounter");
-        String newId = "st" + seq;
-        station.setId(newId);
+        // JPA will auto-generate the ID
         return stationRepo.save(station);
     }
 
     @PutMapping("/admin/update/{id}")
-    public Station updateStation(@PathVariable("id") String id, @RequestBody Station updatedStation) {
+    public Station updateStation(@PathVariable("id") Long id, @RequestBody Station updatedStation) {
         updatedStation.setId(id);
         return stationRepo.save(updatedStation);
     }
 
     @DeleteMapping("/admin/delete/{id}")
-    public ResponseEntity<String> deleteStation(@PathVariable("id") String id) {
+    public ResponseEntity<String> deleteStation(@PathVariable("id") Long id) {
         // Kiểm tra kỹ trước khi xóa: phải dùng hàm Robust để không xóa nhầm trạm còn xe cũ
         if (vehicleRepo.countAvailableVehiclesRobust(id) > 0 || vehicleRepo.countByStationIdAndAvailable(id, false) > 0) {
             return new ResponseEntity<>("Không thể xóa trạm vì vẫn còn xe.", HttpStatus.BAD_REQUEST);

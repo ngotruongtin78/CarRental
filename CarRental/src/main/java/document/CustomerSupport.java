@@ -1,13 +1,14 @@
 package CarRental.example.document;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-@Document(collection = "customer_support")
+@Entity
+@Table(name = "customer_support")
 public class CustomerSupport {
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     private String username;     // Người gửi
     private String title;        // Tiêu đề
     private String content;      // Nội dung
@@ -21,8 +22,8 @@ public class CustomerSupport {
     }
 
     // Getters & Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
     public String getTitle() { return title; }

@@ -107,16 +107,16 @@ public class StaffVerifyController {
         detail.put("userId", user.getId());
         detail.put("username", user.getUsername());
 
-        // Chuyển Binary thành Base64
+        // Chuyển byte array thành Base64
         if (user.getLicenseData() != null) {
-            String licenseBase64 = Base64.getEncoder().encodeToString(user.getLicenseData().getData());
+            String licenseBase64 = Base64.getEncoder().encodeToString(user.getLicenseData());
             detail.put("licenseData", "data:image/png;base64," + licenseBase64);
         } else {
             detail.put("licenseData", null);
         }
 
         if (user.getIdCardData() != null) {
-            String idCardBase64 = Base64.getEncoder().encodeToString(user.getIdCardData().getData());
+            String idCardBase64 = Base64.getEncoder().encodeToString(user.getIdCardData());
             detail.put("idCardData", "data:image/png;base64," + idCardBase64);
         } else {
             detail.put("idCardData", null);

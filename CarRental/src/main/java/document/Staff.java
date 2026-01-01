@@ -2,11 +2,12 @@ package CarRental.example.document;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.*;
 
 @Setter
 @Getter
-@Document(collection = "staff")
+@Entity
+@Table(name = "staff")
 public class Staff extends User {
 
 
@@ -15,7 +16,7 @@ public class Staff extends User {
         super();
     }
 
-    public Staff(String stationId) {
+    public Staff(Long stationId) {
         this.setStationId(stationId);
     }
 
