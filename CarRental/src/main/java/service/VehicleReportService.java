@@ -22,19 +22,19 @@ public class VehicleReportService {
         return vehicleReportRepository.save(report);
     }
 
-    public Optional<VehicleReport> getReportById(String id) {
+    public Optional<VehicleReport> getReportById(Long id) {
         return vehicleReportRepository.findById(id);
     }
 
-    public List<VehicleReport> getReportsByVehicleId(String vehicleId) {
+    public List<VehicleReport> getReportsByVehicleId(Long vehicleId) {
         return vehicleReportRepository.findByVehicleId(vehicleId);
     }
 
-    public List<VehicleReport> getReportsByStationId(String stationId) {
+    public List<VehicleReport> getReportsByStationId(Long stationId) {
         return vehicleReportRepository.findByStationId(stationId);
     }
 
-    public List<VehicleReport> getReportsByStaffId(String staffId) {
+    public List<VehicleReport> getReportsByStaffId(Long staffId) {
         return vehicleReportRepository.findByStaffId(staffId);
     }
 
@@ -42,11 +42,11 @@ public class VehicleReportService {
         return vehicleReportRepository.findByStatus(status);
     }
 
-    public List<VehicleReport> getReportsByStationIdAndStatus(String stationId, String status) {
+    public List<VehicleReport> getReportsByStationIdAndStatus(Long stationId, String status) {
         return vehicleReportRepository.findByStationIdAndStatus(stationId, status);
     }
 
-    public VehicleReport updateReportStatus(String reportId, String newStatus) {
+    public VehicleReport updateReportStatus(Long reportId, String newStatus) {
         Optional<VehicleReport> reportOpt = vehicleReportRepository.findById(reportId);
         if (reportOpt.isPresent()) {
             VehicleReport report = reportOpt.get();
@@ -71,7 +71,7 @@ public class VehicleReportService {
         return null;
     }
 
-    public VehicleReport addNoteToReport(String reportId, String notes) {
+    public VehicleReport addNoteToReport(Long reportId, String notes) {
         Optional<VehicleReport> reportOpt = vehicleReportRepository.findById(reportId);
         if (reportOpt.isPresent()) {
             VehicleReport report = reportOpt.get();
@@ -85,7 +85,7 @@ public class VehicleReportService {
         return vehicleReportRepository.findAll();
     }
 
-    public void deleteReport(String reportId) {
+    public void deleteReport(Long reportId) {
         vehicleReportRepository.deleteById(reportId);
     }
 }

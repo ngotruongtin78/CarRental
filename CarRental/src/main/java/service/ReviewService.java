@@ -21,7 +21,7 @@ public class ReviewService {
         this.rentalRecordRepository = rentalRecordRepository;
     }
     
-    public Review createReview(String bookingId, String userId, String carId, String staffId, 
+    public Review createReview(Long bookingId, Long userId, Long carId, Long staffId, 
                                 Integer carRating, Integer staffRating, String comment) {
         // Check if booking exists and is completed
         RentalRecord rental = rentalRecordRepository.findById(bookingId).orElse(null);
@@ -57,11 +57,11 @@ public class ReviewService {
         return reviewRepository.save(review);
     }
     
-    public boolean isBookingReviewed(String bookingId) {
+    public boolean isBookingReviewed(Long bookingId) {
         return reviewRepository.existsByBookingId(bookingId);
     }
     
-    public Optional<Review> getReviewByBookingId(String bookingId) {
+    public Optional<Review> getReviewByBookingId(Long bookingId) {
         return reviewRepository.findByBookingId(bookingId);
     }
     
@@ -69,11 +69,11 @@ public class ReviewService {
         return reviewRepository.findAllByOrderByReviewDateDesc();
     }
     
-    public List<Review> getReviewsByCarId(String carId) {
+    public List<Review> getReviewsByCarId(Long carId) {
         return reviewRepository.findByCarId(carId);
     }
     
-    public List<Review> getReviewsByStaffId(String staffId) {
+    public List<Review> getReviewsByStaffId(Long staffId) {
         return reviewRepository.findByStaffId(staffId);
     }
     
