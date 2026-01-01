@@ -57,8 +57,8 @@ public class RentalExpirationScheduler {
             // ===== LOGIC MỚI: XÓA NẾU CHƯA THANH TOÁN =====
             if (depositPaid == 0) {
                 // CHƯA THANH TOÁN GÌ → XÓA HẲN KHỎI DATABASE
-                String vehicleId = record.getVehicleId();
-                String rentalId = record.getId();
+                Long vehicleId = record.getVehicleId();
+                Long rentalId = record.getId();
                 
                 // Giải phóng xe trước
                 Vehicle vehicle = vehicleRepo.findById(vehicleId).orElse(null);

@@ -94,7 +94,7 @@ public class StaffVerifyController {
      * Lấy chi tiết người dùng kèm thông tin giấy tờ (Base64)
      */
     @GetMapping("/verifications/detail/{userId}")
-    public Map<String, Object> getVerificationDetail(@PathVariable("userId") String userId) {
+    public Map<String, Object> getVerificationDetail(@PathVariable("userId") Long userId) {
         Optional<User> userOpt = userRepo.findById(userId);
 
         if (userOpt.isEmpty()) {
@@ -130,7 +130,18 @@ public class StaffVerifyController {
      */
     @PostMapping("/verifications/process")
     public Map<String, String> processVerification(@RequestBody Map<String, Object> request) {
-        String userId = (String) request.get("userId");
+        Object userIdObj = request.get("userId");
+        if (userIdObj == null) {
+            return Collections.singletonMap("status", "INVALID_USER_ID");
+        }
+        
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdObj.toString());
+        } catch (NumberFormatException e) {
+            return Collections.singletonMap("status", "INVALID_USER_ID");
+        }
+        
         Boolean approved = (Boolean) request.get("approved");
 
         Optional<User> userOpt = userRepo.findById(userId);
@@ -158,7 +169,7 @@ public class StaffVerifyController {
     }
 
     @PostMapping("/verify-user/{id}")
-    public String verifyUser(@PathVariable("id") String id) {
+    public String verifyUser(@PathVariable("id") Long id) {
         User user = userRepo.findById(id).orElse(null);
         if (user == null) return "USER_NOT_FOUND";
 

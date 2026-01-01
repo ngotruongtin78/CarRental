@@ -66,7 +66,7 @@ public class CustomerSupportController {
 
     // 4. Admin phản hồi
     @PostMapping("/admin/reply/{id}")
-    public ResponseEntity<?> replyTicket(@PathVariable("id") String id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<?> replyTicket(@PathVariable("id") Long id, @RequestBody Map<String, String> body) {
         CustomerSupport ticket = supportRepo.findById(id).orElse(null);
         if (ticket == null) return ResponseEntity.notFound().build();
 
@@ -78,7 +78,7 @@ public class CustomerSupportController {
         User user = userRepository.findByUsername(ticket.getUsername());
         if (user != null) {
             String message = "Yêu cầu hỗ trợ \"" + ticket.getTitle() + "\" đã được Admin phản hồi.";
-            notificationService.createNotification(user.getId(), message, "SUPPORT_REPLY", ticket.getId());
+            notificationService.createNotification(user.getId(), message, "SUPPORT_REPLY", ticket.getId().toString());
         }
         
         return ResponseEntity.ok("Đã phản hồi");

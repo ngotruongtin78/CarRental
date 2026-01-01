@@ -41,7 +41,7 @@ class StaffVehicleController {
             }
 
             // Lấy thông tin trạm
-            String stationId = staff.getStationId();
+            Long stationId = staff.getStationId();
             Station station = stationRepository.findById(stationId).orElse(null);
 
             if (station == null) {

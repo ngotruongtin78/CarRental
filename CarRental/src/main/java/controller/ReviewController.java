@@ -43,9 +43,17 @@ public class ReviewController {
         if (user == null) return ResponseEntity.status(404).body("User không tồn tại");
         
         try {
-            String bookingId = (String) body.get("bookingId");
-            String carId = (String) body.get("carId");
-            String staffId = (String) body.get("staffId");
+            Object bookingIdObj = body.get("bookingId");
+            Object carIdObj = body.get("carId");
+            Object staffIdObj = body.get("staffId");
+            
+            if (bookingIdObj == null || carIdObj == null || staffIdObj == null) {
+                return ResponseEntity.badRequest().body("Missing required IDs");
+            }
+            
+            Long bookingId = Long.parseLong(bookingIdObj.toString());
+            Long carId = Long.parseLong(carIdObj.toString());
+            Long staffId = Long.parseLong(staffIdObj.toString());
             
             Integer carRating = null;
             Integer staffRating = null;
@@ -70,7 +78,7 @@ public class ReviewController {
     }
     
     @GetMapping("/check/{bookingId}")
-    public ResponseEntity<Map<String, Boolean>> checkReviewStatus(@PathVariable("bookingId") String bookingId) {
+    public ResponseEntity<Map<String, Boolean>> checkReviewStatus(@PathVariable("bookingId") Long bookingId) {
         boolean reviewed = reviewService.isBookingReviewed(bookingId);
         Map<String, Boolean> response = new HashMap<>();
         response.put("reviewed", reviewed);
@@ -78,7 +86,7 @@ public class ReviewController {
     }
     
     @GetMapping("/booking/{bookingId}")
-    public ResponseEntity<?> getReviewByBooking(@PathVariable("bookingId") String bookingId) {
+    public ResponseEntity<?> getReviewByBooking(@PathVariable("bookingId") Long bookingId) {
         return reviewService.getReviewByBookingId(bookingId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

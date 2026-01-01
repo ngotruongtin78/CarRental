@@ -13,7 +13,7 @@ public class VehicleService {
         this.vehicleRepo = vehicleRepo;
     }
 
-    public void updateAvailable(String id, boolean available) {
+    public void updateAvailable(Long id, boolean available) {
         Vehicle v = vehicleRepo.findById(id).orElse(null);
         if (v != null) {
             v.setAvailable(available);
@@ -21,15 +21,15 @@ public class VehicleService {
         }
     }
 
-    public boolean markPendingPayment(String vehicleId, String rentalId) {
+    public boolean markPendingPayment(Long vehicleId, Long rentalId) {
         return markPendingPaymentInternal(vehicleId, rentalId, true);
     }
 
-    public boolean markPendingPaymentHidden(String vehicleId, String rentalId) {
+    public boolean markPendingPaymentHidden(Long vehicleId, Long rentalId) {
         return markPendingPaymentInternal(vehicleId, rentalId, false);
     }
 
-    private boolean markPendingPaymentInternal(String vehicleId, String rentalId, boolean showAsAvailable) {
+    private boolean markPendingPaymentInternal(Long vehicleId, Long rentalId, boolean showAsAvailable) {
         Vehicle v = vehicleRepo.findById(vehicleId).orElse(null);
         if (v == null) return false;
 
@@ -47,7 +47,7 @@ public class VehicleService {
         return true;
     }
 
-    public void markRented(String vehicleId, String rentalId) {
+    public void markRented(Long vehicleId, Long rentalId) {
         Vehicle v = vehicleRepo.findById(vehicleId).orElse(null);
         if (v == null) return;
 
@@ -66,7 +66,7 @@ public class VehicleService {
      * Đánh dấu xe đã được đặt cọc (giữ chỗ) nhưng chưa hoàn tất thanh toán tại trạm.
      * Trạng thái hiển thị như đang được thuê để ẩn khỏi danh sách công khai.
      */
-    public void markDeposited(String vehicleId, String rentalId) {
+    public void markDeposited(Long vehicleId, Long rentalId) {
         Vehicle v = vehicleRepo.findById(vehicleId).orElse(null);
         if (v == null) return;
 
@@ -82,7 +82,7 @@ public class VehicleService {
         vehicleRepo.save(v);
     }
 
-    public void releaseHold(String vehicleId, String rentalId) {
+    public void releaseHold(Long vehicleId, Long rentalId) {
         Vehicle v = vehicleRepo.findById(vehicleId).orElse(null);
         if (v == null) return;
 
