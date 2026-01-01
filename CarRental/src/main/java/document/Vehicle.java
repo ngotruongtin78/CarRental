@@ -1,14 +1,16 @@
 package CarRental.example.document;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.*;
 
-@Document(collection = "vehicles")
+@Entity
+@Table(name = "vehicles")
 public class Vehicle {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
+    @Column(unique = true, nullable = false)
     private String plate;
     private String type;
     private String brand;
@@ -25,8 +27,8 @@ public class Vehicle {
     private String issueSeverity;
 
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
     public String getPlate() { return plate; }
     public void setPlate(String plate) { this.plate = plate; }

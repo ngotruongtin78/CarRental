@@ -1,15 +1,16 @@
 package CarRental.example.document;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Document(collection = "rental_records")
+@Entity
+@Table(name = "rental_records")
 public class RentalRecord {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     private String username;
     private String userId;
     private String vehicleId;
@@ -25,6 +26,7 @@ public class RentalRecord {
     private LocalDateTime holdExpiresAt;
     private LocalDateTime checkinTime;  // Thời gian check-in thực tế
 
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     private double total;
@@ -46,7 +48,13 @@ public class RentalRecord {
     private String returnNotes;
     private Double returnLatitude;
     private Double returnLongitude;
+    
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] checkinPhotoData;
+    
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] returnPhotoData;
 
     private Double additionalFeeAmount;
@@ -56,8 +64,16 @@ public class RentalRecord {
 
     private String walletReference;
 
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] deliveryPhotoData;
+    
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] receivePhotoData;
+    
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] signatureData;
 
     // [MỚI - QUAN TRỌNG] Theo dõi hiệu suất nhân viên
@@ -86,8 +102,8 @@ public class RentalRecord {
     // --- GETTERS & SETTERS (Bao gồm các trường cũ và MỚI) ---
     // (Bạn giữ lại các getter/setter cũ, chỉ cần thêm các cái mới dưới đây)
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     // ... (Các getter/setter cũ của bạn) ...
 
     public String getDeliveryStaffId() { return deliveryStaffId; }

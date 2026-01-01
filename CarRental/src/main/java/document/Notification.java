@@ -1,14 +1,15 @@
 package CarRental.example.document;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-@Document(collection = "notifications")
+@Entity
+@Table(name = "notifications")
 public class Notification {
     
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     private String userId;
     private String message;
     private String type;  // SUPPORT_REPLY, BOOKING_UPDATE, etc.
@@ -30,8 +31,8 @@ public class Notification {
     }
     
     // Getters & Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }

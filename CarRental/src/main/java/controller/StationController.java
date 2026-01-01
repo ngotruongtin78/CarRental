@@ -3,7 +3,6 @@ package CarRental.example.controller;
 import CarRental.example.document.Station;
 import CarRental.example.repository.StationRepository;
 import CarRental.example.repository.VehicleRepository;
-import CarRental.example.service.SequenceGeneratorService;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
@@ -16,14 +15,11 @@ import java.util.*;
 public class StationController {
     private final StationRepository stationRepo;
     private final VehicleRepository vehicleRepo;
-    private final SequenceGeneratorService sequenceGenerator;
 
     public StationController(StationRepository stationRepo,
-                             VehicleRepository vehicleRepo,
-                             SequenceGeneratorService sequenceGenerator) {
+                             VehicleRepository vehicleRepo) {
         this.stationRepo = stationRepo;
         this.vehicleRepo = vehicleRepo;
-        this.sequenceGenerator = sequenceGenerator;
     }
 
     // API cho trang chủ (Khách hàng)
@@ -41,7 +37,7 @@ public class StationController {
             map.put("address", st.getAddress());
 
             // Cập nhật luôn cho khách hàng để họ thấy đúng số lượng xe sẵn sàng
-            long count = vehicleRepo.countAvailableVehiclesRobust(st.getId());
+            long count = vehicleRepo.countAvailableVehiclesRobust(String.valueOf(st.getId()));
             map.put("availableCars", count);
 
             data.add(map);
@@ -50,7 +46,7 @@ public class StationController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getStation(@PathVariable("id") String id) {
+    public ResponseEntity<?> getStation(@PathVariable("id") Long id) {
         Optional<Station> station = stationRepo.findById(id);
         return station.<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Station not found"));
@@ -71,14 +67,14 @@ public class StationController {
             map.put("longitude", st.getLongitude());
 
             // 1. Sẵn sàng: Dùng hàm mới để đếm cả xe cũ lẫn xe mới
-            long countAvailable = vehicleRepo.countAvailableVehiclesRobust(st.getId());
+            long countAvailable = vehicleRepo.countAvailableVehiclesRobust(String.valueOf(st.getId()));
 
             // 2. Đang thuê: Cộng dồn RENTED và PENDING_PAYMENT
-            long countRented = vehicleRepo.countByStationIdAndBookingStatus(st.getId(), "RENTED");
-            long countPending = vehicleRepo.countByStationIdAndBookingStatus(st.getId(), "PENDING_PAYMENT");
+            long countRented = vehicleRepo.countByStationIdAndBookingStatus(String.valueOf(st.getId()), "RENTED");
+            long countPending = vehicleRepo.countByStationIdAndBookingStatus(String.valueOf(st.getId()), "PENDING_PAYMENT");
 
             // 3. Bảo trì
-            long countMaintenance = vehicleRepo.countByStationIdAndBookingStatus(st.getId(), "MAINTENANCE");
+            long countMaintenance = vehicleRepo.countByStationIdAndBookingStatus(String.valueOf(st.getId()), "MAINTENANCE");
 
             map.put("statsAvailable", countAvailable);
             map.put("statsRented", countRented + countPending);
@@ -90,28 +86,26 @@ public class StationController {
     }
 
     @GetMapping("/admin/{id}")
-    public Optional<Station> getStationById(@PathVariable("id") String id) {
+    public Optional<Station> getStationById(@PathVariable("id") Long id) {
         return stationRepo.findById(id);
     }
 
     @PostMapping("/admin/add")
     public Station addStation(@RequestBody Station station) {
-        long seq = sequenceGenerator.getNextSequence("stationCounter");
-        String newId = "st" + seq;
-        station.setId(newId);
+        // JPA will auto-generate the ID
         return stationRepo.save(station);
     }
 
     @PutMapping("/admin/update/{id}")
-    public Station updateStation(@PathVariable("id") String id, @RequestBody Station updatedStation) {
+    public Station updateStation(@PathVariable("id") Long id, @RequestBody Station updatedStation) {
         updatedStation.setId(id);
         return stationRepo.save(updatedStation);
     }
 
     @DeleteMapping("/admin/delete/{id}")
-    public ResponseEntity<String> deleteStation(@PathVariable("id") String id) {
+    public ResponseEntity<String> deleteStation(@PathVariable("id") Long id) {
         // Kiểm tra kỹ trước khi xóa: phải dùng hàm Robust để không xóa nhầm trạm còn xe cũ
-        if (vehicleRepo.countAvailableVehiclesRobust(id) > 0 || vehicleRepo.countByStationIdAndAvailable(id, false) > 0) {
+        if (vehicleRepo.countAvailableVehiclesRobust(String.valueOf(id)) > 0 || vehicleRepo.countByStationIdAndAvailable(String.valueOf(id), false) > 0) {
             return new ResponseEntity<>("Không thể xóa trạm vì vẫn còn xe.", HttpStatus.BAD_REQUEST);
         }
         stationRepo.deleteById(id);

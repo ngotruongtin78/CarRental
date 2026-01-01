@@ -1,11 +1,11 @@
 package CarRental.example.repository;
 
 import CarRental.example.document.Review;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
-public interface ReviewRepository extends MongoRepository<Review, String> {
+public interface ReviewRepository extends JpaRepository<Review, Long> {
     Optional<Review> findByBookingId(String bookingId);
     List<Review> findByCarId(String carId);
     List<Review> findByStaffId(String staffId);
