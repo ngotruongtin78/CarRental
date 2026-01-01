@@ -1,24 +1,38 @@
 package CarRental.example.config;
 
-import CarRental.example.document.Vehicle;
-import CarRental.example.repository.StationRepository;
-import CarRental.example.repository.VehicleRepository;
+import CarRental.example.document.User;
+import CarRental.example.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
 public class StationDataLoader implements CommandLineRunner {
 
-    private final StationRepository stationRepo;
-    private final VehicleRepository vehicleRepo;
+    private final UserRepository userRepo;
+    private final PasswordEncoder passwordEncoder;
 
-    public StationDataLoader(StationRepository stationRepo, VehicleRepository vehicleRepo) {
-        this.stationRepo = stationRepo;
-        this.vehicleRepo = vehicleRepo;
+    public StationDataLoader(UserRepository userRepo, PasswordEncoder passwordEncoder) {
+        this.userRepo = userRepo;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
-    public void run(String... args) {
+    public void run(String... args) throws Exception {
+        if (userRepo.findByUsername("admin") == null) {
+            User admin = new User();
+            admin.setUsername("admin");
 
+
+            admin.setPassword(passwordEncoder.encode("admin"));
+
+            admin.setFullName("System Administrator");
+            admin.setRole("ADMIN");
+            admin.setEnabled(true);
+            admin.setVerified(true);
+
+            userRepo.save(admin);
+            System.out.println(">>> Tài khoản Admin đã được tạo thành công: admin / admin");
+        }
     }
 }
