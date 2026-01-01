@@ -36,7 +36,7 @@ public class StaffDeliverController {
             Staff staff = staffRepository.findByUsername(authentication.getName());
             if (staff == null) return ResponseEntity.status(401).build();
 
-            String staffStationId = staff.getStationId();
+            Long staffStationId = staff.getStationId();
             List<RentalRecord> readyRecords = rentalRecordRepository.findAll().stream()
                     .filter(record -> "IN_PROGRESS".equals(record.getStatus()) &&
                             ("PAID".equals(record.getPaymentStatus()) || "PAY_AT_STATION".equals(record.getPaymentStatus())) &&
@@ -68,10 +68,10 @@ public class StaffDeliverController {
     }
 
     @PostMapping("/{rentalId}/confirm")
-    public ResponseEntity<?> confirmDelivery(@PathVariable("rentalId") String rentalId, HttpServletRequest request) {
+    public ResponseEntity<?> confirmDelivery(@PathVariable("rentalId") Long rentalId, HttpServletRequest request) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String currentStaffId = null;
+            Long currentStaffId = null;
             if (authentication != null) {
                 Staff staff = staffRepository.findByUsername(authentication.getName());
                 if (staff != null) currentStaffId = staff.getId();
@@ -114,7 +114,7 @@ public class StaffDeliverController {
     }
 
     @GetMapping("/{rentalId}")
-    public ResponseEntity<?> getDeliveryDetails(@PathVariable("rentalId") String rentalId) {
+    public ResponseEntity<?> getDeliveryDetails(@PathVariable("rentalId") Long rentalId) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !authentication.isAuthenticated()) return ResponseEntity.status(401).build();
@@ -149,7 +149,7 @@ public class StaffDeliverController {
     }
 
     @PutMapping("/{rentalId}/photo")
-    public ResponseEntity<?> saveDeliveryPhoto(@PathVariable("rentalId") String rentalId, @RequestBody byte[] photoData) {
+    public ResponseEntity<?> saveDeliveryPhoto(@PathVariable("rentalId") Long rentalId, @RequestBody byte[] photoData) {
         Optional<RentalRecord> recordOpt = rentalRecordRepository.findById(rentalId);
         if (!recordOpt.isPresent()) return ResponseEntity.status(404).build();
         RentalRecord record = recordOpt.get();
@@ -159,7 +159,7 @@ public class StaffDeliverController {
     }
 
     @PutMapping("/{rentalId}/signature")
-    public ResponseEntity<?> saveDeliverySignature(@PathVariable("rentalId") String rentalId, @RequestBody byte[] signatureData) {
+    public ResponseEntity<?> saveDeliverySignature(@PathVariable("rentalId") Long rentalId, @RequestBody byte[] signatureData) {
         Optional<RentalRecord> recordOpt = rentalRecordRepository.findById(rentalId);
         if (!recordOpt.isPresent()) return ResponseEntity.status(404).build();
         RentalRecord record = recordOpt.get();

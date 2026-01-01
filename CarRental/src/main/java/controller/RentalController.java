@@ -82,8 +82,11 @@ public class RentalController {
 
     @PostMapping("/checkout")
     public Map<String, Object> checkout(@RequestBody Map<String, Object> req) {
-        String vehicleId = (String) req.get("vehicleId");
-        String stationId = (String) req.get("stationId");
+        String vehicleIdStr = (String) req.get("vehicleId");
+        String stationIdStr = (String) req.get("stationId");
+        
+        Long vehicleId = Long.parseLong(vehicleIdStr);
+        Long stationId = Long.parseLong(stationIdStr);
 
         Vehicle v = vehicleRepo.findById(vehicleId).orElse(null);
         if (v == null) {
@@ -100,14 +103,17 @@ public class RentalController {
     }
 
     @PostMapping(value = "/book", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> bookRental(@RequestParam("vehicleId") String vehicleId,
-                                        @RequestParam("stationId") String stationId,
+    public ResponseEntity<?> bookRental(@RequestParam("vehicleId") String vehicleIdStr,
+                                        @RequestParam("stationId") String stationIdStr,
                                         @RequestParam("startDate") String startDateStr,
                                         @RequestParam("endDate") String endDateStr,
                                         @RequestParam(value = "distanceKm", required = false) Double distanceKm) {
 
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+
+        Long vehicleId = Long.parseLong(vehicleIdStr);
+        Long stationId = Long.parseLong(stationIdStr);
 
         Vehicle vehicle = vehicleRepo.findById(vehicleId).orElse(null);
         if (vehicle == null) {
@@ -170,6 +176,7 @@ public class RentalController {
         record.setDepositRequiredAmount(depositRequired);
 
         rentalRepo.save(record);
+        Long rentalId = record.getId();
         boolean held = vehicleService.markPendingPayment(vehicleId, rentalId);
         if (!held) {
             record.setStatus("CANCELLED");
@@ -198,7 +205,7 @@ public class RentalController {
     }
 
     @GetMapping("/{rentalId}")
-    public ResponseEntity<?> getRental(@PathVariable("rentalId") String rentalId) {
+    public ResponseEntity<?> getRental(@PathVariable("rentalId") Long rentalId) {
         try {
             String username = getCurrentUsername();
             RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
@@ -248,7 +255,7 @@ public class RentalController {
     }
 
     @PostMapping("/{rentalId}/payment")
-    public ResponseEntity<?> confirmPayment(@PathVariable("rentalId") String rentalId, @RequestBody Map<String, String> body) {
+    public ResponseEntity<?> confirmPayment(@PathVariable("rentalId") Long rentalId, @RequestBody Map<String, String> body) {
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
@@ -317,7 +324,7 @@ public class RentalController {
     }
 
     @PostMapping("/{rentalId}/cancel")
-    public ResponseEntity<?> cancelRental(@PathVariable("rentalId") String rentalId) {
+    public ResponseEntity<?> cancelRental(@PathVariable("rentalId") Long rentalId) {
         String username = getCurrentUsername();
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
 
@@ -336,7 +343,7 @@ public class RentalController {
     }
 
     @PostMapping("/{rentalId}/sign-contract")
-    public Map<String, Object> signContract(@PathVariable("rentalId") String rentalId) {
+    public Map<String, Object> signContract(@PathVariable("rentalId") Long rentalId) {
         String username = getCurrentUsername();
         RentalRecord record = rentalRecordService.signContract(rentalId, username);
         if (record == null) return Map.of("error", "Rental not found or unauthorized");
@@ -355,7 +362,7 @@ public class RentalController {
      */
     @PostMapping("/{rentalId}/dates")
     public ResponseEntity<?> updateRentalDates(
-            @PathVariable("rentalId") String rentalId,
+            @PathVariable("rentalId") Long rentalId,
             @RequestBody Map<String, String> body) {
         
         String username = getCurrentUsername();
@@ -640,7 +647,7 @@ public class RentalController {
 
     @PostMapping(value = "/{rentalId}/check-in", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> checkIn(
-            @PathVariable("rentalId") String rentalId,
+            @PathVariable("rentalId") Long rentalId,
             @RequestParam(value = "photo", required = false) MultipartFile photo,
             @RequestParam(value = "notes", required = false) String notes,
             @RequestParam(value = "latitude", required = false) Double latitude,
@@ -688,7 +695,7 @@ public class RentalController {
 
     @PostMapping(value = "/{rentalId}/return", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> requestReturn(
-            @PathVariable("rentalId") String rentalId,
+            @PathVariable("rentalId") Long rentalId,
             @RequestParam(value = "photo", required = false) MultipartFile photo,
             @RequestParam(value = "notes", required = false) String notes,
             @RequestParam(value = "latitude", required = false) Double latitude,
@@ -735,7 +742,7 @@ public class RentalController {
 
     // API dành cho Admin: Lấy chi tiết một đơn hàng
     @GetMapping("/admin/detail/{id}")
-    public ResponseEntity<?> getRentalDetailForAdmin(@PathVariable("id") String id) {
+    public ResponseEntity<?> getRentalDetailForAdmin(@PathVariable("id") Long id) {
         try {
             RentalRecord record = rentalRepo.findById(id).orElse(null);
             if (record == null) {

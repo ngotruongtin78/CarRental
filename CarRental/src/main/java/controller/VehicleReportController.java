@@ -41,7 +41,7 @@ public class VehicleReportController {
     }
 
     @GetMapping("/station/{stationId}")
-    public ResponseEntity<?> getReportsByStation(@PathVariable("stationId") String stationId) {
+    public ResponseEntity<?> getReportsByStation(@PathVariable("stationId") Long stationId) {
         try {
             List<VehicleReport> reports = vehicleReportService.getReportsByStationId(stationId);
             return ResponseEntity.ok(Map.of(
@@ -55,7 +55,7 @@ public class VehicleReportController {
     }
 
     @GetMapping("/vehicle/{vehicleId}")
-    public ResponseEntity<?> getReportsByVehicle(@PathVariable("vehicleId") String vehicleId) {
+    public ResponseEntity<?> getReportsByVehicle(@PathVariable("vehicleId") Long vehicleId) {
         try {
             List<VehicleReport> reports = vehicleReportService.getReportsByVehicleId(vehicleId);
             return ResponseEntity.ok(Map.of(
@@ -84,7 +84,7 @@ public class VehicleReportController {
 
     @GetMapping("/station/{stationId}/status/{status}")
     public ResponseEntity<?> getReportsByStationAndStatus(
-            @PathVariable("stationId") String stationId,
+            @PathVariable("stationId") Long stationId,
             @PathVariable("status") String status) {
         try {
             List<VehicleReport> reports = vehicleReportService.getReportsByStationIdAndStatus(stationId, status);
@@ -99,7 +99,7 @@ public class VehicleReportController {
     }
 
     @GetMapping("/{reportId}")
-    public ResponseEntity<?> getReportById(@PathVariable("reportId") String reportId) {
+    public ResponseEntity<?> getReportById(@PathVariable("reportId") Long reportId) {
         try {
             Optional<VehicleReport> report = vehicleReportService.getReportById(reportId);
             if (report.isPresent()) {
@@ -117,7 +117,7 @@ public class VehicleReportController {
 
     @PutMapping("/{reportId}/status")
     public ResponseEntity<?> updateReportStatus(
-            @PathVariable("reportId") String reportId,
+            @PathVariable("reportId") Long reportId,
             @RequestBody Map<String, String> request) {
         try {
             String newStatus = request.get("status");
@@ -142,7 +142,7 @@ public class VehicleReportController {
 
     @PutMapping("/{reportId}/notes")
     public ResponseEntity<?> addNotesToReport(
-            @PathVariable("reportId") String reportId,
+            @PathVariable("reportId") Long reportId,
             @RequestBody Map<String, String> request) {
         try {
             String notes = request.get("notes");
@@ -171,7 +171,7 @@ public class VehicleReportController {
      */
     @PutMapping("/{reportId}/photo")
     public ResponseEntity<?> saveReportPhoto(
-            @PathVariable("reportId") String reportId,
+            @PathVariable("reportId") Long reportId,
             @RequestHeader(value = "X-Photo-Name", required = false) String photoName,
             @RequestBody byte[] photoData) {
         try {
@@ -216,7 +216,7 @@ public class VehicleReportController {
     }
 
     @DeleteMapping("/{reportId}")
-    public ResponseEntity<?> deleteReport(@PathVariable("reportId") String reportId) {
+    public ResponseEntity<?> deleteReport(@PathVariable("reportId") Long reportId) {
         try {
             vehicleReportService.deleteReport(reportId);
             return ResponseEntity.ok(Map.of(
