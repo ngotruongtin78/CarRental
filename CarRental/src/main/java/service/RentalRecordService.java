@@ -107,29 +107,6 @@ public class RentalRecordService {
         return response;
     }
 
-    /**
-     * Trích xuất số từ mã đơn
-     * Ví dụ: "rental210" → 210
-     */
-    private long extractRentalNumber(String rentalId) {
-        if (rentalId == null || rentalId.isEmpty()) {
-            return 0;
-        }
-        
-        // Lấy tất cả các chữ số
-        String digits = rentalId.replaceAll("[^0-9]", "");
-        
-        if (digits.isEmpty()) {
-            return 0;
-        }
-        
-        try {
-            return Long.parseLong(digits);
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-    }
-
     private Comparator<RentalRecord> buildHistoryComparator() {
         // Sort đơn giản theo mã đơn: số lớn hơn (mới hơn) lên đầu
         return (a, b) -> {

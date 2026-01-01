@@ -43,9 +43,17 @@ public class ReviewController {
         if (user == null) return ResponseEntity.status(404).body("User không tồn tại");
         
         try {
-            Long bookingId = Long.parseLong((String) body.get("bookingId"));
-            Long carId = Long.parseLong((String) body.get("carId"));
-            Long staffId = Long.parseLong((String) body.get("staffId"));
+            Object bookingIdObj = body.get("bookingId");
+            Object carIdObj = body.get("carId");
+            Object staffIdObj = body.get("staffId");
+            
+            if (bookingIdObj == null || carIdObj == null || staffIdObj == null) {
+                return ResponseEntity.badRequest().body("Missing required IDs");
+            }
+            
+            Long bookingId = Long.parseLong(bookingIdObj.toString());
+            Long carId = Long.parseLong(carIdObj.toString());
+            Long staffId = Long.parseLong(staffIdObj.toString());
             
             Integer carRating = null;
             Integer staffRating = null;

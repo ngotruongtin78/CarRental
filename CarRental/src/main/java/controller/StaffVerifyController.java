@@ -130,7 +130,18 @@ public class StaffVerifyController {
      */
     @PostMapping("/verifications/process")
     public Map<String, String> processVerification(@RequestBody Map<String, Object> request) {
-        Long userId = Long.parseLong(request.get("userId").toString());
+        Object userIdObj = request.get("userId");
+        if (userIdObj == null) {
+            return Collections.singletonMap("status", "INVALID_USER_ID");
+        }
+        
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdObj.toString());
+        } catch (NumberFormatException e) {
+            return Collections.singletonMap("status", "INVALID_USER_ID");
+        }
+        
         Boolean approved = (Boolean) request.get("approved");
 
         Optional<User> userOpt = userRepo.findById(userId);
