@@ -35,7 +35,7 @@ public class SepayWebhookHandler {
         }
 
         String lower = raw.toLowerCase();
-        String rentalId = null;
+        Long rentalId = null;
         boolean depositFlow = false;
         boolean incidentFlow = false;
 
@@ -44,7 +44,7 @@ public class SepayWebhookHandler {
                 .matcher(lower);
 
         if (depositMatcher.find()) {
-            rentalId = "rental" + depositMatcher.group(1);
+            rentalId = Long.parseLong(depositMatcher.group(1));
             depositFlow = true;
         }
 
@@ -53,7 +53,7 @@ public class SepayWebhookHandler {
                 .matcher(lower);
 
         if (incidentMatcher.find()) {
-            rentalId = "rental" + incidentMatcher.group(1);
+            rentalId = Long.parseLong(incidentMatcher.group(1));
             incidentFlow = true;
         }
 
@@ -62,19 +62,19 @@ public class SepayWebhookHandler {
                 .matcher(lower);
 
         if (rentalId == null && matcher.find()) {
-            rentalId = matcher.group(0);
+            rentalId = Long.parseLong(matcher.group(1));
         }
 
-        if ((rentalId == null || rentalId.isEmpty()) && lower.contains("carrental_")) {
+        if (rentalId == null && lower.contains("carrental_")) {
             String digits = lower.substring(lower.indexOf("carrental_") + "carrental_".length())
                     .replaceAll("[^0-9]", "")
                     .trim();
             if (!digits.isEmpty()) {
-                rentalId = "rental" + digits;
+                rentalId = Long.parseLong(digits);
             }
         }
 
-        if (rentalId == null || rentalId.isEmpty()) {
+        if (rentalId == null) {
             log.warn("Không tìm thấy rentalId trong nội dung: {}", raw);
             return ResponseEntity.ok("NO_RENTAL_ID");
         }
