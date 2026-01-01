@@ -43,9 +43,9 @@ public class ReviewController {
         if (user == null) return ResponseEntity.status(404).body("User không tồn tại");
         
         try {
-            String bookingId = (String) body.get("bookingId");
-            String carId = (String) body.get("carId");
-            String staffId = (String) body.get("staffId");
+            Long bookingId = Long.parseLong((String) body.get("bookingId"));
+            Long carId = Long.parseLong((String) body.get("carId"));
+            Long staffId = Long.parseLong((String) body.get("staffId"));
             
             Integer carRating = null;
             Integer staffRating = null;
@@ -70,7 +70,7 @@ public class ReviewController {
     }
     
     @GetMapping("/check/{bookingId}")
-    public ResponseEntity<Map<String, Boolean>> checkReviewStatus(@PathVariable("bookingId") String bookingId) {
+    public ResponseEntity<Map<String, Boolean>> checkReviewStatus(@PathVariable("bookingId") Long bookingId) {
         boolean reviewed = reviewService.isBookingReviewed(bookingId);
         Map<String, Boolean> response = new HashMap<>();
         response.put("reviewed", reviewed);
@@ -78,7 +78,7 @@ public class ReviewController {
     }
     
     @GetMapping("/booking/{bookingId}")
-    public ResponseEntity<?> getReviewByBooking(@PathVariable("bookingId") String bookingId) {
+    public ResponseEntity<?> getReviewByBooking(@PathVariable("bookingId") Long bookingId) {
         return reviewService.getReviewByBookingId(bookingId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

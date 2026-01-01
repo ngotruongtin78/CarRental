@@ -32,8 +32,8 @@ public class RentalRecordService {
     }
     public List<RentalRecord> getHistoryByUsername(String username) { return repo.findByUsername(username); }
     public List<RentalRecord> getAll() { return repo.findAll(); }
-    public RentalRecord getById(String id) { return repo.findById(id).orElse(null); }
-    public void delete(String id) { repo.deleteById(id); }
+    public RentalRecord getById(Long id) { return repo.findById(id).orElse(null); }
+    public void delete(Long id) { repo.deleteById(id); }
 
     public List<Map<String, Object>> getHistoryDetails(String username) {
         List<RentalRecord> records = repo.findByUsername(username)
@@ -133,8 +133,8 @@ public class RentalRecordService {
     private Comparator<RentalRecord> buildHistoryComparator() {
         // Sort đơn giản theo mã đơn: số lớn hơn (mới hơn) lên đầu
         return (a, b) -> {
-            long idA = extractRentalNumber(a.getId());
-            long idB = extractRentalNumber(b.getId());
+            Long idA = a.getId();
+            Long idB = b.getId();
             return Long.compare(idB, idA); // DESC: lớn nhất lên đầu
         };
     }
@@ -178,7 +178,7 @@ public class RentalRecordService {
         return stats;
     }
 
-    public RentalRecord signContract(String rentalId, String username) {
+    public RentalRecord signContract(Long rentalId, String username) {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
         record.setContractSigned(true);
@@ -187,7 +187,7 @@ public class RentalRecordService {
         return repo.save(record);
     }
 
-    public RentalRecord checkIn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
+    public RentalRecord checkIn(Long rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
         
@@ -265,7 +265,7 @@ public class RentalRecordService {
         }
     }
 
-    public RentalRecord requestReturn(String rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
+    public RentalRecord requestReturn(Long rentalId, String username, String notes, byte[] photoData, Double latitude, Double longitude) {
         RentalRecord record = repo.findById(rentalId).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) return null;
         record.setReturnNotes(notes);
@@ -344,12 +344,12 @@ public class RentalRecordService {
     public List<String> getAiSuggestions() {
         List<String> suggestions = new ArrayList<>();
         List<RentalRecord> allRecords = repo.findAll();
-        Map<String, Long> tripsByStation = allRecords.stream()
+        Map<Long, Long> tripsByStation = allRecords.stream()
                 .filter(r -> !"CANCELLED".equals(r.getStatus()))
                 .collect(Collectors.groupingBy(RentalRecord::getStationId, Collectors.counting()));
 
         tripsByStation.forEach((stationId, count) -> {
-            String stationName = stationRepository.findById(stationId).map(s -> s.getName()).orElse(stationId);
+            String stationName = stationRepository.findById(stationId).map(s -> s.getName()).orElse(stationId.toString());
             long currentVehicles = vehicleRepository.findByStationIdAndBookingStatusNot(stationId, "MAINTENANCE").size();
             if (currentVehicles > 0 && (count / currentVehicles) >= 5) {
                 suggestions.add("<strong>Nhu cầu cao tại " + stationName + ":</strong> AI khuyến nghị bổ sung thêm xe.");
