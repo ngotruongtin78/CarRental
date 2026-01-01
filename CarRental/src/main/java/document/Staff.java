@@ -16,7 +16,7 @@ public class Staff extends User {
         super();
     }
 
-    public Staff(String stationId) {
+    public Staff(Long stationId) {
         this.setStationId(stationId);
     }
 

@@ -87,7 +87,7 @@ public class RentalRecord {
     public RentalRecord() {}
 
     // Constructor cơ bản giữ nguyên...
-    public RentalRecord(String userId, String vehicleId, String stationId, double total) {
+    public RentalRecord(Long userId, Long vehicleId, Long stationId, double total) {
         this.userId = userId;
         this.vehicleId = vehicleId;
         this.stationId = stationId;
