@@ -10,10 +10,10 @@ public class Review {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String bookingId;
-    private String userId;
-    private String carId;
-    private String staffId;
+    private Long bookingId;
+    private Long userId;
+    private Long carId;
+    private Long staffId;
     private Integer carRating;      // 1-5
     private Integer staffRating;    // 1-5
     private String comment;
@@ -27,17 +27,17 @@ public class Review {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     
-    public String getBookingId() { return bookingId; }
-    public void setBookingId(String bookingId) { this.bookingId = bookingId; }
+    public Long getBookingId() { return bookingId; }
+    public void setBookingId(Long bookingId) { this.bookingId = bookingId; }
     
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
     
-    public String getCarId() { return carId; }
-    public void setCarId(String carId) { this.carId = carId; }
+    public Long getCarId() { return carId; }
+    public void setCarId(Long carId) { this.carId = carId; }
     
-    public String getStaffId() { return staffId; }
-    public void setStaffId(String staffId) { this.staffId = staffId; }
+    public Long getStaffId() { return staffId; }
+    public void setStaffId(Long staffId) { this.staffId = staffId; }
     
     public Integer getCarRating() { return carRating; }
     public void setCarRating(Integer carRating) { this.carRating = carRating; }

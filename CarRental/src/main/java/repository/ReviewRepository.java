@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
-    Optional<Review> findByBookingId(String bookingId);
-    List<Review> findByCarId(String carId);
-    List<Review> findByStaffId(String staffId);
-    List<Review> findByUserId(String userId);
-    boolean existsByBookingId(String bookingId);
+    Optional<Review> findByBookingId(Long bookingId);
+    List<Review> findByCarId(Long carId);
+    List<Review> findByStaffId(Long staffId);
+    List<Review> findByUserId(Long userId);
+    boolean existsByBookingId(Long bookingId);
     List<Review> findAllByOrderByReviewDateDesc();
 }

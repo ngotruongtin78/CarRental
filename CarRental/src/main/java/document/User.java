@@ -21,7 +21,7 @@ public class User {
     private boolean enabled = true;
     private String fullName;
 
-    private String stationId;
+    private Long stationId;
 
     @Lob
     @Column(columnDefinition = "LONGBLOB")
@@ -38,8 +38,8 @@ public class User {
     @Temporal(TemporalType.TIMESTAMP)
     private Date updatedAt = new Date();
 
-    public String getStationId() { return stationId; }
-    public void setStationId(String stationId) { this.stationId = stationId; }
+    public Long getStationId() { return stationId; }
+    public void setStationId(Long stationId) { this.stationId = stationId; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

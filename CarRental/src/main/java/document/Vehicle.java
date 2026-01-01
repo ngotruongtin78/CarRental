@@ -17,11 +17,11 @@ public class Vehicle {
     private int battery;
     private double price;
 
-    private String stationId;
+    private Long stationId;
     private boolean available = true;
 
     private String bookingStatus = "AVAILABLE";
-    private String pendingRentalId;
+    private Long pendingRentalId;
 
     private String issue;
     private String issueSeverity;
@@ -45,8 +45,8 @@ public class Vehicle {
     public double getPrice() { return price; }
     public void setPrice(double price) { this.price = price; }
 
-    public String getStationId() { return stationId; }
-    public void setStationId(String stationId) { this.stationId = stationId; }
+    public Long getStationId() { return stationId; }
+    public void setStationId(Long stationId) { this.stationId = stationId; }
 
     public boolean isAvailable() { return available; }
     public void setAvailable(boolean available) { this.available = available; }
@@ -54,8 +54,8 @@ public class Vehicle {
     public String getBookingStatus() { return bookingStatus; }
     public void setBookingStatus(String bookingStatus) { this.bookingStatus = bookingStatus; }
 
-    public String getPendingRentalId() { return pendingRentalId; }
-    public void setPendingRentalId(String pendingRentalId) { this.pendingRentalId = pendingRentalId; }
+    public Long getPendingRentalId() { return pendingRentalId; }
+    public void setPendingRentalId(Long pendingRentalId) { this.pendingRentalId = pendingRentalId; }
 
     public String getIssue() { return issue; }
     public void setIssue(String issue) { this.issue = issue; }

@@ -10,7 +10,7 @@ public class Notification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String userId;
+    private Long userId;
     private String message;
     private String type;  // SUPPORT_REPLY, BOOKING_UPDATE, etc.
     private boolean isRead;
@@ -22,7 +22,7 @@ public class Notification {
         this.isRead = false;
     }
     
-    public Notification(String userId, String message, String type, String supportRequestId) {
+    public Notification(Long userId, String message, String type, String supportRequestId) {
         this();
         this.userId = userId;
         this.message = message;
@@ -34,8 +34,8 @@ public class Notification {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
     
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }

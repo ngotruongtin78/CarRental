@@ -37,7 +37,7 @@ public class StationController {
             map.put("address", st.getAddress());
 
             // Cập nhật luôn cho khách hàng để họ thấy đúng số lượng xe sẵn sàng
-            long count = vehicleRepo.countAvailableVehiclesRobust(String.valueOf(st.getId()));
+            long count = vehicleRepo.countAvailableVehiclesRobust(st.getId());
             map.put("availableCars", count);
 
             data.add(map);
@@ -67,14 +67,14 @@ public class StationController {
             map.put("longitude", st.getLongitude());
 
             // 1. Sẵn sàng: Dùng hàm mới để đếm cả xe cũ lẫn xe mới
-            long countAvailable = vehicleRepo.countAvailableVehiclesRobust(String.valueOf(st.getId()));
+            long countAvailable = vehicleRepo.countAvailableVehiclesRobust(st.getId());
 
             // 2. Đang thuê: Cộng dồn RENTED và PENDING_PAYMENT
-            long countRented = vehicleRepo.countByStationIdAndBookingStatus(String.valueOf(st.getId()), "RENTED");
-            long countPending = vehicleRepo.countByStationIdAndBookingStatus(String.valueOf(st.getId()), "PENDING_PAYMENT");
+            long countRented = vehicleRepo.countByStationIdAndBookingStatus(st.getId(), "RENTED");
+            long countPending = vehicleRepo.countByStationIdAndBookingStatus(st.getId(), "PENDING_PAYMENT");
 
             // 3. Bảo trì
-            long countMaintenance = vehicleRepo.countByStationIdAndBookingStatus(String.valueOf(st.getId()), "MAINTENANCE");
+            long countMaintenance = vehicleRepo.countByStationIdAndBookingStatus(st.getId(), "MAINTENANCE");
 
             map.put("statsAvailable", countAvailable);
             map.put("statsRented", countRented + countPending);
@@ -105,7 +105,7 @@ public class StationController {
     @DeleteMapping("/admin/delete/{id}")
     public ResponseEntity<String> deleteStation(@PathVariable("id") Long id) {
         // Kiểm tra kỹ trước khi xóa: phải dùng hàm Robust để không xóa nhầm trạm còn xe cũ
-        if (vehicleRepo.countAvailableVehiclesRobust(String.valueOf(id)) > 0 || vehicleRepo.countByStationIdAndAvailable(String.valueOf(id), false) > 0) {
+        if (vehicleRepo.countAvailableVehiclesRobust(id) > 0 || vehicleRepo.countByStationIdAndAvailable(id, false) > 0) {
             return new ResponseEntity<>("Không thể xóa trạm vì vẫn còn xe.", HttpStatus.BAD_REQUEST);
         }
         stationRepo.deleteById(id);
