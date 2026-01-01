@@ -15,31 +15,31 @@ public class NotificationService {
         this.notificationRepository = notificationRepository;
     }
     
-    public Notification createNotification(String userId, String message, String type, String supportRequestId) {
+    public Notification createNotification(Long userId, String message, String type, String supportRequestId) {
         Notification notification = new Notification(userId, message, type, supportRequestId);
         return notificationRepository.save(notification);
     }
     
-    public List<Notification> getNotificationsForUser(String userId) {
+    public List<Notification> getNotificationsForUser(Long userId) {
         return notificationRepository.findByUserIdOrderByCreatedDateDesc(userId);
     }
     
-    public List<Notification> getUnreadNotificationsForUser(String userId) {
+    public List<Notification> getUnreadNotificationsForUser(Long userId) {
         return notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedDateDesc(userId);
     }
     
-    public long getUnreadCountForUser(String userId) {
+    public long getUnreadCountForUser(Long userId) {
         return notificationRepository.countByUserIdAndIsReadFalse(userId);
     }
     
-    public void markAsRead(String notificationId) {
+    public void markAsRead(Long notificationId) {
         notificationRepository.findById(notificationId).ifPresent(notification -> {
             notification.setRead(true);
             notificationRepository.save(notification);
         });
     }
     
-    public void markAllAsRead(String userId) {
+    public void markAllAsRead(Long userId) {
         List<Notification> unread = notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedDateDesc(userId);
         unread.forEach(notification -> notification.setRead(true));
         notificationRepository.saveAll(unread);

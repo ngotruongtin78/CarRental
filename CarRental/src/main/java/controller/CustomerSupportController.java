@@ -78,7 +78,7 @@ public class CustomerSupportController {
         User user = userRepository.findByUsername(ticket.getUsername());
         if (user != null) {
             String message = "Yêu cầu hỗ trợ \"" + ticket.getTitle() + "\" đã được Admin phản hồi.";
-            notificationService.createNotification(user.getId(), message, "SUPPORT_REPLY", ticket.getId());
+            notificationService.createNotification(user.getId(), message, "SUPPORT_REPLY", ticket.getId().toString());
         }
         
         return ResponseEntity.ok("Đã phản hồi");

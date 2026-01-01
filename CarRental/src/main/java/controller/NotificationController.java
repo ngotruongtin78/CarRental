@@ -52,7 +52,7 @@ public class NotificationController {
     }
     
     @PostMapping("/mark-read/{id}")
-    public ResponseEntity<String> markAsRead(@PathVariable("id") String id) {
+    public ResponseEntity<String> markAsRead(@PathVariable("id") Long id) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return ResponseEntity.status(401).build();
         
