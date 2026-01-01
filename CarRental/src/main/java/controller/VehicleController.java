@@ -50,7 +50,7 @@ public class VehicleController {
     private StaffRepository staffRepository;
 
     @GetMapping("/station/{stationId}")
-    public List<Vehicle> getByStation(@PathVariable("stationId") String stationId) {
+    public List<Vehicle> getByStation(@PathVariable("stationId") Long stationId) {
         releaseExpiredHolds(stationId);
         return repo.findByStationIdAndAvailable(stationId, true)
                 .stream()
@@ -59,7 +59,7 @@ public class VehicleController {
     }
 
     @GetMapping("/station/{stationId}/staff-station")
-    public ResponseEntity<?> getByStationWithInfo(@PathVariable("stationId") String stationId) {
+    public ResponseEntity<?> getByStationWithInfo(@PathVariable("stationId") Long stationId) {
         try {
             // Lấy danh sách xe tại trạm (bao gồm cả xe đang thuê)
             List<Vehicle> vehicles = repo.findByStationId(stationId);
@@ -85,12 +85,12 @@ public class VehicleController {
     }
 
     @GetMapping("/{id}")
-    public Optional<Vehicle> getVehicle(@PathVariable("id") String id) {
+    public Optional<Vehicle> getVehicle(@PathVariable("id") Long id) {
         return repo.findById(id);
     }
 
     @GetMapping("/admin/{id}")
-    public Optional<Vehicle> getVehicleById(@PathVariable("id") String id) {
+    public Optional<Vehicle> getVehicleById(@PathVariable("id") Long id) {
         return repo.findById(id);
     }
 
@@ -100,13 +100,13 @@ public class VehicleController {
     }
 
     @PutMapping("/admin/update/{id}")
-    public Vehicle updateVehicle(@PathVariable("id") String id, @RequestBody Vehicle updatedVehicle) {
+    public Vehicle updateVehicle(@PathVariable("id") Long id, @RequestBody Vehicle updatedVehicle) {
         updatedVehicle.setId(id);
         return repo.save(updatedVehicle);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateVehicleStatus(@PathVariable("id") String id, @RequestBody Map<String, Object> updates) {
+    public ResponseEntity<?> updateVehicleStatus(@PathVariable("id") Long id, @RequestBody Map<String, Object> updates) {
         try {
             Optional<Vehicle> vehicleOpt = repo.findById(id);
             if (!vehicleOpt.isPresent()) {
@@ -153,13 +153,13 @@ public class VehicleController {
     }
 
     @DeleteMapping("/admin/delete/{id}")
-    public String deleteVehicle(@PathVariable("id") String id) {
+    public String deleteVehicle(@PathVariable("id") Long id) {
         repo.deleteById(id);
         return "Delete vehicle " + id + " success";
     }
 
     @PostMapping("/{id}/report-issue")
-    public ResponseEntity<?> reportIssue(@PathVariable("id") String vehicleId, @RequestBody Map<String, Object> reportData) {
+    public ResponseEntity<?> reportIssue(@PathVariable("id") Long vehicleId, @RequestBody Map<String, Object> reportData) {
         try {
             Optional<Vehicle> vehicleOpt = repo.findById(vehicleId);
             if (!vehicleOpt.isPresent()) {
@@ -180,12 +180,14 @@ public class VehicleController {
 
             // Get current authenticated user (staff)
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            String staffId = auth.getName();
-            String staffName = auth.getName();
+            String staffUsername = auth.getName();
+            Long staffId = null;
+            String staffName = staffUsername;
             try {
-                Optional<Staff> staffOpt = staffRepository.findById(staffId);
-                if (staffOpt.isPresent()) {
-                    staffName = staffOpt.get().getName();
+                Staff staff = staffRepository.findByUsername(staffUsername);
+                if (staff != null) {
+                    staffId = staff.getId();
+                    staffName = staff.getName();
                 }
             } catch (Exception e) {
             }
@@ -220,7 +222,7 @@ public class VehicleController {
     }
 
     @GetMapping("/reports/station/{stationId}")
-    public ResponseEntity<?> getReportsByStation(@PathVariable("stationId") String stationId) {
+    public ResponseEntity<?> getReportsByStation(@PathVariable("stationId") Long stationId) {
         try {
             List<VehicleReport> reports = vehicleReportRepository.findByStationId(stationId);
             return ResponseEntity.ok(Map.of(
@@ -234,7 +236,7 @@ public class VehicleController {
     }
 
     @GetMapping("/reports/vehicle/{vehicleId}")
-    public ResponseEntity<?> getReportsByVehicle(@PathVariable("vehicleId") String vehicleId) {
+    public ResponseEntity<?> getReportsByVehicle(@PathVariable("vehicleId") Long vehicleId) {
         try {
             List<VehicleReport> reports = vehicleReportRepository.findByVehicleId(vehicleId);
             return ResponseEntity.ok(Map.of(
@@ -261,7 +263,7 @@ public class VehicleController {
         }
     }
 
-    private void releaseExpiredHolds(String stationId) {
+    private void releaseExpiredHolds(Long stationId) {
         List<RentalRecord> expired = rentalRepo.findByStatusAndHoldExpiresAtBefore(
                 "PENDING_PAYMENT", LocalDateTime.now()
         );

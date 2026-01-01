@@ -101,12 +101,15 @@ public class AdminController {
 
     @PostMapping("/staff/update/{id}")
     @ResponseBody
-    public ResponseEntity<?> updateStaff(@PathVariable("id") String id, @RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> updateStaff(@PathVariable("id") Long id, @RequestBody Map<String, String> payload) {
         User user = userRepository.findById(id).orElse(null);
         if (user == null) return ResponseEntity.badRequest().body("Không tìm thấy nhân viên");
         String newPass = payload.get("password");
         if (newPass != null && !newPass.trim().isEmpty()) user.setPassword(passwordEncoder.encode(newPass));
-        user.setStationId(payload.get("stationId"));
+        String stationIdStr = payload.get("stationId");
+        if (stationIdStr != null && !stationIdStr.trim().isEmpty()) {
+            user.setStationId(Long.parseLong(stationIdStr));
+        }
         String role = payload.get("role");
         if (role != null && !role.isEmpty()) user.setRole(role);
         userRepository.save(user);
@@ -150,7 +153,7 @@ public class AdminController {
         newStaff.setUsername(username.trim());
         newStaff.setPassword(passwordEncoder.encode(password));
         newStaff.setFullName(fullName.trim());
-        newStaff.setStationId(stationId.trim());
+        newStaff.setStationId(Long.parseLong(stationId.trim()));
         newStaff.setRole(role.trim());
         newStaff.setEnabled(true);
         newStaff.setUpdatedAt(new Date());
@@ -198,7 +201,7 @@ public class AdminController {
 
     @PostMapping("/customers/toggle-status/{id}")
     @ResponseBody
-    public ResponseEntity<String> toggleCustomerStatus(@PathVariable("id") String id) {
+    public ResponseEntity<String> toggleCustomerStatus(@PathVariable("id") Long id) {
         User user = userRepository.findById(id).orElse(null);
         if (user != null) { user.setEnabled(!user.isEnabled()); userRepository.save(user); }
         return ResponseEntity.ok("OK");
@@ -206,14 +209,14 @@ public class AdminController {
 
     @PostMapping("/customers/toggle-risk/{id}")
     @ResponseBody
-    public ResponseEntity<String> toggleCustomerRisk(@PathVariable("id") String id) {
+    public ResponseEntity<String> toggleCustomerRisk(@PathVariable("id") Long id) {
         User user = userRepository.findById(id).orElse(null);
         if (user != null) { user.setRisk(!user.isRisk()); userRepository.save(user); }
         return ResponseEntity.ok("OK");
     }
 
     @GetMapping("/customers/view/{id}")
-    public String showCustomerDetailPage(@PathVariable("id") String userId, Model model) {
+    public String showCustomerDetailPage(@PathVariable("id") Long userId, Model model) {
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) return "redirect:/admin/customers";
         Map<String, Object> stats = rentalRecordService.calculateStats(user.getUsername());
@@ -245,7 +248,7 @@ public class AdminController {
         Staff targetStaff = staffRepository.findByUsername("staff");
         if (targetStaff == null) return ResponseEntity.badRequest().body("Không tìm thấy user 'staff'");
 
-        String staffId = targetStaff.getId();
+        Long staffId = targetStaff.getId();
         List<RentalRecord> allRecords = rentalRecordRepository.findAll();
         int count = 0;
         for (RentalRecord r : allRecords) {

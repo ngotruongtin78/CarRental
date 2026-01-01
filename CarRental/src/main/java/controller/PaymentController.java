@@ -75,7 +75,7 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Thiếu mã chuyến thuê");
         }
 
-        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        RentalRecord record = rentalRepo.findById(Long.parseLong(rentalId)).orElse(null);
         if (record == null || !Objects.equals(record.getUsername(), username)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy chuyến thuê");
         }
@@ -159,7 +159,7 @@ public class PaymentController {
         }
 
         rentalRepo.save(record);
-        vehicleService.markPendingPayment(record.getVehicleId(), rentalId);
+        vehicleService.markPendingPayment(record.getVehicleId(), Long.parseLong(rentalId));
 
         // ==== TẠO QR ====
         int amountInt = (int) Math.round(amountToCollect);
@@ -217,7 +217,7 @@ public class PaymentController {
                                       @RequestParam(value = "status", required = false) String status,
                                       @RequestParam(value = "amount", required = false) String amount) {
 
-        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        RentalRecord record = rentalRepo.findById(Long.parseLong(rentalId)).orElse(null);
         if (record != null) {
             double paidAmount = 0;
             if (amount != null) {
@@ -243,14 +243,14 @@ public class PaymentController {
                     record.setHoldExpiresAt(record.getStartTime());
                     record.setPaidAt(LocalDateTime.now());
                     rentalRepo.save(record);
-                    vehicleService.markRented(record.getVehicleId(), rentalId);
+                    vehicleService.markRented(record.getVehicleId(), Long.parseLong(rentalId));
                 } else if (newPaid >= depositRequired) {
                     record.setPaymentStatus("PAY_AT_STATION");
                     record.setStatus("ACTIVE");
                     // Đã đặt cọc 30% → giữ 8 tiếng
                     record.setHoldExpiresAt(LocalDateTime.now().plusHours(8));
                     rentalRepo.save(record);
-                    vehicleService.markDeposited(record.getVehicleId(), rentalId);
+                    vehicleService.markDeposited(record.getVehicleId(), Long.parseLong(rentalId));
                 } else {
                     record.setPaymentStatus("DEPOSIT_PENDING");
                     rentalRepo.save(record);
@@ -265,7 +265,7 @@ public class PaymentController {
                 // Đã thanh toán 100% → giữ đến thời gian thuê (startTime)
                 record.setHoldExpiresAt(record.getStartTime());
                 rentalRepo.save(record);
-                vehicleService.markRented(record.getVehicleId(), rentalId);
+                vehicleService.markRented(record.getVehicleId(), Long.parseLong(rentalId));
             }
         }
 
@@ -276,7 +276,7 @@ public class PaymentController {
 
     @GetMapping("/cancel")
     public RedirectView paymentCancel(@RequestParam("rentalId") String rentalId) {
-        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        RentalRecord record = rentalRepo.findById(Long.parseLong(rentalId)).orElse(null);
 
         if (record != null) {
             record.setPaymentStatus("CANCELLED");
@@ -284,7 +284,7 @@ public class PaymentController {
             record.setHoldExpiresAt(null);
 
             rentalRepo.save(record);
-            vehicleService.releaseHold(record.getVehicleId(), rentalId);
+            vehicleService.releaseHold(record.getVehicleId(), Long.parseLong(rentalId));
         }
 
         RedirectView redirectView = new RedirectView("/thanhtoan?rentalId=" + rentalId + "&cancel=1");
@@ -301,7 +301,7 @@ public class PaymentController {
     public ResponseEntity<Map<String, Object>> checkPayment(@RequestParam("rentalId") String rentalId) {
         Map<String, Object> resp = new HashMap<>();
 
-        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        RentalRecord record = rentalRepo.findById(Long.parseLong(rentalId)).orElse(null);
         if (record == null) {
             resp.put("paid", false);
             resp.put("depositPaid", false);
@@ -352,7 +352,7 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Thiếu mã chuyến thuê");
         }
 
-        RentalRecord record = rentalRepo.findById(rentalId).orElse(null);
+        RentalRecord record = rentalRepo.findById(Long.parseLong(rentalId)).orElse(null);
         if (record == null || !username.equals(record.getUsername())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy chuyến thuê");
         }
