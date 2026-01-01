@@ -18,6 +18,8 @@ Khi khởi động ứng dụng lần đầu tiên, hệ thống sẽ tự độ
 - **Vai trò**: STAFF
 - **Quyền**: Quản lý xe, trả xe, xác minh khách hàng
 
+> **Lưu ý Bảo mật**: Mật khẩu mặc định chỉ hiển thị trong tài liệu này để hỗ trợ việc thiết lập ban đầu. Hệ thống sẽ KHÔNG in mật khẩu ra console khi khởi động. Hãy lưu giữ thông tin này ở nơi an toàn và đổi mật khẩu ngay sau khi đăng nhập lần đầu.
+
 ### Đổi Mật khẩu Mặc định
 
 **⚠️ QUAN TRỌNG**: Sau khi đăng nhập lần đầu, bạn **PHẢI** đổi mật khẩu mặc định để bảo mật hệ thống.
@@ -54,7 +56,7 @@ System.out.println(hashedPassword);
 
 #### Cách 2: Sửa đổi UserDataLoader
 
-1. Mở file `/src/main/java/config/UserDataLoader.java`
+1. Mở file `CarRental/src/main/java/config/UserDataLoader.java`
 
 2. Thêm code tạo tài khoản mới vào phương thức `run()`:
 
@@ -211,6 +213,8 @@ When starting the application for the first time, the system will automatically 
 - **Role**: STAFF
 - **Permissions**: Vehicle management, returns, customer verification
 
+> **Security Note**: Default passwords are only displayed in this documentation to support initial setup. The system will NOT print passwords to the console during startup. Please keep this information secure and change passwords immediately after first login.
+
 ### Change Default Password
 
 **⚠️ IMPORTANT**: After first login, you **MUST** change the default password for security.
@@ -239,7 +243,7 @@ VALUES ('staff_new', '$2a$10$YOUR_BCRYPT_HASHED_PASSWORD', 'STAFF', 'Staff Name'
 
 #### Method 2: Modify UserDataLoader
 
-1. Open `/src/main/java/config/UserDataLoader.java`
+1. Open `CarRental/src/main/java/config/UserDataLoader.java`
 
 2. Add code to create new accounts in the `run()` method
 

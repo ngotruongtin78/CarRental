@@ -29,7 +29,7 @@ public class UserDataLoader implements CommandLineRunner {
             admin.setEnabled(true);
             admin.setVerified(true);
             userRepo.save(admin);
-            System.out.println("Default admin account created - Username: admin, Password: admin123");
+            System.out.println("Default admin account created - Username: admin");
         }
 
         // Create default staff account if not exists
@@ -42,7 +42,7 @@ public class UserDataLoader implements CommandLineRunner {
             staff.setEnabled(true);
             staff.setVerified(true);
             userRepo.save(staff);
-            System.out.println("Default staff account created - Username: staff, Password: staff123");
+            System.out.println("Default staff account created - Username: staff");
         }
     }
 }
